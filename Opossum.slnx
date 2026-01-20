@@ -1,6 +1,22 @@
 <Solution>
   <Folder Name="/Copilot Rules/" />
   <Folder Name="/Documentation/" />
+  <Folder Name="/Samples/">
+    <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/" />
   <Folder Name="/Specification/" />
+  <Folder Name="/src/">
+    <Project Path="src/Opossum.SourceGeneration/Opossum.SourceGeneration.csproj" />
+    <Project Path="src/Opossum/Opossum.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Opossum.BenchmarkTests/Opossum.BenchmarkTests.csproj" />
+    <Project Path="tests/Opossum.IntegrationTests/Opossum.IntegrationTests.csproj" />
+    <Project Path="tests/Opossum.UnitTests/Opossum.UnitTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/Samples/">
+    <Project Path="tests/Samples/Opossum.Samples.CourseManagement.IntegrationTests/Opossum.Samples.CourseManagement.IntegrationTests.csproj" />
+    <Project Path="tests/Samples/Opossum.Samples.CourseManagement.UnitTests/Opossum.Samples.CourseManagement.UnitTests.csproj" />
+  </Folder>
 </Solution>
