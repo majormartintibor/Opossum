@@ -1,11 +1,16 @@
 <Solution>
-  <Folder Name="/Copilot Rules/" />
+  <Folder Name="/Copilot Rules/">
+    <File Path="Copilot Rules/CodeingRules.MD" />
+    <File Path="Copilot Rules/WorkflowRules.MD" />
+  </Folder>
   <Folder Name="/Documentation/" />
   <Folder Name="/Samples/">
     <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />
   </Folder>
   <Folder Name="/Solution Items/" />
-  <Folder Name="/Specification/" />
+  <Folder Name="/Specification/">
+    <File Path="Specification/DCB-Specification.md" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Opossum.SourceGeneration/Opossum.SourceGeneration.csproj" />
     <Project Path="src/Opossum/Opossum.csproj" />
