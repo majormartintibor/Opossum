@@ -1,15 +1,22 @@
 <Solution>
-  <Folder Name="/Copilot Rules/">
-    <File Path="Copilot Rules/CodeingRules.MD" />
-    <File Path="Copilot Rules/WorkflowRules.MD" />
+  <Folder Name="/CopilotRules/">
+    <File Path="CopilotRules/CodeingRules.MD" />
+    <File Path="CopilotRules/mediator-pattern.md" />
+    <File Path="CopilotRules/nuget-package-management.md" />
+    <File Path="CopilotRules/using-statements.md" />
+    <File Path="CopilotRules/WorkflowRules.MD" />
   </Folder>
-  <Folder Name="/Documentation/" />
+  <Folder Name="/Documentation/">
+    <File Path="Documentation/solution-review.md" />
+  </Folder>
   <Folder Name="/Samples/">
     <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />
   </Folder>
   <Folder Name="/Solution Items/" />
   <Folder Name="/Specification/">
     <File Path="Specification/DCB-Specification.md" />
+    <File Path="Specification/InitialSpecification.MD" />
+    <File Path="Specification/mediator-pattern-specification.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Opossum.SourceGeneration/Opossum.SourceGeneration.csproj" />
