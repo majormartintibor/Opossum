@@ -125,32 +125,42 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
         // Arrange
         var studentId = Guid.NewGuid();
 
-        // Create 3 courses (student limit is 2, so 3rd enrollment should fail)
+        // Create 6 courses (student limit is 5, so 6th enrollment should fail)
         var course1Id = Guid.NewGuid();
         var course2Id = Guid.NewGuid();
         var course3Id = Guid.NewGuid();
+        var course4Id = Guid.NewGuid();
+        var course5Id = Guid.NewGuid();
+        var course6Id = Guid.NewGuid();
 
         await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course1Id, 30));
         await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course2Id, 30));
         await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course3Id, 30));
+        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course4Id, 30));
+        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course5Id, 30));
+        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course6Id, 30));
 
-        // Enroll student in first course
+        // Enroll student in first 5 courses
         await _mediator.InvokeAsync<CommandResult>(
             new EnrollStudentToCourseCommand(course1Id, studentId));
-
-        // Enroll student in second course (now at limit)
         await _mediator.InvokeAsync<CommandResult>(
             new EnrollStudentToCourseCommand(course2Id, studentId));
-
-        // Act - Try to enroll in third course (should fail - student at limit)
-        var result = await _mediator.InvokeAsync<CommandResult>(
+        await _mediator.InvokeAsync<CommandResult>(
             new EnrollStudentToCourseCommand(course3Id, studentId));
+        await _mediator.InvokeAsync<CommandResult>(
+            new EnrollStudentToCourseCommand(course4Id, studentId));
+        await _mediator.InvokeAsync<CommandResult>(
+            new EnrollStudentToCourseCommand(course5Id, studentId));
+
+        // Act - Try to enroll in sixth course (should fail - student at limit)
+        var result = await _mediator.InvokeAsync<CommandResult>(
+            new EnrollStudentToCourseCommand(course6Id, studentId));
 
         // Assert - Command should fail due to student enrollment limit
         Assert.False(result.Success);
         Assert.Contains("Student has reached maximum course enrollment limit", result.ErrorMessage);
 
-        // Verify student is only in 2 courses
+        // Verify student is only in 5 courses
         var enrollmentQuery = Query.FromItems(
             new QueryItem
             {
@@ -163,10 +173,10 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
         );
 
         var studentEvents = await _eventStore.ReadAsync(enrollmentQuery);
-        var aggregate = BuildAggregate(studentEvents, course3Id, studentId);
+        var aggregate = BuildAggregate(studentEvents, course6Id, studentId);
 
-        Assert.Equal(0, aggregate.CourseCurrentEnrollmentCount); // course3 has 0 students
-        Assert.Equal(2, aggregate.StudentCurrentCourseEnrollmentCount); // student in 2 courses
+        Assert.Equal(0, aggregate.CourseCurrentEnrollmentCount); // course6 has 0 students
+        Assert.Equal(5, aggregate.StudentCurrentCourseEnrollmentCount); // student in 5 courses
     }
 
     [Fact]

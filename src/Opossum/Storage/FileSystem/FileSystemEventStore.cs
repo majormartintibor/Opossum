@@ -273,30 +273,58 @@ internal class FileSystemEventStore : IEventStore
 
     /// <summary>
     /// Validates the append condition by checking if conflicting events exist.
+    /// Per DCB spec: when AfterSequencePosition is present, FailIfEventsMatch should
+    /// only check for events AFTER that position (ignore events before).
     /// </summary>
     private async Task ValidateAppendConditionAsync(string contextPath, AppendCondition condition)
     {
+        // Get current ledger position for comparison
+        var currentPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+
         // Check AfterSequencePosition constraint
+        // This checks if ANY events were added since the specified position
         if (condition.AfterSequencePosition.HasValue)
         {
-            var currentPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
-
             if (currentPosition != condition.AfterSequencePosition.Value)
             {
-                throw new ConcurrencyException(
-                    $"Expected sequence position {condition.AfterSequencePosition.Value}, but current position is {currentPosition}");
+                // Events were added - now check if they match our query
+                // If FailIfEventsMatch is provided, we only care about matching events
+                if (condition.FailIfEventsMatch != null && condition.FailIfEventsMatch.QueryItems.Count > 0)
+                {
+                    // Get all positions matching the query
+                    var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch);
+
+                    // Filter to only positions AFTER our read (> AfterSequencePosition)
+                    var newMatchingPositions = matchingPositions
+                        .Where(p => p > condition.AfterSequencePosition.Value)
+                        .ToArray();
+
+                    if (newMatchingPositions.Length > 0)
+                    {
+                        throw new ConcurrencyException(
+                            $"Append condition failed: found {newMatchingPositions.Length} matching event(s) after position {condition.AfterSequencePosition.Value}");
+                    }
+                }
+                else
+                {
+                    // No query specified - ANY new events cause failure
+                    throw new ConcurrencyException(
+                        $"Expected sequence position {condition.AfterSequencePosition.Value}, but current position is {currentPosition}");
+                }
             }
         }
-
-        // Check FailIfEventsMatch constraint
-        if (condition.FailIfEventsMatch != null && condition.FailIfEventsMatch.QueryItems.Count > 0)
+        else
         {
-            var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch);
-
-            if (matchingPositions.Length > 0)
+            // AfterSequencePosition not provided - check all matching events
+            if (condition.FailIfEventsMatch != null && condition.FailIfEventsMatch.QueryItems.Count > 0)
             {
-                throw new ConcurrencyException(
-                    $"Append condition failed: found {matchingPositions.Length} matching event(s)");
+                var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch);
+
+                if (matchingPositions.Length > 0)
+                {
+                    throw new ConcurrencyException(
+                        $"Append condition failed: found {matchingPositions.Length} matching event(s)");
+                }
             }
         }
     }

@@ -51,77 +51,125 @@ public class EnrollStudentToCourseCommandHandler
         EnrollStudentToCourseCommand command,
         IEventStore eventStore)
     {
-        // Step 1: Build DCB aggregate from relevant events
-        // Query for events needed to make enrollment decision:
-        // - Course events (capacity tracking)
-        // - Student events (enrollment count tracking)
-        var query = Query.FromItems(
-            new QueryItem
-            {
-                Tags = [new Tag { Key = "courseId", Value = command.CourseId.ToString() }],
-                EventTypes =
-                [
-                    nameof(CourseCreated),
-                    nameof(CourseCapacityUpdatedEvent),
-                    nameof(StudentEnrolledToCourseEvent),
-                    nameof(StudentUnenrolledFromCourseEvent)
-                ]
-            },
-            new QueryItem
-            {
-                Tags = [new Tag { Key = "studentId", Value = command.StudentId.ToString() }],
-                EventTypes =
-                [
-                    nameof(StudentEnrolledToCourseEvent),
-                    nameof(StudentUnenrolledFromCourseEvent)
-                ]
-            }
-        );
+        // Implement retry logic for optimistic concurrency
+        // Higher retry count for high-concurrency scenarios
+        const int maxRetries = 10;
 
-        var events = await eventStore.ReadAsync(query, readOptions: null);
-
-        // Fold events into aggregate
-        var aggregate = BuildAggregate(events, command.CourseId, command.StudentId);
-
-        // Step 2: Validate business rules
-        if (!aggregate.CanEnrollStudent())
+        for (int attempt = 0; attempt < maxRetries; attempt++)
         {
-            return new CommandResult(
-                Success: false,
-                ErrorMessage: aggregate.GetEnrollmentFailureReason()
+            // Step 1: Build DCB aggregate from relevant events
+            // Query for events needed to make enrollment decision:
+            // - Course events (capacity tracking)
+            // - Student events (enrollment count tracking)
+            var query = Query.FromItems(
+                new QueryItem
+                {
+                    Tags = [new Tag { Key = "courseId", Value = command.CourseId.ToString() }],
+                    EventTypes =
+                    [
+                        nameof(CourseCreated),
+                        nameof(CourseCapacityUpdatedEvent),
+                        nameof(StudentEnrolledToCourseEvent),
+                        nameof(StudentUnenrolledFromCourseEvent)
+                    ]
+                },
+                new QueryItem
+                {
+                    Tags = [new Tag { Key = "studentId", Value = command.StudentId.ToString() }],
+                    EventTypes =
+                    [
+                        nameof(StudentEnrolledToCourseEvent),
+                        nameof(StudentUnenrolledFromCourseEvent)
+                    ]
+                }
             );
+
+            var events = await eventStore.ReadAsync(query, readOptions: null);
+
+            // Remember the last position for optimistic concurrency control
+            var lastPosition = events.Length > 0 ? events[^1].Position : 0;
+
+            // Fold events into aggregate
+            var aggregate = BuildAggregate(events, command.CourseId, command.StudentId);
+
+            // Step 2: Validate business rules
+            // Check if student is already enrolled in this specific course
+            var isAlreadyEnrolled = events.Any(e => 
+                e.Event.EventType == nameof(StudentEnrolledToCourseEvent) &&
+                e.Event.Event is StudentEnrolledToCourseEvent enrollEvent &&
+                enrollEvent.CourseId == command.CourseId &&
+                enrollEvent.StudentId == command.StudentId);
+
+            if (isAlreadyEnrolled)
+            {
+                // Student is already enrolled - this is idempotent, just return success
+                // Alternatively, could return an error. For this test, we'll prevent duplicate enrollment.
+                return new CommandResult(Success: false, ErrorMessage: "Student is already enrolled in this course");
+            }
+
+            if (!aggregate.CanEnrollStudent())
+            {
+                return new CommandResult(
+                    Success: false,
+                    ErrorMessage: aggregate.GetEnrollmentFailureReason()
+                );
+            }
+
+            // Step 3: Create and append event
+            var @event = new StudentEnrolledToCourseEvent(command.CourseId, command.StudentId);
+
+            var sequencedEvent = new SequencedEvent
+            {
+                Position = 0, // Will be assigned by AppendAsync
+                Event = new DomainEvent
+                {
+                    EventType = nameof(StudentEnrolledToCourseEvent),
+                    Event = @event,
+                    Tags =
+                    [
+                        new Tag { Key = "courseId", Value = command.CourseId.ToString() },
+                        new Tag { Key = "studentId", Value = command.StudentId.ToString() }
+                    ]
+                },
+                Metadata = new Metadata
+                {
+                    Timestamp = DateTimeOffset.UtcNow,
+                    CorrelationId = Guid.NewGuid()
+                }
+            };
+
+            // Step 4: Create AppendCondition to prevent stale decision models
+            // This is CRITICAL for DCB pattern!
+            // - AfterSequencePosition: The position we read up to
+            // - FailIfEventsMatch: The same query we used to build our decision model
+            // Together: Fail ONLY if events matching our query were added AFTER our read
+            var appendCondition = new AppendCondition
+            {
+                AfterSequencePosition = lastPosition,  // Position when we read
+                FailIfEventsMatch = query              // Only fail if matching events added after this position
+            };
+
+            // Step 5: Append the event with optimistic concurrency control
+            try
+            {
+                await eventStore.AppendAsync([sequencedEvent], appendCondition);
+                return new CommandResult(Success: true);
+            }
+            catch (Exceptions.ConcurrencyException) when (attempt < maxRetries - 1)
+            {
+                // Decision model was stale - retry with fresh read
+                await Task.Delay(10 * (attempt + 1)); // Small exponential backoff
+                continue; // Retry
+            }
+            catch (Exceptions.ConcurrencyException)
+            {
+                // Max retries exceeded
+                return new CommandResult(Success: false, ErrorMessage: "Concurrency conflict detected");
+            }
         }
 
-        // Step 3: Create and append event
-        var @event = new StudentEnrolledToCourseEvent(command.CourseId, command.StudentId);
-
-        var sequencedEvent = new SequencedEvent
-        {
-            Position = 0, // Will be assigned by AppendAsync
-            Event = new DomainEvent
-            {
-                EventType = nameof(StudentEnrolledToCourseEvent),
-                Event = @event,
-                Tags =
-                [
-                    new Tag { Key = "courseId", Value = command.CourseId.ToString() },
-                    new Tag { Key = "studentId", Value = command.StudentId.ToString() }
-                ]
-            },
-            Metadata = new Metadata
-            {
-                Timestamp = DateTimeOffset.UtcNow,
-                CorrelationId = Guid.NewGuid()
-            }
-        };
-
-        // Step 4: Append the event
-        // Note: In a real-world scenario, you might want to use AppendCondition
-        // to detect concurrent modifications and retry if needed.
-        // For this example, we'll use a simple condition that checks the current state.
-
-        await eventStore.AppendAsync([sequencedEvent], condition: null);
-        return new CommandResult(Success: true);
+        // Should never reach here
+        return new CommandResult(Success: false, ErrorMessage: "Unexpected error");
     }
 
     /// <summary>
@@ -134,9 +182,9 @@ public class EnrollStudentToCourseCommandHandler
         Guid studentId)
     {
         // Initialize aggregate with command context (defines the consistency boundary)
-        // Note: Using studentMaxLimit of 2 to match test expectations
+        // Note: Using default studentMaxLimit of 5 (from CourseEnlistmentAggregate constructor)
         // In a real system, this would come from configuration or a StudentCreated event
-        var aggregate = new CourseEnlistmentAggregate(courseId, studentId, studentMaxLimit: 2);
+        var aggregate = new CourseEnlistmentAggregate(courseId, studentId);
 
         // Fold all events over the aggregate
         foreach (var sequencedEvent in events)
@@ -154,5 +202,44 @@ public class EnrollStudentToCourseCommandHandler
         }
 
         return aggregate;
+    }
+}
+
+/// <summary>
+/// Command handler for registering students
+/// </summary>
+public class RegisterStudentCommandHandler
+{
+    public async Task<CommandResult> HandleAsync(
+        RegisterStudentCommand command,
+        IEventStore eventStore)
+    {
+        // Create the StudentRegistered event
+        var @event = new StudentRegisteredEvent(command.StudentId, command.Name);
+
+        // Build the SequencedEvent with proper tags
+        var sequencedEvent = new SequencedEvent
+        {
+            Position = 0, // Will be assigned by AppendAsync
+            Event = new DomainEvent
+            {
+                EventType = nameof(StudentRegisteredEvent),
+                Event = @event,
+                Tags =
+                [
+                    new Tag { Key = "studentId", Value = command.StudentId.ToString() }
+                ]
+            },
+            Metadata = new Metadata
+            {
+                Timestamp = DateTimeOffset.UtcNow,
+                CorrelationId = Guid.NewGuid()
+            }
+        };
+
+        // Append to event store
+        await eventStore.AppendAsync([sequencedEvent], condition: null);
+
+        return new CommandResult(Success: true);
     }
 }

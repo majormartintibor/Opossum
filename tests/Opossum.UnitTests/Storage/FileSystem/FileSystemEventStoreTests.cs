@@ -320,14 +320,20 @@ public class FileSystemEventStoreTests : IDisposable
         };
         await _store.AppendAsync(initialEvents, null);
 
-        // Act & Assert - Append with incorrect position condition
+        // Append one more event to create a position mismatch
+        var additionalEvent = new[] { CreateTestEvent("Event2b", new TestDomainEvent { Data = "2b" }) };
+        await _store.AppendAsync(additionalEvent, null);
+        // Current position is now 3
+
+        // Act & Assert - Try to append with stale position (0) and a query that matches existing events
+        // This should fail because events matching the query exist after position 0
         var condition = new AppendCondition
         {
-            FailIfEventsMatch = Query.FromEventTypes(),
-            AfterSequencePosition = 5 // Wrong position
+            FailIfEventsMatch = Query.FromEventTypes("Event1", "Event2", "Event2b"), // Matches existing events
+            AfterSequencePosition = 0 // Stale position - we know events exist after this
         };
         var newEvents = new[] { CreateTestEvent("Event3", new TestDomainEvent { Data = "3" }) };
-        
+
         await Assert.ThrowsAsync<ConcurrencyException>(
             () => _store.AppendAsync(newEvents, condition));
     }
