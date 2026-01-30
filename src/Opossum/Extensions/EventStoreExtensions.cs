@@ -3,6 +3,174 @@ using Opossum.Core;
 namespace Opossum.Extensions;
 
 /// <summary>
+/// Extension methods for IEvent to provide fluent API for building domain events
+/// </summary>
+public static class EventExtensions
+{
+    /// <summary>
+    /// Converts an IEvent into a DomainEventBuilder for fluent configuration
+    /// </summary>
+    /// <param name="event">The event to convert</param>
+    /// <returns>A DomainEventBuilder for fluent configuration</returns>
+    public static DomainEventBuilder ToDomainEvent(this IEvent @event)
+    {
+        ArgumentNullException.ThrowIfNull(@event);
+        return new DomainEventBuilder(@event);
+    }
+}
+
+/// <summary>
+/// Fluent builder for constructing SequencedEvent instances from domain events
+/// </summary>
+public class DomainEventBuilder
+{
+    private readonly IEvent _event;
+    private readonly List<Tag> _tags = [];
+    private Metadata? _metadata;
+
+    internal DomainEventBuilder(IEvent @event)
+    {
+        _event = @event ?? throw new ArgumentNullException(nameof(@event));
+    }
+
+    /// <summary>
+    /// Adds a single tag to the event
+    /// </summary>
+    /// <param name="key">Tag key</param>
+    /// <param name="value">Tag value</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithTag(string key, string value)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(value);
+
+        _tags.Add(new Tag { Key = key, Value = value });
+        return this;
+    }
+
+    /// <summary>
+    /// Adds multiple tags to the event
+    /// </summary>
+    /// <param name="tags">Tags to add</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithTags(params Tag[] tags)
+    {
+        ArgumentNullException.ThrowIfNull(tags);
+        _tags.AddRange(tags);
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the metadata for the event
+    /// </summary>
+    /// <param name="metadata">Metadata to attach</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithMetadata(Metadata metadata)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        _metadata = metadata;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the correlation ID in the metadata
+    /// </summary>
+    /// <param name="correlationId">Correlation ID for tracking related operations</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithCorrelationId(Guid correlationId)
+    {
+        EnsureMetadata();
+        _metadata!.CorrelationId = correlationId;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the causation ID in the metadata
+    /// </summary>
+    /// <param name="causationId">Causation ID for tracking what caused this event</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithCausationId(Guid causationId)
+    {
+        EnsureMetadata();
+        _metadata!.CausationId = causationId;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the operation ID in the metadata
+    /// </summary>
+    /// <param name="operationId">Operation ID for tracking the operation</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithOperationId(Guid operationId)
+    {
+        EnsureMetadata();
+        _metadata!.OperationId = operationId;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the user ID in the metadata
+    /// </summary>
+    /// <param name="userId">User ID who triggered the event</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithUserId(Guid userId)
+    {
+        EnsureMetadata();
+        _metadata!.UserId = userId;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets a custom timestamp in the metadata (defaults to UtcNow if not set)
+    /// </summary>
+    /// <param name="timestamp">Custom timestamp for the event</param>
+    /// <returns>This builder for fluent chaining</returns>
+    public DomainEventBuilder WithTimestamp(DateTimeOffset timestamp)
+    {
+        EnsureMetadata();
+        _metadata!.Timestamp = timestamp;
+        return this;
+    }
+
+    /// <summary>
+    /// Builds the final SequencedEvent
+    /// </summary>
+    /// <returns>A SequencedEvent ready to be appended to the event store</returns>
+    public SequencedEvent Build()
+    {
+        return new SequencedEvent
+        {
+            Position = 0, // Will be assigned by event store
+            Event = new DomainEvent
+            {
+                EventType = _event.GetType().Name,
+                Event = _event,
+                Tags = _tags
+            },
+            Metadata = _metadata ?? new Metadata
+            {
+                Timestamp = DateTimeOffset.UtcNow,
+                CorrelationId = Guid.NewGuid()
+            }
+        };
+    }
+
+    /// <summary>
+    /// Implicit conversion to SequencedEvent for convenience
+    /// </summary>
+    public static implicit operator SequencedEvent(DomainEventBuilder builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        return builder.Build();
+    }
+
+    private void EnsureMetadata()
+    {
+        _metadata ??= new Metadata { Timestamp = DateTimeOffset.UtcNow };
+    }
+}
+
+/// <summary>
 /// Extension methods for IEventStore to provide convenient overloads and helpers
 /// </summary>
 public static class EventStoreExtensions
@@ -73,5 +241,84 @@ public static class EventStoreExtensions
         ArgumentNullException.ThrowIfNull(query);
 
         return eventStore.ReadAsync(query, readOptions: null);
+    }
+
+    /// <summary>
+    /// Appends a single domain event to the event store with simplified syntax
+    /// </summary>
+    /// <param name="eventStore">The event store</param>
+    /// <param name="event">The domain event to append</param>
+    /// <param name="tags">Optional tags to attach to the event</param>
+    /// <param name="metadata">Optional metadata (timestamp and correlation ID auto-generated if not provided)</param>
+    /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    public static Task AppendEventAsync(
+        this IEventStore eventStore,
+        IEvent @event,
+        IEnumerable<Tag>? tags = null,
+        Metadata? metadata = null,
+        AppendCondition? condition = null)
+    {
+        ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(@event);
+
+        var sequencedEvent = new SequencedEvent
+        {
+            Position = 0, // Will be assigned by AppendAsync
+            Event = new DomainEvent
+            {
+                EventType = @event.GetType().Name,
+                Event = @event,
+                Tags = tags?.ToList() ?? []
+            },
+            Metadata = metadata ?? new Metadata
+            {
+                Timestamp = DateTimeOffset.UtcNow,
+                CorrelationId = Guid.NewGuid()
+            }
+        };
+
+        return eventStore.AppendAsync([sequencedEvent], condition);
+    }
+
+    /// <summary>
+    /// Appends multiple domain events to the event store with simplified syntax
+    /// </summary>
+    /// <param name="eventStore">The event store</param>
+    /// <param name="events">The domain events to append</param>
+    /// <param name="tags">Optional tags to attach to all events</param>
+    /// <param name="metadata">Optional metadata (timestamp and correlation ID auto-generated if not provided)</param>
+    /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <returns>A task representing the asynchronous operation</returns>
+    public static Task AppendEventsAsync(
+        this IEventStore eventStore,
+        IEvent[] events,
+        IEnumerable<Tag>? tags = null,
+        Metadata? metadata = null,
+        AppendCondition? condition = null)
+    {
+        ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(events);
+
+        var tagList = tags?.ToList() ?? [];
+        var sharedMetadata = metadata ?? new Metadata
+        {
+            Timestamp = DateTimeOffset.UtcNow,
+            CorrelationId = Guid.NewGuid()
+        };
+
+        var sequencedEvents = events.Select(e => new SequencedEvent
+        {
+            Position = 0,
+            Event = new DomainEvent
+            {
+                EventType = e.GetType().Name,
+                Event = e,
+                Tags = tagList
+            },
+            Metadata = sharedMetadata
+        }).ToArray();
+
+        return eventStore.AppendAsync(sequencedEvents, condition);
     }
 }

@@ -36,22 +36,22 @@ public class Query
     /// <summary>
     /// Creates a query that matches all events.
     /// </summary>
-    public static Query All() => new Query();
+    public static Query All() => new();
 
     /// <summary>
     /// Creates a query from a collection of query items.
     /// </summary>
-    public static Query FromItems(params QueryItem[] items) => new Query 
+    public static Query FromItems(params QueryItem[] items) => new()
     { 
-        QueryItems = new List<QueryItem>(items) 
+        QueryItems = [.. items]
     };
 
     /// <summary>
     /// Creates a query that matches events of any of the specified types.
     /// </summary>
-    public static Query FromEventTypes(params string[] eventTypes) => new Query
+    public static Query FromEventTypes(params string[] eventTypes) => new()
     {
-        QueryItems = [new QueryItem { EventTypes = new List<string>(eventTypes) }]
+        QueryItems = [new QueryItem { EventTypes = [.. eventTypes] }]
     };
 
     /// <summary>
@@ -59,6 +59,6 @@ public class Query
     /// </summary>
     public static Query FromTags(params Tag[] tags) => new Query
     {
-        QueryItems = [new QueryItem { Tags = new List<Tag>(tags) }]
+        QueryItems = [new QueryItem { Tags = [.. tags] }]
     };
 }
