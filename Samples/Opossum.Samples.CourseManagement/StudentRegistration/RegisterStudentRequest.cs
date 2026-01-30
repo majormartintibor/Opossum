@@ -5,7 +5,7 @@ using Opossum.Mediator;
 
 namespace Opossum.Samples.CourseManagement.StudentRegistration;
 
-public sealed record RegisterStudent(string FirstName, string LastName, string Email);
+public sealed record RegisterStudentRequest(string FirstName, string LastName, string Email);
 //NOTE: Opossum is currently missing command validation.
 public sealed record RegisterStudentCommand(Guid StudentId, string FirstName, string LastName, string Email);
 public sealed record StudentRegisteredEvent(
@@ -16,7 +16,7 @@ public static class Endpoint
     public static void MapRegisterStudentEndpoint(this IEndpointRouteBuilder app)
     {
         app.MapPost("/students", async (
-            [FromBody] RegisterStudent request,
+            [FromBody] RegisterStudentRequest request,
             [FromServices] IMediator mediator) =>
         {
             var studentId = Guid.NewGuid();
