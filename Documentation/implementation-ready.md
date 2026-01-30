@@ -869,10 +869,8 @@ public record StudentEnlistedToCourseEvent(
   - Concurrency design decisions
   - Index management algorithm
   - Complex append/read logic
-  
-- ❌ **Sample Web API** - Needs FileSystemEventStore working
 
-- ❌ **Source Generation** - Future feature
+- ❌ **Sample Web API** - Needs FileSystemEventStore working
 
 ---
 

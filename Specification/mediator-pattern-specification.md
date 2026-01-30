@@ -471,25 +471,13 @@ public class BackgroundService : Microsoft.Extensions.Hosting.BackgroundService
 - Type mismatches between returned value and expected type throw `InvalidOperationException`
 - Handler exceptions bubble up to the caller
 
-### 5. Code Generation Approach
+### 5. Implementation Approach
 
-Two options for implementation:
-
-**Option A: Runtime Code Generation (Reflection.Emit or Expression Trees)**
-- Generate IL or expression trees at startup
-- Faster execution after compilation
-- More complex implementation
-
-**Option B: Source Generators (Recommended for .NET 6+)**
-- Use Roslyn source generators
-- Code is generated at compile time
-- Better debugging experience
-- Type-safe and AOT-friendly
-
-**Option C: Simple Reflection (Easiest)**
-- Use `MethodInfo.Invoke` with dependency resolution
-- Slower but simpler to implement
-- Good for proof-of-concept
+The mediator implementation uses **reflection-based handler discovery and invocation**:
+- Simple and straightforward implementation
+- Convention-based handler discovery
+- No code generation needed for MVP
+- Good balance of simplicity and functionality
 
 ## Testing Considerations
 

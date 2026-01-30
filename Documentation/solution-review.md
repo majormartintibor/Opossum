@@ -266,27 +266,7 @@ builder.Services.AddOpossum(options =>
 });
 ```
 
-#### 7. Source Generation (Future)
-
-**Not Started**:
-- ❌ Command-to-Query translation
-- ❌ Dispatcher generation for commands
-- ❌ Aggregate Apply() method discovery
-- ❌ Boilerplate reduction
-
-**Planned Pattern**:
-```csharp
-[UsesQuery(EnlistStudentToCourseQuery)]
-public record EnlistStudentToCourseCommand(Guid CourseId, Guid StudentId);
-
-// Auto-generated:
-public class DispatchEnlistStudentToCourseCommand
-{
-    // Generated handler code
-}
-```
-
-#### 8. Sample Application
+#### 7. Sample Application
 
 **Current State**: Boilerplate Web API only
 
@@ -961,25 +941,19 @@ public class OpossumFixture : IDisposable
 
 ### Long-term Tasks (Month 2+)
 
-#### 11. Source Generation
-- Implement Roslyn source generator
-- Auto-generate Query from Command
-- Auto-generate command dispatchers
-- Reduce boilerplate code
-
-#### 12. Snapshot Support
+#### 11. Snapshot Support
 - Design snapshot format
 - Implement snapshot creation
 - Implement snapshot loading
 - Add snapshot configuration
 
-#### 13. Projection Support
+#### 12. Projection Support
 - Define projection interface
 - Implement projection daemon
 - Add read model updates
 - Support multiple projections
 
-#### 14. Advanced Features
+#### 13. Advanced Features
 - Add event versioning
 - Implement event migration
 - Add encryption support
@@ -1141,11 +1115,10 @@ public void AddContext(string contextName)
 | Configuration System | 20% | 1 day |
 | Sample Application | 10% | 2 days |
 | Integration Tests | 30% | 1 day |
-| Source Generation | 0% | 5-7 days (optional) |
 | Documentation | 60% | 2 days |
 
 **Total Effort Remaining**: ~15-20 working days for MVP  
-**Total Effort for Complete Solution**: ~25-30 working days
+**Total Effort for Complete Solution**: ~20-25 working days
 
 ### Phase Breakdown
 
@@ -1180,10 +1153,9 @@ public void AddContext(string contextName)
 ---
 
 #### Phase 3: Advanced Features
-**Duration**: 4+ weeks  
+**Duration**: 3+ weeks  
 **Goal**: Complete feature set
 
-- Source generation
 - Snapshot support
 - Projection support
 - Event migration

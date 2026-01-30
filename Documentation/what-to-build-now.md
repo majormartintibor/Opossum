@@ -175,7 +175,6 @@ This constraint ensures the full developer experience of using the Opossum libra
 ### What Remains
 - ❌ **FileSystemEventStore** core implementation (8-12 hours)
 - ❌ Sample Web API (2-3 hours)
-- ❌ Source generation (future)
 
 ---
 
