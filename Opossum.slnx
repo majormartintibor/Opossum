@@ -10,6 +10,7 @@
     <File Path="Documentation/AI_CONSTRAINTS.md" />
     <File Path="Documentation/benchmark-testing-strategy.md" />
     <File Path="Documentation/concurrency-handling-guide.md" />
+    <File Path="Documentation/CONSTRAINT_REVOCATION.md" />
     <File Path="Documentation/FILESYSTEMEVENTSTORE-CHECKLIST.md" />
     <File Path="Documentation/FILESYSTEMEVENTSTORE-IMPLEMENTATION-PLAN.md" />
     <File Path="Documentation/implementation-checklist.md" />

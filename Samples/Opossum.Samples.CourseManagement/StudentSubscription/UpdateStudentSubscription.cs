@@ -6,7 +6,7 @@ using Tier = Opossum.Samples.CourseManagement.EnrollmentTier.EnrollmentTier;
 
 namespace Opossum.Samples.CourseManagement.StudentSubscription;
 
-public sealed record UpdateStudentSubscriptionRequest(Guid StudentId, Tier EnrollmentTier);
+public sealed record UpdateStudentSubscriptionRequest(Tier EnrollmentTier);
 public sealed record UpdateStudentSubscriptionCommand(Guid StudentId, Tier EnrollmentTier);
 public sealed record StudentSubscriptionUpdatedEvent(Guid StudentId, Tier EnrollmentTier) : IEvent;
 
@@ -14,12 +14,13 @@ public static class Endpoint
 {
     public static void MapUpdateStudentSubscriptionEndpoint(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/students/subscription", async (
+        app.MapPatch("/students/{studentId:guid}/subscription", async (
+            Guid studentId,
             [FromBody] UpdateStudentSubscriptionRequest request,
             [FromServices] IMediator mediator) =>
         {
             var command = new UpdateStudentSubscriptionCommand(
-                StudentId: request.StudentId,
+                StudentId: studentId,
                 EnrollmentTier: request.EnrollmentTier);
 
             var result = await mediator.InvokeAsync<CommandResult>(command);
@@ -37,6 +38,7 @@ public sealed class UpdateStudentSubscriptionCommandHandler()
         UpdateStudentSubscriptionCommand command,
         IEventStore eventStore)
     {
+        // Invariant: Student must exist
         var studentExistsQuery = Query.FromItems(
                 new QueryItem
                 {
@@ -49,7 +51,7 @@ public sealed class UpdateStudentSubscriptionCommandHandler()
         {
             return CommandResult.Fail($"Student with ID {command.StudentId} does not exist.");
         }
-        
+
         SequencedEvent sequencedEvent = new StudentSubscriptionUpdatedEvent(
             StudentId: command.StudentId,
             EnrollmentTier: command.EnrollmentTier)

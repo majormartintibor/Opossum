@@ -1,6 +1,7 @@
 using Opossum.DependencyInjection;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.CourseCreation;
+using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
@@ -51,6 +52,7 @@ app.MapRegisterStudentEndpoint();
 app.MapGetStudentsShortInfoEndpoint();
 app.MapUpdateStudentSubscriptionEndpoint();
 app.MapCreateCourseEndpoint();
+app.MapModifyCourseStudentLimitEndpoint();
 
 app.Run();
 

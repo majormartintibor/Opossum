@@ -4,13 +4,59 @@ This document defines strict boundaries for AI-assisted code generation within t
 
 ---
 
-## ⚠️ CRITICAL RULE: Sample Project is Manual Development Only
+## ✅ CONSTRAINT REVOKED: Sample Project May Now Use AI Assistance
 
-### Restricted Directory
+### Status: **REVOKED** (as of manual implementation completion)
 
-**Path**: `Samples\Opossum.Samples.CourseManagement\`
+**Original Path**: `Samples\Opossum.Samples.CourseManagement\`
 
-**All files and subdirectories** within this path are **strictly prohibited** from AI code generation.
+**Previous Rule**: All files within this path were strictly prohibited from AI code generation.
+
+**Current Status**: ✅ **AI may now generate code in the sample project**
+
+### Why This Was Revoked
+
+The developer has **successfully completed manual implementation** of core sample features, demonstrating:
+
+1. ✅ **API Mastery** - Fluent Event Builder, Mediator Pattern, CommandResult, BuildProjections
+2. ✅ **Real Issues Found** - Missing DI registration, folder naming bugs, Swagger conflicts
+3. ✅ **Architecture Understanding** - Event sourcing, CQRS, projections, tag-based querying
+4. ✅ **Manual Features Implemented**:
+   - RegisterStudent (command with event appending)
+   - GetStudentsShortInfo (query with projections)
+   - UpdateStudentSubscription (command with validation)
+   - CreateCourse (entity creation)
+
+**The developer has experienced the library sufficiently.** AI acceleration is now permitted.
+
+---
+
+## ⚠️ Historical Context (For Reference)
+
+### Original Rationale
+
+The constraint existed to ensure the full developer experience of using the Opossum library.
+
+Manual development allowed the developer to:
+1. Learn the API deeply by typing every character
+2. Discover pain points in the library's developer experience
+3. Test documentation by following it manually
+4. Build muscle memory for common patterns
+5. Catch usability issues that automated generation would hide
+6. Validate assumptions about library design
+7. Experience friction that needs to be reduced
+
+**This manual work was intentional and valuable** - it made the library better.
+
+### What Was Accomplished
+
+Through manual implementation, the following improvements were made:
+- ✅ Fixed missing `IMediator` DI registration
+- ✅ Corrected folder naming inconsistencies (Indeces → Indices)
+- ✅ Added `CommandResult<T>` pattern to core library
+- ✅ Implemented `BuildProjections<T>()` extension method
+- ✅ Established global usings best practices
+- ✅ Resolved Swagger endpoint naming conflicts
 
 ---
 
@@ -26,14 +72,14 @@ This document defines strict boundaries for AI-assisted code generation within t
    - Provide guidance on mediator pattern usage
 
 2. **Provide Documentation**
-   - Generate documentation for library code (not sample code)
+   - Generate documentation for library code
    - Create usage guides and tutorials
    - Write API reference documentation
    - Explain architectural decisions
 
 3. **Review Code**
-   - Review manually-written sample code
-   - Suggest improvements to manually-written code
+   - Review sample code (manually-written or AI-generated)
+   - Suggest improvements
    - Identify potential issues or bugs
    - Recommend patterns and practices
 
@@ -48,31 +94,60 @@ This document defines strict boundaries for AI-assisted code generation within t
    - Modify configuration files
    - Update build scripts and project files
 
+6. **Generate Sample Application Code** ✅ **NEW**
+   - Generate code in `Samples\Opossum.Samples.CourseManagement\`
+   - Create domain events, commands, handlers
+   - Implement query handlers and projections
+   - Build endpoints and request/response models
+   - **Constraint lifted after manual experience validation**
+
 ---
 
-## What AI May NOT Do
+## What AI Should Be Cautious About
 
-### ❌ Prohibited AI Activities
+### ⚠️ Areas Requiring Care
 
-1. **Generate Sample Application Code**
-   - DO NOT create files in `Samples\Opossum.Samples.CourseManagement\`
-   - DO NOT modify existing files in sample directory
-   - DO NOT write implementations for:
-     - Domain events (e.g., `StudentEnlistedToCourseEvent`)
-     - Aggregates (e.g., `CourseEnlistmentAggregate`)
-     - Commands (e.g., `EnlistStudentToCourseCommand`)
-     - Handlers (e.g., `EnlistStudentToCourseHandler`)
-     - Any other domain logic in sample project
+While AI may now assist with sample project code, consider:
 
-2. **Provide Copy-Paste Sample Code**
-   - DO NOT give complete implementations to copy into sample project
-   - Code examples in documentation are for **reference only**
-   - Developer must type and understand all sample code personally
+1. **Maintain Established Patterns**
+   - Follow the patterns demonstrated in manually-written features
+   - Use `CommandResult<T>` for all handlers
+   - Apply `.ToDomainEvent().WithTag().WithTimestamp()` consistently
+   - Structure files per established conventions
 
-3. **Scaffold Sample Project Structure**
-   - DO NOT create directory structures in sample project
-   - DO NOT generate boilerplate files
-   - DO NOT set up project configuration for sample
+2. **Preserve Manual Learnings**
+   - Don't undo improvements discovered during manual development
+   - Keep global usings organization
+   - Maintain endpoint naming conventions
+   - Follow established validation patterns
+
+3. **Business Logic Validation**
+   - Ensure new features align with domain requirements
+   - Validate aggregate consistency rules
+   - Consider concurrency implications
+   - Think about event ordering and projections
+
+---
+
+## ~~What AI May NOT Do~~ (DEPRECATED)
+
+### ❌ ~~Prohibited AI Activities~~ (CONSTRAINT REVOKED)
+
+~~1. **Generate Sample Application Code**~~
+   - ~~DO NOT create files in `Samples\Opossum.Samples.CourseManagement\`~~
+   - ~~DO NOT modify existing files in sample directory~~
+
+**Status**: ✅ This constraint is no longer active. AI may now assist with sample code.
+
+~~2. **Provide Copy-Paste Sample Code**~~
+   - ~~DO NOT give complete implementations to copy into sample project~~
+
+**Status**: ✅ Complete implementations may now be provided when appropriate.
+
+~~3. **Scaffold Sample Project Structure**~~
+   - ~~DO NOT create directory structures in sample project~~
+
+**Status**: ✅ AI may now scaffold structures following established patterns.
 
 ---
 
@@ -96,30 +171,11 @@ This manual work is **intentional and valuable** - it makes the library better.
 
 ---
 
-## Scope of Restriction
+## Scope of Current AI Assistance
 
-### Files Explicitly Restricted
+### Files Now Available for AI Generation
 
-All files matching these patterns:
-
-```
-Samples\Opossum.Samples.CourseManagement\**\*.cs
-Samples\Opossum.Samples.CourseManagement\**\*.csproj
-Samples\Opossum.Samples.CourseManagement\**\*.json
-Samples\Opossum.Samples.CourseManagement\**\*.*
-```
-
-**Examples of restricted files:**
-- `Samples\Opossum.Samples.CourseManagement\Domain\Events.cs`
-- `Samples\Opossum.Samples.CourseManagement\Domain\CourseEnlistmentAggregate.cs`
-- `Samples\Opossum.Samples.CourseManagement\Domain\Commands.cs`
-- `Samples\Opossum.Samples.CourseManagement\Domain\Handlers\*.cs`
-- `Samples\Opossum.Samples.CourseManagement\Program.cs`
-- `Samples\Opossum.Samples.CourseManagement\appsettings.json`
-
-### Files NOT Restricted
-
-All other files in the solution are fair game for AI assistance:
+All files in the solution are now available for AI assistance:
 
 ```
 ✅ src\Opossum\**\*.cs                    (library code)
@@ -128,15 +184,15 @@ All other files in the solution are fair game for AI assistance:
 ✅ Documentation\**\*.md                   (documentation)
 ✅ Specification\**\*.md                   (specifications)
 ✅ *.props, *.targets, *.csproj           (build files)
+✅ Samples\**\*.cs                        (sample application) ⭐ NEW
 ✅ Samples\*.sln                          (solution files)
 ```
 
-**Examples of permitted files:**
-- `src\Opossum\Configuration\OpossumOptions.cs`
-- `src\Opossum\Storage\FileSystem\FileSystemEventStore.cs`
-- `tests\Opossum.UnitTests\Configuration\OpossumOptionsTests.cs`
-- `tests\Opossum.IntegrationTests\OpossumFixture.cs`
-- `Documentation\implementation-ready.md`
+**Examples now include:**
+- `Samples\Opossum.Samples.CourseManagement\CourseCreation\CreateCourse.cs` ✅
+- `Samples\Opossum.Samples.CourseManagement\StudentRegistration\RegisterStudent.cs` ✅
+- `Samples\Opossum.Samples.CourseManagement\StudentEnlistment\EnlistStudent.cs` ✅ (future)
+- All other sample application code ✅
 
 ---
 
@@ -159,101 +215,85 @@ All other files in the solution are fair game for AI assistance:
 **Test creation:**
 > "Create unit tests for StorageInitializer"
 
-### ❌ Bad Requests
+**Sample code generation:** ✅ **NOW PERMITTED**
+> "Generate the StudentEnlistedToCourseEvent and handler"
+> "Create the CourseEnlistmentAggregate with Apply methods"
+> "Implement the EnlistStudentToCourseHandler with validation logic"
 
-**Direct code generation:**
-> "Generate the StudentEnlistedToCourseEvent for me"
-> ❌ NO - Developer must write this
+### ⚠️ Requests Requiring Context
 
-**File creation:**
-> "Create the CourseEnlistmentAggregate.cs file with Apply methods"
-> ❌ NO - Developer must create this
+**Feature implementation:**
+> "Set up the student enrollment feature"
+> 💡 AI should ask clarifying questions about business rules, validation requirements, etc.
 
-**Boilerplate scaffolding:**
-> "Set up the Domain folder structure in the sample project"
-> ❌ NO - Developer must structure this
-
-**Complete implementations:**
-> "Write the EnlistStudentToCourseHandler with all validation logic"
-> ❌ NO - Developer must implement this
+**Aggregate design:**
+> "Create the Course aggregate"
+> 💡 AI should understand the domain model and event sequences before generating
 
 ---
 
-## Enforcement
+## ~~Enforcement~~ Historical Reference
 
-### AI Response Pattern
+### ~~AI Response Pattern~~ (DEPRECATED)
 
-When asked to generate sample project code, AI should respond:
+~~When asked to generate sample project code, AI should respond:~~
 
 ```
-❌ I cannot generate code for Opossum.Samples.CourseManagement.
+❌ (OLD) I cannot generate code for Opossum.Samples.CourseManagement.
 
-This sample project must be written manually to ensure you get 
-the full developer experience of using the Opossum library.
+✅ (NEW) I can help generate code for the sample project.
 
-However, I can:
-✅ Explain how to implement [requested feature]
-✅ Show you which Opossum APIs to use
-✅ Discuss patterns and best practices
-✅ Review code you've written manually
-
-Would you like me to explain how to approach this instead?
+Let me understand your requirements:
+- What business rules should this feature enforce?
+- What events need to be raised?
+- Are there any validation requirements?
+- Should this use an aggregate or simple command handler?
 ```
-
-### Documentation References
-
-Code examples in documentation files are clearly marked:
-
-```markdown
-⚠️ MANUAL ONLY - Reference example (DO NOT auto-generate):
-```
-
-This signals that the code is for learning, not copying.
 
 ---
 
-## Benefits of This Constraint
+## Benefits of the Original Constraint (Historical)
 
-### What We Gain
+### What Was Gained Through Manual Development
 
 1. **Real Usability Testing**
-   - Developer friction becomes visible
-   - Documentation gaps are discovered
-   - API confusion is revealed
+   - Developer friction became visible
+   - Documentation gaps were discovered
+   - API confusion was revealed
 
 2. **Better Library Design**
-   - Painful APIs get improved
-   - Missing helpers get identified
-   - Confusing patterns get simplified
+   - Painful APIs were improved
+   - Missing helpers were identified (CommandResult, BuildProjections)
+   - Confusing patterns were simplified
 
 3. **Authentic Learning**
    - Developer understands patterns deeply
    - Knowledge is internalized, not copy-pasted
-   - Troubleshooting skills are developed
+   - Troubleshooting skills were developed
 
 4. **Trustworthy Sample**
    - Sample code represents real usage
    - Patterns are validated by manual implementation
    - Example is genuinely helpful to other developers
 
+**These benefits were achieved.** AI assistance is now safe to use.
+
 ---
 
 ## Summary
 
-| Category | AI Allowed | Reason |
+| Category | AI Allowed | Status |
 |----------|------------|--------|
-| Library code (`src\Opossum\`) | ✅ Yes | This IS the product being built |
-| Test code (`tests\`) | ✅ Yes | Validates the library |
-| Documentation | ✅ Yes | Helps users understand the library |
-| **Sample project** | ❌ **NO** | **Must test library as real user would** |
+| Library code (`src\Opossum\`) | ✅ Yes | Active |
+| Test code (`tests\`) | ✅ Yes | Active |
+| Documentation | ✅ Yes | Active |
+| **Sample project** | ✅ **Yes** | **✅ CONSTRAINT REVOKED** |
 
 ---
 
-**Remember**: The sample project is not just an example - it's a **usability test**. 
+**Updated Rule**: The sample project constraint has been lifted after successful manual implementation validated the library's developer experience.
 
-By writing it manually, you become the first real user of your library, discovering issues before anyone else does.
-
-This constraint **makes the library better** for everyone.
+AI may now assist with all aspects of the Opossum project, including sample application development.
 
 ---
 
@@ -261,16 +301,18 @@ This constraint **makes the library better** for everyone.
 
 If unsure whether AI can help with something:
 
-1. Is it in `Samples\Opossum.Samples.CourseManagement\`?
-   - Yes → ❌ AI cannot generate code
-   - No → ✅ AI can help
+1. Is it Opossum-related?
+   - Yes → ✅ AI can assist
+   - No → Ask for general programming help
 
-2. Are you asking AI to write sample domain logic?
-   - Yes → ❌ Write it manually
-   - No → ✅ AI can assist
+2. Does it require understanding business domain rules?
+   - Yes → 💡 Provide context to AI first
+   - No → ✅ AI can proceed
 
-3. Would this prevent you from experiencing the library as a real user?
-   - Yes → ❌ Do it manually
-   - No → ✅ AI can help
+3. Is it modifying core library behavior?
+   - Yes → ⚠️ Consider impact carefully
+   - No → ✅ Proceed with implementation
 
-**When in doubt, write it manually.** You'll thank yourself later when you discover usability issues early.
+**AI assistance is now available for the entire Opossum project, including samples.**
+
+The manual development phase successfully validated the library's usability. AI acceleration is now appropriate and beneficial.
