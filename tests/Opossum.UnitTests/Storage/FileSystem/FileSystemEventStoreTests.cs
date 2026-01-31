@@ -124,8 +124,8 @@ public class FileSystemEventStoreTests : IDisposable
         await _store.AppendAsync(events, null);
 
         // Assert - Verify index files exist
-        var indexPath = Path.Combine(_tempRootPath, "TestContext", "index");
-        var eventTypeIndexPath = Path.Combine(indexPath, "eventtype", "TestEvent.json");
+        var indexPath = Path.Combine(_tempRootPath, "TestContext", "Indices");
+        var eventTypeIndexPath = Path.Combine(indexPath, "EventType", "TestEvent.json");
         Assert.True(File.Exists(eventTypeIndexPath));
     }
 
@@ -140,7 +140,7 @@ public class FileSystemEventStoreTests : IDisposable
         await _store.AppendAsync(events, null);
 
         // Assert
-        var tagIndexPath = Path.Combine(_tempRootPath, "TestContext", "index", "tag", "Environment_Production.json");
+        var tagIndexPath = Path.Combine(_tempRootPath, "TestContext", "Indices", "Tags", "Environment_Production.json");
         Assert.True(File.Exists(tagIndexPath));
     }
 
@@ -454,7 +454,7 @@ public class FileSystemEventStoreTests : IDisposable
 
         // Act - Append in batches
         await _store.AppendAsync(new[] { event1 }, null);
-        await _store.AppendAsync(new[] { event2, event3 }, null);
+        await _store.AppendAsync([event2, event3], null);
 
         // Assert - Verify positions
         Assert.Equal(1, event1.Position);
@@ -468,12 +468,12 @@ public class FileSystemEventStoreTests : IDisposable
         Assert.True(File.Exists(Path.Combine(eventsPath, "0000000003.json")));
 
         // Verify indices exist
-        var indexPath = Path.Combine(_tempRootPath, "TestContext", "index");
-        Assert.True(File.Exists(Path.Combine(indexPath, "eventtype", "OrderCreated.json")));
-        Assert.True(File.Exists(Path.Combine(indexPath, "eventtype", "OrderShipped.json")));
-        Assert.True(File.Exists(Path.Combine(indexPath, "tag", "Environment_Production.json")));
-        Assert.True(File.Exists(Path.Combine(indexPath, "tag", "Environment_Development.json")));
-        Assert.True(File.Exists(Path.Combine(indexPath, "tag", "Region_US-West.json")));
+        var indexPath = Path.Combine(_tempRootPath, "TestContext", "Indices");
+        Assert.True(File.Exists(Path.Combine(indexPath, "EventType", "OrderCreated.json")));
+        Assert.True(File.Exists(Path.Combine(indexPath, "EventType", "OrderShipped.json")));
+        Assert.True(File.Exists(Path.Combine(indexPath, "Tags", "Environment_Production.json")));
+        Assert.True(File.Exists(Path.Combine(indexPath, "Tags", "Environment_Development.json")));
+        Assert.True(File.Exists(Path.Combine(indexPath, "Tags", "Region_US-West.json")));
     }
 
     // ========================================================================

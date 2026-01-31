@@ -20,19 +20,22 @@ public static class Endpoint
             [FromServices] IMediator mediator) =>
         {
             var studentId = Guid.NewGuid();
+            
             var command = new RegisterStudentCommand(
                 StudentId: studentId,
                 FirstName: request.FirstName,
                 LastName: request.LastName,
                 Email: request.Email);
+
             var commandResult = await mediator.InvokeAsync<CommandResult>(command);
+
             if (!commandResult.Success)
             {
                 return Results.BadRequest(commandResult.ErrorMessage);
             }
             return Results.Created($"/students/{studentId}", new { id = studentId });
         })
-        .WithName("Students")
+        .WithName("RegisterStudent")
         .WithTags("Commands");
     }
 }

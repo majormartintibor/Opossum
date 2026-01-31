@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using Opossum.DependencyInjection;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.StudentRegistration;
+using Opossum.Samples.CourseManagement.StudentShortInfo;
+using Opossum.Samples.CourseManagement.StudentSubscription;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,7 +11,12 @@ builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
     options.AddContext("OpossumSampleApp");
+    //TODO: multiple context support
+    //options.AddContext("ExampleAdditionalContext");
 });
+
+// Add mediator for command/query handling
+builder.Services.AddMediator();
 
 // Add Swagger/OpenAPI support
 builder.Services.AddEndpointsApiExplorer();
@@ -40,6 +46,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapRegisterStudentEndpoint();
+app.MapGetStudentsShortInfoEndpoint();
+app.MapUpdateStudentSubscriptionEndpoint();
 
 app.Run();
 

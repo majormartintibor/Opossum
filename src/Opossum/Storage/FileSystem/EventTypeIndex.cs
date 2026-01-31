@@ -83,7 +83,7 @@ internal class EventTypeIndex
     {
         // Create a safe file name from event type
         var safeFileName = GetSafeFileName(eventType);
-        return Path.Combine(indexPath, "eventtype", $"{safeFileName}.json");
+        return Path.Combine(indexPath, "EventType", $"{safeFileName}.json");
     }
 
     /// <summary>

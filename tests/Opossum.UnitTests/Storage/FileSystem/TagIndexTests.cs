@@ -49,7 +49,7 @@ public class TagIndexTests : IDisposable
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
 
         // Assert
-        var tagDir = Path.Combine(_tempIndexPath, "tag");
+        var tagDir = Path.Combine(_tempIndexPath, "Tags");
         Assert.True(Directory.Exists(tagDir));
     }
 

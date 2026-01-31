@@ -3,27 +3,20 @@ namespace Opossum.Mediator;
 /// <summary>
 /// Default implementation of the mediator pattern
 /// </summary>
-public sealed class Mediator : IMediator
+public sealed class Mediator(
+    IServiceProvider serviceProvider, 
+    Dictionary<Type, IMessageHandler> handlers) : IMediator
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly Dictionary<Type, IMessageHandler> _handlers;
-    
-    public Mediator(IServiceProvider serviceProvider, Dictionary<Type, IMessageHandler> handlers)
-    {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-        _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
-    }
-    
+    private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+    private readonly Dictionary<Type, IMessageHandler> _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+
     public async Task<T> InvokeAsync<T>(
         object message, 
         CancellationToken cancellation = default, 
         TimeSpan? timeout = default)
     {
-        if (message == null)
-        {
-            throw new ArgumentNullException(nameof(message));
-        }
-        
+        ArgumentNullException.ThrowIfNull(message);
+
         var messageType = message.GetType();
         
         if (!_handlers.TryGetValue(messageType, out var handler))
@@ -36,12 +29,12 @@ public sealed class Mediator : IMediator
         using var cts = timeout.HasValue 
             ? CancellationTokenSource.CreateLinkedTokenSource(cancellation) 
             : null;
-        
-        if (cts != null)
+
+        if (timeout.HasValue)
         {
-            cts.CancelAfter(timeout.Value);
+            cts!.CancelAfter(timeout.Value);
         }
-        
+
         var effectiveToken = cts?.Token ?? cancellation;
         
         var response = await handler.HandleAsync(message, _serviceProvider, effectiveToken);

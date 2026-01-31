@@ -163,6 +163,6 @@ internal class IndexManager
     /// </summary>
     private static string GetIndexPath(string contextPath)
     {
-        return Path.Combine(contextPath, "index");
+        return Path.Combine(contextPath, "Indices");
     }
 }

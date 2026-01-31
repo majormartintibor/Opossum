@@ -87,7 +87,7 @@ internal class TagIndex
         // Create a safe file name from tag key and value
         var safeKey = GetSafeFileName(tag.Key);
         var safeValue = GetSafeFileName(tag.Value ?? "null");
-        return Path.Combine(indexPath, "tag", $"{safeKey}_{safeValue}.json");
+        return Path.Combine(indexPath, "Tags", $"{safeKey}_{safeValue}.json");
     }
 
     /// <summary>

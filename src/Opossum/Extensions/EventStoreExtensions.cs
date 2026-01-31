@@ -321,4 +321,45 @@ public static class EventStoreExtensions
 
         return eventStore.AppendAsync(sequencedEvents, condition);
     }
+
+    /// <summary>
+    /// Builds projection objects by grouping events by aggregate and applying them sequentially
+    /// </summary>
+    /// <typeparam name="TProjection">The projection type to build</typeparam>
+    /// <param name="events">Events to process</param>
+    /// <param name="aggregateIdSelector">Function to extract aggregate ID from each event</param>
+    /// <param name="applyEvent">Function to apply an event to the current projection state (null for first event of aggregate)</param>
+    /// <returns>Enumerable of built projections, one per unique aggregate ID</returns>
+    /// <example>
+    /// <code>
+    /// var students = events.BuildProjections&lt;StudentShortInfo&gt;(
+    ///     aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+    ///     applyEvent: (evt, current) => evt switch
+    ///     {
+    ///         StudentRegisteredEvent registered => new StudentShortInfo(...),
+    ///         StudentUpdatedEvent updated when current != null => current with { ... },
+    ///         _ => current
+    ///     }
+    /// );
+    /// </code>
+    /// </example>
+    public static IEnumerable<TProjection> BuildProjections<TProjection>(
+        this SequencedEvent[] events,
+        Func<SequencedEvent, string> aggregateIdSelector,
+        Func<IEvent, TProjection?, TProjection?> applyEvent)
+        where TProjection : class
+    {
+        ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(aggregateIdSelector);
+        ArgumentNullException.ThrowIfNull(applyEvent);
+
+        return events
+            .GroupBy(aggregateIdSelector)
+            .Select(eventGroup => eventGroup.Aggregate(
+                seed: (TProjection?)null,
+                func: (current, seqEvent) => applyEvent((IEvent)seqEvent.Event.Event, current)
+            ))
+            .Where(projection => projection != null)
+            .Cast<TProjection>();
+    }
 }

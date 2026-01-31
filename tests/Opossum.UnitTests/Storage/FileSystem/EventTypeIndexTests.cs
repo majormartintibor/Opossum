@@ -43,7 +43,7 @@ public class EventTypeIndexTests : IDisposable
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
 
         // Assert
-        var eventTypeDir = Path.Combine(_tempIndexPath, "eventtype");
+        var eventTypeDir = Path.Combine(_tempIndexPath, "EventType");
         Assert.True(Directory.Exists(eventTypeDir));
     }
 
