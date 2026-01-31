@@ -1,5 +1,6 @@
 using Opossum.DependencyInjection;
 using Opossum.Mediator;
+using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
@@ -45,9 +46,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// Sample App Endpoints Registration
 app.MapRegisterStudentEndpoint();
 app.MapGetStudentsShortInfoEndpoint();
 app.MapUpdateStudentSubscriptionEndpoint();
+app.MapCreateCourseEndpoint();
 
 app.Run();
 
