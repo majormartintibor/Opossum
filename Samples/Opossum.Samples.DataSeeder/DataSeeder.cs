@@ -267,7 +267,9 @@ public class DataSeeder
             }
 
             // Enroll student
-            var @event = new StudentEnrolledToCourseEvent(course.CourseId, student.StudentId)
+            var @event = new StudentEnrolledToCourseEvent(
+                CourseId: course.CourseId,
+                StudentId: student.StudentId)
                 .ToDomainEvent()
                 .WithTag("courseId", course.CourseId.ToString())
                 .WithTag("studentId", student.StudentId.ToString())

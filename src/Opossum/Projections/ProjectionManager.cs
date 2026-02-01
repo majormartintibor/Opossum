@@ -53,7 +53,7 @@ internal sealed class ProjectionManager : IProjectionManager
             }
 
             var store = new FileSystemProjectionStore<TState>(_options, definition.ProjectionName);
-            var registration = new ProjectionRegistration<TState>(definition, store);
+            var registration = new ProjectionRegistration<TState>(definition, store, _eventStore);
 
             _projections[definition.ProjectionName] = registration;
         }
@@ -195,11 +195,16 @@ internal sealed class ProjectionManager : IProjectionManager
     {
         private readonly IProjectionDefinition<TState> _definition;
         private readonly FileSystemProjectionStore<TState> _store;
+        private readonly IEventStore? _eventStore;
 
-        public ProjectionRegistration(IProjectionDefinition<TState> definition, FileSystemProjectionStore<TState> store)
+        public ProjectionRegistration(
+            IProjectionDefinition<TState> definition, 
+            FileSystemProjectionStore<TState> store,
+            IEventStore? eventStore = null)
         {
             _definition = definition;
             _store = store;
+            _eventStore = eventStore;
         }
 
         public override string[] EventTypes => _definition.EventTypes;
@@ -208,7 +213,30 @@ internal sealed class ProjectionManager : IProjectionManager
         {
             var key = _definition.KeySelector(evt);
             var current = await _store.GetAsync(key, cancellationToken);
-            var updated = _definition.Apply(current, evt.Event.Event);
+
+            TState? updated;
+
+            // Check if this is a multi-stream projection
+            if (_definition is IMultiStreamProjectionDefinition<TState> multiStreamProjection)
+            {
+                // Get related events query
+                var relatedQuery = multiStreamProjection.GetRelatedEventsQuery(evt.Event.Event);
+                SequencedEvent[] relatedEvents = [];
+
+                // Load related events if query is provided
+                if (relatedQuery != null && _eventStore != null)
+                {
+                    relatedEvents = await _eventStore.ReadAsync(relatedQuery, null);
+                }
+
+                // Apply with related events
+                updated = multiStreamProjection.Apply(current, evt.Event.Event, relatedEvents);
+            }
+            else
+            {
+                // Regular projection - apply without related events
+                updated = _definition.Apply(current, evt.Event.Event);
+            }
 
             if (updated == null)
             {
@@ -224,13 +252,13 @@ internal sealed class ProjectionManager : IProjectionManager
         public override async Task ClearAsync(CancellationToken cancellationToken)
         {
             var all = await _store.GetAllAsync(cancellationToken);
-            
+
             // Extract keys from state objects (assumes state has a property matching the key)
             // For now, we'll need to delete files directly
             var projectionPath = Path.Combine(_store.GetType().GetField("_projectionPath", 
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                 ?.GetValue(_store) as string ?? "");
-            
+
             if (Directory.Exists(projectionPath))
             {
                 foreach (var file in Directory.GetFiles(projectionPath, "*.json"))

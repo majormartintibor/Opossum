@@ -60,15 +60,7 @@ public static class Endpoint
             return Results.Ok(commandResult.Value);
         })
         .WithName("GetCourses")
-        .WithTags("Queries")
-        .WithOpenApi(operation =>
-        {
-            operation.Parameters[0].Description = "Page number (default: 1)";
-            operation.Parameters[1].Description = "Page size (default: 50)";
-            operation.Parameters[3].Description = "Sort field (default: Name)";
-            operation.Parameters[4].Description = "Sort order (default: Ascending)";
-            return operation;
-        });
+        .WithTags("Queries");
 
         // GET /courses/{courseId} - Get single course
         app.MapGet("/courses/{courseId:guid}", async (

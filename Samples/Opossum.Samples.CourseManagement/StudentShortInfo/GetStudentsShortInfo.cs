@@ -1,12 +1,7 @@
 ﻿using Opossum.Core;
-using Opossum.Extensions;
 using Opossum.Mediator;
 using Opossum.Projections;
-using Opossum.Samples.CourseManagement.CourseEnrollment;
-using Opossum.Samples.CourseManagement.EnrollmentTier;
 using Opossum.Samples.CourseManagement.Shared;
-using Opossum.Samples.CourseManagement.StudentRegistration;
-using Opossum.Samples.CourseManagement.StudentSubscription;
 using Tier = Opossum.Samples.CourseManagement.EnrollmentTier.EnrollmentTier;
 
 namespace Opossum.Samples.CourseManagement.StudentShortInfo;
@@ -74,16 +69,7 @@ public static class Endpoint
             return Results.Ok(commandResult.Value);
         })
         .WithName("GetStudents")
-        .WithTags("Queries")
-        .WithOpenApi(operation =>
-        {
-            operation.Parameters[0].Description = "Page number (default: 1)";
-            operation.Parameters[1].Description = "Page size (default: 50)";
-            operation.Parameters[4].Description = "Sort field (default: Name)";
-            operation.Parameters[5].Description = "Sort order (default: Ascending)";
-            operation.Parameters[6].Description = "Include enrollment counts (default: false)";
-            return operation;
-        });
+        .WithTags("Queries");
 
         // GET /students/{studentId} - Get single student
         app.MapGet("/students/{studentId:guid}", async (

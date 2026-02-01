@@ -1,9 +1,11 @@
 using Opossum.DependencyInjection;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.CourseCreation;
+using Opossum.Samples.CourseManagement.CourseDetails;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.CourseShortInfo;
 using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
+using Opossum.Samples.CourseManagement.StudentDetails;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
@@ -69,9 +71,11 @@ app.UseHttpsRedirection();
 // Sample App Endpoints Registration
 app.MapRegisterStudentEndpoint();
 app.MapGetStudentsShortInfoEndpoint();
+app.MapGetStudentDetailsEndpoint();
 app.MapUpdateStudentSubscriptionEndpoint();
 app.MapCreateCourseEndpoint();
 app.MapGetCoursesShortInfoEndpoint();
+app.MapGetCourseDetailsEndpoint();
 app.MapModifyCourseStudentLimitEndpoint();
 app.MapEnrollStudentToCourseEndpoint();
 
