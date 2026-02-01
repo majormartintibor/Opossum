@@ -87,6 +87,7 @@ public class DataSeeder
 
                 await _eventStore.AppendAsync(@event);
                 TotalEventsCreated++;
+                await Task.Delay(1); // Prevent file system lock contention
 
                 _students.Add((studentId, tier, GetMaxCoursesForTier(tier)));
 
@@ -123,6 +124,7 @@ public class DataSeeder
 
                 await _eventStore.AppendAsync(@event);
                 TotalEventsCreated++;
+                await Task.Delay(1); // Prevent file system lock contention
 
                 _courses.Add((courseId, courseName, capacity));
 
@@ -160,6 +162,7 @@ public class DataSeeder
 
             await _eventStore.AppendAsync(@event);
             TotalEventsCreated++;
+            await Task.Delay(1); // Prevent file system lock contention
 
             // Update in-memory list
             var index = _students.FindIndex(s => s.StudentId == studentId);
@@ -197,6 +200,7 @@ public class DataSeeder
 
             await _eventStore.AppendAsync(@event);
             TotalEventsCreated++;
+            await Task.Delay(1); // Prevent file system lock contention
 
             // Update in-memory list
             var index = _courses.FindIndex(c => c.CourseId == courseId);
@@ -271,6 +275,9 @@ public class DataSeeder
 
             await _eventStore.AppendAsync(@event);
             TotalEventsCreated++;
+
+            // Small delay to prevent file system lock contention (Windows)
+            await Task.Delay(1);
 
             // Update tracking
             courseEnrollments[course.CourseId]++;

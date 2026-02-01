@@ -13,14 +13,12 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">The service collection to add services to</param>
     /// <param name="configure">Optional configuration action for OpossumOptions</param>
-    /// <param name="enableProjectionDaemon">Enable projection daemon (not yet implemented)</param>
     /// <returns>The service collection for chaining</returns>
     /// <exception cref="ArgumentNullException">Thrown when services is null</exception>
     /// <exception cref="InvalidOperationException">Thrown when no contexts are configured</exception>
     public static IServiceCollection AddOpossum(
         this IServiceCollection services,
-        Action<OpossumOptions>? configure = null,
-        bool enableProjectionDaemon = true)
+        Action<OpossumOptions>? configure = null)
     {
         if (services == null)
         {
@@ -51,12 +49,6 @@ public static class ServiceCollectionExtensions
 
         // Register event store implementation
         services.AddSingleton<IEventStore, FileSystemEventStore>();
-
-        // TODO: Add projection daemon when implemented
-        // if (enableProjectionDaemon)
-        // {
-        //     services.AddHostedService<ProjectionDaemon>();
-        // }
 
         return services;
     }

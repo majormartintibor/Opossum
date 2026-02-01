@@ -370,8 +370,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
             {
                 options.RootPath = _testRootPath;
                 options.AddContext("CourseManagement");
-            },
-            enableProjectionDaemon: false);
+            });
 
         var serviceProvider = services.BuildServiceProvider();
 
@@ -393,8 +392,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
             {
                 options.RootPath = _testRootPath;
                 options.AddContext("CourseManagement");
-            },
-            enableProjectionDaemon: true);
+            });
 
         var serviceProvider = services.BuildServiceProvider();
 

@@ -19,6 +19,15 @@ builder.Services.AddOpossum(options =>
     //options.AddContext("ExampleAdditionalContext");
 });
 
+// Add projection system
+builder.Services.AddProjections(options =>
+{
+    options.ScanAssembly(typeof(Program).Assembly);
+    options.PollingInterval = TimeSpan.FromSeconds(5);
+    options.BatchSize = 1000;
+    options.EnableAutoRebuild = true;
+});
+
 // Add mediator for command/query handling
 builder.Services.AddMediator();
 

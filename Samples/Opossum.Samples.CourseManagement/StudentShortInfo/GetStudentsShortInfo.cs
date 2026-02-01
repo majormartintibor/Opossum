@@ -1,31 +1,68 @@
 ﻿using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
+using Opossum.Projections;
+using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.EnrollmentTier;
+using Opossum.Samples.CourseManagement.Shared;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentSubscription;
 using Tier = Opossum.Samples.CourseManagement.EnrollmentTier.EnrollmentTier;
 
 namespace Opossum.Samples.CourseManagement.StudentShortInfo;
 
-public sealed record GetStudentsShortInfoCommand();
+public sealed record GetStudentsShortInfoQuery(
+    int PageNumber = 1,
+    int PageSize = 50,
+    Tier? TierFilter = null,
+    bool? IsMaxedOut = null,
+    string? SortBy = null,  // "tier", "enrollmentCount", "name"
+    bool IncludeEnrollmentCounts = false  // NEW: Opt-in for enrollment counts
+) : PaginationQuery
+{
+    public new int PageNumber { get; init; } = PageNumber;
+    public new int PageSize { get; init; } = PageSize;
+}
+
 public sealed record GetStudentShortInfoCommand(Guid StudentId);
 
-public sealed record StudentShortInfo(Guid StudentId, string FirstName, string LastName, string Email, Tier EnrollmentTier)
+public sealed record StudentShortInfo(
+    Guid StudentId, 
+    string FirstName, 
+    string LastName, 
+    string Email, 
+    Tier EnrollmentTier,
+    int CurrentEnrollmentCount,
+    int MaxEnrollmentCount)
 {
-    public int MaxCoursesAllowed => StudentMaxCourseEnrollment.GetMaxCoursesAllowed(EnrollmentTier);
+    public bool IsMaxedOut => CurrentEnrollmentCount >= MaxEnrollmentCount;
 };
 
 public static class Endpoint
 {
     public static void MapGetStudentsShortInfoEndpoint(this IEndpointRouteBuilder app)
     {
-        // GET /students - List all students
+        // GET /students - List all students with pagination and filtering
         app.MapGet("/students", async (
+            [FromQuery] int pageNumber,
+            [FromQuery] int pageSize,
+            [FromQuery] Tier? tierFilter,
+            [FromQuery] bool? isMaxedOut,
+            [FromQuery] string? sortBy,
+            [FromQuery] bool includeEnrollmentCounts,
             [FromServices] IMediator mediator) =>
         {
-            var command = new GetStudentsShortInfoCommand();
-            var commandResult = await mediator.InvokeAsync<CommandResult<List<StudentShortInfo>>>(command);
+            // Apply defaults if not provided
+            var query = new GetStudentsShortInfoQuery(
+                PageNumber: pageNumber > 0 ? pageNumber : 1,
+                PageSize: pageSize > 0 ? pageSize : 50,
+                TierFilter: tierFilter,
+                IsMaxedOut: isMaxedOut,
+                SortBy: sortBy,
+                IncludeEnrollmentCounts: includeEnrollmentCounts
+            );
+
+            var commandResult = await mediator.InvokeAsync<CommandResult<PaginatedResponse<StudentShortInfo>>>(query);
 
             if (!commandResult.Success)
             {
@@ -59,38 +96,54 @@ public static class Endpoint
 
 public sealed class GetStudentsShortInfoCommandHandler()
 {
-    public async Task<CommandResult<List<StudentShortInfo>>> HandleAsync(
-        GetStudentsShortInfoCommand command,
-        IEventStore eventStore)
+    public async Task<CommandResult<PaginatedResponse<StudentShortInfo>>> HandleAsync(
+        GetStudentsShortInfoQuery query,
+        IProjectionStore<StudentShortInfo> projectionStore)
     {
-        var studentsShortInfoQuery = Query.FromItems(
-                new QueryItem
-                {
-                    Tags = [],
-                    EventTypes = [nameof(StudentRegisteredEvent), nameof(StudentSubscriptionUpdatedEvent)]
-                });
+        // Step 1: Load all students from projection store
+        var allStudents = await projectionStore.GetAllAsync();
 
-        var events = await eventStore.ReadAsync(studentsShortInfoQuery, ReadOption.None);
+        // Step 2: Apply filters
+        var filteredStudents = allStudents.AsEnumerable();
 
-        var studentsList = events.BuildProjections<StudentShortInfo>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
-            applyEvent: (evt, current) => evt switch
-            {
-                StudentRegisteredEvent registered => new StudentShortInfo(
-                    registered.StudentId,
-                    registered.FirstName,
-                    registered.LastName,
-                    registered.Email,
-                    Tier.Basic),
+        if (query.TierFilter.HasValue)
+        {
+            filteredStudents = filteredStudents.Where(s => s.EnrollmentTier == query.TierFilter.Value);
+        }
 
-                StudentSubscriptionUpdatedEvent updated when current != null => 
-                    current with { EnrollmentTier = updated.EnrollmentTier },
+        if (query.IsMaxedOut.HasValue)
+        {
+            filteredStudents = filteredStudents.Where(s => s.IsMaxedOut == query.IsMaxedOut.Value);
+        }
 
-                _ => current
-            }
-        ).ToList();
+        // Step 3: Apply sorting
+        filteredStudents = query.SortBy?.ToLowerInvariant() switch
+        {
+            "tier" => filteredStudents.OrderBy(s => s.EnrollmentTier),
+            "enrollmentcount" => filteredStudents.OrderByDescending(s => s.CurrentEnrollmentCount),
+            "name" => filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName),
+            _ => filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName) // Default sort by name
+        };
 
-        return CommandResult<List<StudentShortInfo>>.Ok(studentsList);
+        var sortedStudents = filteredStudents.ToList();
+
+        // Step 4: Apply pagination
+        var totalCount = sortedStudents.Count;
+        var paginatedStudents = sortedStudents
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToList();
+
+        // Step 5: Return paginated response
+        var response = new PaginatedResponse<StudentShortInfo>
+        {
+            Items = paginatedStudents,
+            TotalCount = totalCount,
+            PageNumber = query.PageNumber,
+            PageSize = query.PageSize
+        };
+
+        return CommandResult<PaginatedResponse<StudentShortInfo>>.Ok(response);
     }
 }
 
@@ -98,39 +151,9 @@ public sealed class GetStudentShortInfoCommandHandler()
 {
     public async Task<CommandResult<StudentShortInfo>> HandleAsync(
         GetStudentShortInfoCommand command,
-        IEventStore eventStore)
+        IProjectionStore<StudentShortInfo> projectionStore)
     {
-        var studentQuery = Query.FromItems(
-                new QueryItem
-                {
-                    Tags = [new Tag { Key = "studentId", Value = command.StudentId.ToString() }],
-                    EventTypes = [nameof(StudentRegisteredEvent), nameof(StudentSubscriptionUpdatedEvent)]
-                });
-
-        var events = await eventStore.ReadAsync(studentQuery, ReadOption.None);
-
-        if (events.Length == 0)
-        {
-            return CommandResult<StudentShortInfo>.Fail($"Student with ID {command.StudentId} not found.");
-        }
-
-        var student = events.BuildProjections<StudentShortInfo>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
-            applyEvent: (evt, current) => evt switch
-            {
-                StudentRegisteredEvent registered => new StudentShortInfo(
-                    registered.StudentId,
-                    registered.FirstName,
-                    registered.LastName,
-                    registered.Email,
-                    Tier.Basic),
-
-                StudentSubscriptionUpdatedEvent updated when current != null => 
-                    current with { EnrollmentTier = updated.EnrollmentTier },
-
-                _ => current
-            }
-        ).FirstOrDefault();
+        var student = await projectionStore.GetAsync(command.StudentId.ToString());
 
         if (student == null)
         {
