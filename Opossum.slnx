@@ -1,7 +1,6 @@
 <Solution>
   <Folder Name="/CopilotRules/">
     <File Path="CopilotRules/CodeingRules.MD" />
-    <File Path="CopilotRules/mediator-pattern.md" />
     <File Path="CopilotRules/nuget-package-management.md" />
     <File Path="CopilotRules/using-statements.md" />
     <File Path="CopilotRules/WorkflowRules.MD" />
