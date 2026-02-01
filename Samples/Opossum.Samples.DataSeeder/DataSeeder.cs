@@ -216,14 +216,22 @@ public class DataSeeder
     {
         int totalEnrollments = 0;
         int attempts = 0;
-        const int maxAttempts = 10000; // Prevent infinite loops
+        int skippedDuplicates = 0;
+        int skippedCapacity = 0;
+        int skippedStudentLimit = 0;
+        int maxAttempts = _config.StudentCount * 10; // More generous limit
 
         // Track enrollments per course and per student
         var courseEnrollments = _courses.ToDictionary(c => c.CourseId, _ => 0);
         var studentEnrollments = _students.ToDictionary(s => s.StudentId, _ => 0);
 
+        // Track unique student-course pairs to prevent duplicates
+        var enrolledPairs = new HashSet<(Guid StudentId, Guid CourseId)>();
+
         // Aim for ~5 enrollments per student on average
         var targetEnrollments = _config.StudentCount * 5;
+
+        Console.WriteLine($"   🎯 Target: {targetEnrollments} enrollments");
 
         while (totalEnrollments < targetEnrollments && attempts < maxAttempts)
         {
@@ -233,15 +241,24 @@ public class DataSeeder
             var student = _students[_random.Next(_students.Count)];
             var course = _courses[_random.Next(_courses.Count)];
 
+            // Check if this pair is already enrolled (DUPLICATE CHECK)
+            if (enrolledPairs.Contains((student.StudentId, course.CourseId)))
+            {
+                skippedDuplicates++;
+                continue; // Already enrolled
+            }
+
             // Check if student can enroll
             if (studentEnrollments[student.StudentId] >= student.MaxCourses)
             {
+                skippedStudentLimit++;
                 continue; // Student at limit
             }
 
             // Check if course has capacity
             if (courseEnrollments[course.CourseId] >= course.MaxCapacity)
             {
+                skippedCapacity++;
                 continue; // Course full
             }
 
@@ -255,17 +272,20 @@ public class DataSeeder
             await _eventStore.AppendAsync(@event);
             TotalEventsCreated++;
 
+            // Update tracking
             courseEnrollments[course.CourseId]++;
             studentEnrollments[student.StudentId]++;
+            enrolledPairs.Add((student.StudentId, course.CourseId));
             totalEnrollments++;
 
             if (totalEnrollments % 100 == 0)
             {
-                Console.Write($"   Enrolled {totalEnrollments} students (attempts: {attempts})...\r");
+                Console.Write($"   Enrolled {totalEnrollments}/{targetEnrollments} (attempts: {attempts}, skipped: {skippedDuplicates + skippedCapacity + skippedStudentLimit})...\r");
             }
         }
 
-        Console.WriteLine($"   ✅ Created {totalEnrollments} enrollments (attempts: {attempts}).       ");
+        Console.WriteLine($"   ✅ Created {totalEnrollments} enrollments in {attempts} attempts.                    ");
+        Console.WriteLine($"      Skipped - Duplicates: {skippedDuplicates}, Capacity: {skippedCapacity}, Student Limit: {skippedStudentLimit}");
     }
 
     // ============================================================================
