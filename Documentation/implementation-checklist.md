@@ -4,20 +4,6 @@ Use this checklist to track implementation progress. Check off items as you comp
 
 ---
 
-## ⚠️ IMPORTANT: Sample Project Development Constraint
-
-**`Opossum.Samples.CourseManagement` must be written MANUALLY without AI code generation.**
-
-Items marked with ⚠️ **MANUAL ONLY** are restricted from AI code generation:
-- ✅ You may ask AI questions about the library
-- ✅ AI may explain patterns and best practices
-- ❌ AI may NOT generate code for sample project files
-- ❌ AI may NOT create/modify files in `Samples\Opossum.Samples.CourseManagement\`
-
-This ensures you get the full developer experience of using the Opossum library.
-
----
-
 ## Phase 1: Independent Components (4 hours)
 
 These can be implemented in ANY order with ZERO dependencies:
@@ -54,18 +40,16 @@ These can be implemented in ANY order with ZERO dependencies:
   - [ ] Implement AppendEventsAsync() helper
   - [ ] Add XML documentation
 
-### Domain Models - Events ⚠️ MANUAL ONLY
+### Domain Models - Events
 - [ ] **Course Events** (`Samples\Opossum.Samples.CourseManagement\Domain\Events.cs`) **30 min**
-  - Developer must implement manually (no AI code generation)
   - [ ] Create StudentEnlistedToCourseEvent
   - [ ] Create StudentWithdrawnFromCourseEvent
   - [ ] Create CourseReachedCapacityEvent
   - [ ] Create CourseCapacityIncreasedEvent
   - [ ] Create CourseCreatedEvent
 
-### Domain Models - Aggregate ⚠️ MANUAL ONLY
+### Domain Models - Aggregate
 - [ ] **CourseEnlistmentAggregate** (`Samples\...\Domain\CourseEnlistmentAggregate.cs`) **45 min**
-  - Developer must implement manually (no AI code generation)
   - [ ] Define aggregate properties
   - [ ] Add IsStudentEnlisted() method
   - [ ] Add Apply(StudentEnlistedToCourseEvent) method
@@ -73,10 +57,10 @@ These can be implemented in ANY order with ZERO dependencies:
   - [ ] Add Apply(CourseCapacityIncreasedEvent) method
   - [ ] Add Apply(CourseCreatedEvent) method
   - [ ] Add Apply(CourseReachedCapacityEvent) method
+  - [ ] Add Apply(CourseReachedCapacityEvent) method
 
-### Domain Models - Commands ⚠️ MANUAL ONLY
+### Domain Models - Commands
 - [ ] **Commands & Queries** (`Samples\...\Domain\Commands.cs`) **20 min**
-  - Developer must implement manually (no AI code generation)
   - [ ] Create EnlistStudentToCourseCommand
   - [ ] Create WithdrawStudentFromCourseCommand
   - [ ] Create IncreaseCourseCapacityCommand
@@ -84,9 +68,8 @@ These can be implemented in ANY order with ZERO dependencies:
   - [ ] Create CommandResult record
   - [ ] Create CourseQueries static class with helper methods
 
-### Domain Models - Handlers ⚠️ MANUAL ONLY
+### Domain Models - Handlers
 - [ ] **Command Handlers** (`Samples\...\Domain\Handlers\*.cs`) **30 min**
-  - Developer must implement manually (no AI code generation)
   - [ ] Create EnlistStudentToCourseHandler
   - [ ] Implement validation logic
   - [ ] Implement event creation

@@ -12,24 +12,6 @@ Opossum provides event sourcing capabilities using the file system as storage ba
 
 ---
 
-## ⚠️ IMPORTANT: Development Constraints
-
-**The sample project (`Opossum.Samples.CourseManagement`) must be written MANUALLY without AI code generation.**
-
-This constraint ensures the full developer experience of using the library and helps identify usability issues early.
-
-### What This Means:
-
-- ✅ AI can implement library code in `src\Opossum\`
-- ✅ AI can create tests in `tests\` directories
-- ✅ AI can generate documentation
-- ❌ AI **cannot** generate code for `Samples\Opossum.Samples.CourseManagement\`
-- ❌ AI **cannot** create sample domain events, aggregates, commands, or handlers
-
-**See [Documentation/AI_CONSTRAINTS.md](./Documentation/AI_CONSTRAINTS.md) for complete details.**
-
----
-
 ## 🚀 Quick Start
 
 ### Installation (Future)
@@ -82,7 +64,7 @@ var sequencedEvents = await eventStore.ReadAsync("CourseManagement", query);
 ```
 Opossum/
 ├── src/
-│   └── Opossum/                    # Main library (✅ AI can implement)
+│   └── Opossum/                    # Main library
 │       ├── Configuration/          # ✅ COMPLETE - OpossumOptions
 │       ├── Core/                   # Query model, domain types
 │       ├── DependencyInjection/    # ✅ COMPLETE - ServiceCollectionExtensions
@@ -91,13 +73,12 @@ Opossum/
 │           └── FileSystem/        # ✅ COMPLETE - StorageInitializer
 │                                  # ⚠️ TODO - FileSystemEventStore
 ├── Samples/
-│   └── Opossum.Samples.CourseManagement/  # ⚠️ MANUAL ONLY - NO AI CODE GEN
-│       └── Domain/                        # Developer must write manually
+│   └── Opossum.Samples.CourseManagement/  # Example course management domain
+│       └── Domain/                        # Domain models and handlers
 ├── tests/
-│   ├── Opossum.UnitTests/         # ✅ AI can create tests
-│   └── Opossum.IntegrationTests/  # ✅ AI can create tests
-├── Documentation/                  # ✅ AI can generate docs
-│   ├── AI_CONSTRAINTS.md          # 🚫 AI implementation rules
+│   ├── Opossum.UnitTests/         # Unit tests
+│   └── Opossum.IntegrationTests/  # Integration tests
+├── Documentation/                  # Documentation
 │   ├── PROGRESS.md                # Implementation progress
 │   └── implementation-ready.md    # Component implementation guide
 └── Specification/                  # Reference documentation
@@ -135,7 +116,7 @@ Opossum/
 - Custom exception classes
 - ReadOption enum enhancements  
 - EventStore extension methods
-- **Sample domain models (MANUAL ONLY - no AI)**
+- Sample domain models
 
 ### Major Work Item: FileSystemEventStore (8-12 hours)
 
@@ -151,12 +132,19 @@ See [Documentation/PROGRESS.md](./Documentation/PROGRESS.md) for detailed status
 
 ## 📚 Documentation
 
-- **[Solution Review](./Documentation/solution-review.md)** - Comprehensive analysis
-- **[What to Build Now](./Documentation/what-to-build-now.md)** - Ready-to-implement items
-- **[Implementation Ready](./Documentation/implementation-ready.md)** - Detailed implementation guide
-- **[AI Constraints](./Documentation/AI_CONSTRAINTS.md)** - AI code generation rules
-- **[DCB Specification](./Specification/DCB-Specification.md)** - Core specification
-- **[Query Examples](./Documentation/query-examples.md)** - DCB query patterns
+### Getting Started
+- **[Quick Start](./Documentation/PROJECTIONS_QUICK_START.md)** - Add projections in 3 steps
+- **[Projection Architecture](./Documentation/PROJECTIONS_ARCHITECTURE.md)** - Design and patterns
+- **[Test Coverage](./Documentation/PROJECTIONS_TEST_COVERAGE.md)** - 71 projection tests explained
+
+### Reference
+- **[DCB Specification](./Specification/DCB-Specification.md)** - Core concurrency model
+- **[Query Examples](./Documentation/query-examples.md)** - Event query patterns
+
+### Implementation Details
+- **[Projections Implementation](./Documentation/PROJECTIONS_IMPLEMENTATION_SUMMARY.md)** - What was built
+- **[Solution Review](./Documentation/solution-review.md)** - Architecture analysis
+- **[Mediator Specification](./Specification/mediator-pattern-specification.md)** - Mediator design
 
 ---
 
@@ -207,22 +195,12 @@ Events are stored as JSON files in the following structure:
 
 ## 🤝 Contributing
 
-### For Library Development (AI Assisted)
-
-Work on these can use AI assistance:
+Contributions are welcome! Please feel free to submit pull requests for:
 - Core library features in `src/Opossum/`
 - Unit and integration tests
-- Documentation
-- Build scripts
-
-### For Sample Application (Manual Only)
-
-The sample project must be written manually:
-- Domain events, aggregates, commands
-- Command handlers
-- Application logic
-
-This ensures real usability testing of the library.
+- Documentation improvements
+- Sample applications and examples
+- Build and tooling enhancements
 
 ---
 

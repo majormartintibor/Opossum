@@ -88,31 +88,25 @@
 
 ### Phase 1 Remaining (Can work in parallel)
 
-> ⚠️ **Note**: Items marked **MANUAL ONLY** are part of `Opossum.Samples.CourseManagement` and must be written manually without AI code generation to ensure full developer experience.
-
-5. **Domain Events** (30 min) ⚠️ **MANUAL ONLY**
+5. **Domain Events** (30 min)
    - StudentEnlistedToCourseEvent
    - 4 other event types
    - **Dependencies**: None ✅
-   - **AI Restriction**: Developer must implement manually
 
-6. **Domain Aggregate** (45 min) ⚠️ **MANUAL ONLY**
+6. **Domain Aggregate** (45 min)
    - CourseEnlistmentAggregate
    - Apply() methods for events
    - **Dependencies**: Domain Events recommended
-   - **AI Restriction**: Developer must implement manually
 
-7. **Commands & Queries** (20 min) ⚠️ **MANUAL ONLY**
+7. **Commands & Queries** (20 min)
    - Command records
    - Query helper methods
    - **Dependencies**: None ✅
-   - **AI Restriction**: Developer must implement manually
 
-8. **Command Handlers** (30 min) ⚠️ **MANUAL ONLY**
+8. **Command Handlers** (30 min)
    - Business logic
    - Event creation
    - **Dependencies**: Domain Events, Aggregate
-   - **AI Restriction**: Developer must implement manually
 
 ---
 

@@ -66,34 +66,31 @@ For historical context on why this constraint existed and what was accomplished,
 
 ---
 
-### **Category 3: Domain Models** (~2 hours) ⚠️ **MANUAL DEVELOPMENT ONLY**
+### **Category 3: Domain Models** (~2 hours)
 
-> **🚫 AI IMPLEMENTATION RESTRICTED**  
-> These files are part of `Opossum.Samples.CourseManagement` and must be written manually to ensure full developer experience. AI may answer questions but cannot generate code for these items.
-
-#### 5. Course Management Events ⚠️ MANUAL ONLY
+#### 5. Course Management Events
 - **File**: `Samples\Opossum.Samples.CourseManagement\Domain\Events.cs` (new)
-- **Effort**: 30 minutes (developer manual work)
+- **Effort**: 30 minutes
 - **Events**: StudentEnlisted, StudentWithdrawn, CourseReachedCapacity, etc.
-- **Status**: Developer to implement manually
+- **Status**: To be implemented
 
-#### 6. CourseEnlistmentAggregate ⚠️ MANUAL ONLY
+#### 6. CourseEnlistmentAggregate
 - **File**: `Samples\Opossum.Samples.CourseManagement\Domain\CourseEnlistmentAggregate.cs` (new)
-- **Effort**: 45 minutes (developer manual work)
+- **Effort**: 45 minutes
 - **Purpose**: Event-sourced aggregate with Apply() methods
-- **Status**: Developer to implement manually
+- **Status**: To be implemented
 
-#### 7. Commands & Queries ⚠️ MANUAL ONLY
+#### 7. Commands & Queries
 - **File**: `Samples\Opossum.Samples.CourseManagement\Domain\Commands.cs` (new)
-- **Effort**: 20 minutes (developer manual work)
+- **Effort**: 20 minutes
 - **Purpose**: Command objects and query builders
-- **Status**: Developer to implement manually
+- **Status**: To be implemented
 
-#### 8. Command Handlers ⚠️ MANUAL ONLY
+#### 8. Command Handlers
 - **File**: `Samples\Opossum.Samples.CourseManagement\Domain\Handlers\*.cs` (new)
-- **Effort**: 30 minutes (developer manual work)
+- **Effort**: 30 minutes
 - **Purpose**: Business logic for commands
-- **Status**: Developer to implement manually
+- **Status**: To be implemented
 
 ---
 
@@ -135,14 +132,14 @@ For historical context on why this constraint existed and what was accomplished,
 
 ## 🎯 Recommended Implementation Sequence
 
-### **START HERE** (Can Begin Immediately with AI)
+### **START HERE** (Can Begin Immediately)
 ```
 1. OpossumOptions (30 min) ⭐ BLOCKING OTHERS - ✅ COMPLETE
 2. Custom Exceptions (30 min) ✅ INDEPENDENT
 3. ReadOption Enum (15 min) ✅ INDEPENDENT
 4. EventStore Extensions (1 hour) ✅ INDEPENDENT
 ```
-**Subtotal: ~2 hours of AI-assisted parallel-safe work**
+**Subtotal: ~2 hours of parallel-safe work**
 
 ---
 

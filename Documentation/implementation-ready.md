@@ -479,13 +479,13 @@ public static class CourseQueries
 
 ---
 
-### 4.4 Command Handlers ⚠️ MANUAL ONLY
+### 4.4 Command Handlers
 **File**: `Samples\Opossum.Samples.CourseManagement\Domain\Handlers\EnlistStudentToCourseHandler.cs` (to create)  
-**Status**: Doesn't exist - **Developer must create manually**  
-**Effort**: 30 minutes (manual development)  
+**Status**: Doesn't exist - To be created  
+**Effort**: 30 minutes  
 **Dependencies**: Events, Aggregate, Commands
 
-**Reference example** (DO NOT auto-generate):
+**Reference example**:
 ```csharp
 namespace Opossum.Samples.CourseManagement.Domain.Handlers;
 
