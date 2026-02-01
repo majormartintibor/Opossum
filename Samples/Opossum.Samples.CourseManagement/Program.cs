@@ -7,8 +7,22 @@ using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
+using Scalar.AspNetCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure JSON serialization to use string enums (for API responses)
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
+// Configure OpenAPI to use string enums (for Swagger schema)
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 // Add event sourcing framework
 builder.Services.AddOpossum(options =>
@@ -31,29 +45,23 @@ builder.Services.AddProjections(options =>
 // Add mediator for command/query handling
 builder.Services.AddMediator();
 
-// Add Swagger/OpenAPI support
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc("v1", new()
-    {
-        Title = "Sample API - Opossum Event Sourcing Sample",
-        Version = "v1",
-        Description = "A sample application demonstrating the Opossum event sourcing framework with CQRS"
-    });
-});
+// Add OpenAPI with native .NET support (respects JsonStringEnumConverter)
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure Swagger UI
+// Configure OpenAPI and Scalar UI
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
+    app.MapOpenApi(); // Native OpenAPI endpoint at /openapi/v1.json
+    app.MapScalarApiReference(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sample API v1");
-        options.RoutePrefix = string.Empty; // Serve Swagger UI at root
-    });
+        options.WithTitle("Opossum Event Sourcing API");
+        options.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+    }).RequireHost("*:*"); // Accessible at /scalar/v1
+
+    // Redirect root to Scalar UI
+    app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
 
 app.UseHttpsRedirection();

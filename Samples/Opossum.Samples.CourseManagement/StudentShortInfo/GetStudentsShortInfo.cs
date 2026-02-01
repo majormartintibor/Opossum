@@ -16,8 +16,9 @@ public sealed record GetStudentsShortInfoQuery(
     int PageSize = 50,
     Tier? TierFilter = null,
     bool? IsMaxedOut = null,
-    string? SortBy = null,  // "tier", "enrollmentCount", "name"
-    bool IncludeEnrollmentCounts = false  // NEW: Opt-in for enrollment counts
+    StudentSortField SortBy = StudentSortField.Name,
+    SortOrder SortOrder = SortOrder.Ascending,
+    bool IncludeEnrollmentCounts = false
 ) : PaginationQuery
 {
     public new int PageNumber { get; init; } = PageNumber;
@@ -44,21 +45,22 @@ public static class Endpoint
     {
         // GET /students - List all students with pagination and filtering
         app.MapGet("/students", async (
-            [FromQuery] int pageNumber,
-            [FromQuery] int pageSize,
-            [FromQuery] Tier? tierFilter,
-            [FromQuery] bool? isMaxedOut,
-            [FromQuery] string? sortBy,
-            [FromQuery] bool includeEnrollmentCounts,
-            [FromServices] IMediator mediator) =>
+            int pageNumber,
+            int pageSize,
+            Tier? tierFilter,
+            bool? isMaxedOut,
+            StudentSortField sortBy,
+            SortOrder sortOrder,
+            bool includeEnrollmentCounts,
+            IMediator mediator) =>
         {
-            // Apply defaults if not provided
             var query = new GetStudentsShortInfoQuery(
                 PageNumber: pageNumber > 0 ? pageNumber : 1,
                 PageSize: pageSize > 0 ? pageSize : 50,
                 TierFilter: tierFilter,
                 IsMaxedOut: isMaxedOut,
                 SortBy: sortBy,
+                SortOrder: sortOrder,
                 IncludeEnrollmentCounts: includeEnrollmentCounts
             );
 
@@ -72,7 +74,16 @@ public static class Endpoint
             return Results.Ok(commandResult.Value);
         })
         .WithName("GetStudents")
-        .WithTags("Queries");
+        .WithTags("Queries")
+        .WithOpenApi(operation =>
+        {
+            operation.Parameters[0].Description = "Page number (default: 1)";
+            operation.Parameters[1].Description = "Page size (default: 50)";
+            operation.Parameters[4].Description = "Sort field (default: Name)";
+            operation.Parameters[5].Description = "Sort order (default: Ascending)";
+            operation.Parameters[6].Description = "Include enrollment counts (default: false)";
+            return operation;
+        });
 
         // GET /students/{studentId} - Get single student
         app.MapGet("/students/{studentId:guid}", async (
@@ -117,19 +128,28 @@ public sealed class GetStudentsShortInfoCommandHandler()
         }
 
         // Step 3: Apply sorting
-        filteredStudents = query.SortBy?.ToLowerInvariant() switch
+        var sortedStudents = query.SortBy switch
         {
-            "tier" => filteredStudents.OrderBy(s => s.EnrollmentTier),
-            "enrollmentcount" => filteredStudents.OrderByDescending(s => s.CurrentEnrollmentCount),
-            "name" => filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName),
-            _ => filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName) // Default sort by name
+            StudentSortField.EnrollmentTier => query.SortOrder == SortOrder.Ascending
+                ? filteredStudents.OrderBy(s => s.EnrollmentTier)
+                : filteredStudents.OrderByDescending(s => s.EnrollmentTier),
+
+            StudentSortField.EnrollmentCount => query.SortOrder == SortOrder.Ascending
+                ? filteredStudents.OrderBy(s => s.CurrentEnrollmentCount)
+                : filteredStudents.OrderByDescending(s => s.CurrentEnrollmentCount),
+
+            StudentSortField.Name => query.SortOrder == SortOrder.Ascending
+                ? filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
+                : filteredStudents.OrderByDescending(s => s.LastName).ThenByDescending(s => s.FirstName),
+
+            _ => filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
         };
 
-        var sortedStudents = filteredStudents.ToList();
+        var studentList = sortedStudents.ToList();
 
         // Step 4: Apply pagination
-        var totalCount = sortedStudents.Count;
-        var paginatedStudents = sortedStudents
+        var totalCount = studentList.Count;
+        var paginatedStudents = studentList
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToList();

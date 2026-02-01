@@ -9,8 +9,9 @@ public sealed record GetCoursesShortInfoQuery(
     int PageNumber = 1,
     int PageSize = 50,
     bool? IsFull = null,
-    string? SortBy = null,  // "name", "enrollmentCount", "capacity"
-    bool IncludeEnrollmentCounts = false  // Opt-in for enrollment counts
+    CourseSortField SortBy = CourseSortField.Name,
+    SortOrder SortOrder = SortOrder.Ascending,
+    bool IncludeEnrollmentCounts = false
 ) : PaginationQuery
 {
     public new int PageNumber { get; init; } = PageNumber;
@@ -34,18 +35,19 @@ public static class Endpoint
     {
         // GET /courses - List all courses with pagination and filtering
         app.MapGet("/courses", async (
-            [FromQuery] int pageNumber,
-            [FromQuery] int pageSize,
-            [FromQuery] bool? isFull,
-            [FromQuery] string? sortBy,
-            [FromServices] IMediator mediator) =>
+            int pageNumber,
+            int pageSize,
+            bool? isFull,
+            CourseSortField sortBy,
+            SortOrder sortOrder,
+            IMediator mediator) =>
         {
-            // Apply defaults if not provided
             var query = new GetCoursesShortInfoQuery(
                 PageNumber: pageNumber > 0 ? pageNumber : 1,
                 PageSize: pageSize > 0 ? pageSize : 50,
                 IsFull: isFull,
-                SortBy: sortBy
+                SortBy: sortBy,
+                SortOrder: sortOrder
             );
 
             var commandResult = await mediator.InvokeAsync<CommandResult<PaginatedResponse<CourseShortInfo>>>(query);
@@ -58,7 +60,15 @@ public static class Endpoint
             return Results.Ok(commandResult.Value);
         })
         .WithName("GetCourses")
-        .WithTags("Queries");
+        .WithTags("Queries")
+        .WithOpenApi(operation =>
+        {
+            operation.Parameters[0].Description = "Page number (default: 1)";
+            operation.Parameters[1].Description = "Page size (default: 50)";
+            operation.Parameters[3].Description = "Sort field (default: Name)";
+            operation.Parameters[4].Description = "Sort order (default: Ascending)";
+            return operation;
+        });
 
         // GET /courses/{courseId} - Get single course
         app.MapGet("/courses/{courseId:guid}", async (
@@ -98,19 +108,28 @@ public sealed class GetCoursesShortInfoCommandHandler()
         }
 
         // Step 3: Apply sorting
-        filteredCourses = query.SortBy?.ToLowerInvariant() switch
+        var sortedCourses = query.SortBy switch
         {
-            "enrollmentcount" => filteredCourses.OrderByDescending(c => c.CurrentEnrollmentCount),
-            "capacity" => filteredCourses.OrderByDescending(c => c.MaxStudentCount),
-            "name" => filteredCourses.OrderBy(c => c.Name),
-            _ => filteredCourses.OrderBy(c => c.Name) // Default sort by name
+            CourseSortField.EnrollmentCount => query.SortOrder == SortOrder.Ascending
+                ? filteredCourses.OrderBy(c => c.CurrentEnrollmentCount)
+                : filteredCourses.OrderByDescending(c => c.CurrentEnrollmentCount),
+
+            CourseSortField.Capacity => query.SortOrder == SortOrder.Ascending
+                ? filteredCourses.OrderBy(c => c.MaxStudentCount)
+                : filteredCourses.OrderByDescending(c => c.MaxStudentCount),
+
+            CourseSortField.Name => query.SortOrder == SortOrder.Ascending
+                ? filteredCourses.OrderBy(c => c.Name)
+                : filteredCourses.OrderByDescending(c => c.Name),
+
+            _ => filteredCourses.OrderBy(c => c.Name)
         };
 
-        var sortedCourses = filteredCourses.ToList();
+        var courseList = sortedCourses.ToList();
 
         // Step 4: Apply pagination
-        var totalCount = sortedCourses.Count;
-        var paginatedCourses = sortedCourses
+        var totalCount = courseList.Count;
+        var paginatedCourses = courseList
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToList();
