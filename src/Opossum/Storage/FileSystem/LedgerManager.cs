@@ -45,9 +45,46 @@ internal sealed class LedgerManager
             return 0;
         }
 
+        // Retry logic for concurrent read/write scenarios
+        var maxRetries = 5;
+        var retryDelay = 10;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                // Use file locking to ensure thread-safe reads
+                using var fileStream = new FileStream(
+                    ledgerPath,
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read);
+
+                var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream);
+                return ledgerData?.LastSequencePosition ?? 0;
+            }
+            catch (JsonException)
+            {
+                // Ledger is corrupt - return 0 and let it be rebuilt
+                return 0;
+            }
+            catch (IOException) when (attempt < maxRetries - 1)
+            {
+                // File might be locked by a writer, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2;
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
+            {
+                // File might be being replaced, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2;
+            }
+        }
+
+        // Final attempt without catching IO exceptions
         try
         {
-            // Use file locking to ensure thread-safe reads
             using var fileStream = new FileStream(
                 ledgerPath,
                 FileMode.Open,
@@ -55,18 +92,11 @@ internal sealed class LedgerManager
                 FileShare.Read);
 
             var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream);
-
             return ledgerData?.LastSequencePosition ?? 0;
         }
         catch (JsonException)
         {
-            // Ledger is corrupt - return 0 and let it be rebuilt
             return 0;
-        }
-        catch (IOException)
-        {
-            // File is locked or inaccessible - retry or throw
-            throw;
         }
     }
 
@@ -113,8 +143,8 @@ internal sealed class LedgerManager
                 await fileStream.FlushAsync();
             }
 
-            // Atomic rename (overwrites existing ledger)
-            File.Move(tempPath, ledgerPath, overwrite: true);
+            // Atomic rename with retry logic to handle concurrent access
+            await AtomicMoveWithRetryAsync(tempPath, ledgerPath);
         }
         catch
         {
@@ -125,6 +155,38 @@ internal sealed class LedgerManager
             }
             throw;
         }
+    }
+
+    /// <summary>
+    /// Atomically moves a file with retry logic to handle concurrent access.
+    /// </summary>
+    private static async Task AtomicMoveWithRetryAsync(string sourcePath, string destinationPath, int maxRetries = 10)
+    {
+        var retryDelay = 20; // Start with 20ms
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                File.Move(sourcePath, destinationPath, overwrite: true);
+                return; // Success
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
+            {
+                // File might be locked by a reader, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2; // Exponential backoff
+            }
+            catch (IOException) when (attempt < maxRetries - 1)
+            {
+                // File might be in use, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2; // Exponential backoff
+            }
+        }
+
+        // Final attempt without catching exceptions
+        File.Move(sourcePath, destinationPath, overwrite: true);
     }
 
     /// <summary>

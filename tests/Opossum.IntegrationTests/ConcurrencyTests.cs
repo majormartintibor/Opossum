@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Opossum.Core;
 using Opossum.Exceptions;
 using Opossum.Extensions;
@@ -8,20 +9,27 @@ namespace Opossum.IntegrationTests;
 /// <summary>
 /// Tests for concurrent operations and optimistic concurrency control using AppendCondition.
 /// These tests validate the DCB specification's requirement that stale decision models must be rejected.
+/// 
+/// Uses IntegrationTestCollection to prevent parallel test execution and ensure proper file system isolation.
 /// </summary>
+[Collection(nameof(IntegrationTestCollection))]
 public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFixture>
 {
-    private readonly IMediator _mediator = fixture.Mediator;
-    private readonly IEventStore _eventStore = fixture.EventStore;
+    private readonly OpossumFixture _fixture = fixture;
 
     /// <summary>
     /// Scenario 1: Independent operations should execute successfully in parallel.
     /// RegisterStudentCommand and RenameCourseCommand have no overlapping decision models.
+    /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
     public async Task IndependentCommands_ShouldExecuteConcurrently_WithoutConflict()
     {
-        // Arrange
+        // Arrange - Use isolated scope
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
         var studentId = Guid.NewGuid();
         var courseId = Guid.NewGuid();
 
@@ -31,12 +39,12 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Task.Run(async () =>
             {
                 var registerCommand = new RegisterStudentCommand(studentId, "John Doe");
-                await _mediator.InvokeAsync<CommandResult>(registerCommand);
+                await mediator.InvokeAsync<CommandResult>(registerCommand);
             }),
             Task.Run(async () =>
             {
                 var createCourseCommand = new CreateCourseCommand(courseId, 30);
-                await _mediator.InvokeAsync<CommandResult>(createCourseCommand);
+                await mediator.InvokeAsync<CommandResult>(createCourseCommand);
             })
         };
 
@@ -46,8 +54,8 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var studentQuery = Query.FromEventTypes(nameof(StudentRegisteredEvent));
         var courseQuery = Query.FromEventTypes(nameof(CourseCreated));
 
-        var studentEvents = await _eventStore.ReadAsync(studentQuery);
-        var courseEvents = await _eventStore.ReadAsync(courseQuery);
+        var studentEvents = await eventStore.ReadAsync(studentQuery);
+        var courseEvents = await eventStore.ReadAsync(courseQuery);
 
         Assert.Contains(studentEvents, e => 
             ((StudentRegisteredEvent)e.Event.Event).StudentId == studentId);
@@ -59,25 +67,31 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Scenario 2: CRITICAL TEST - Two concurrent enrollments when course has only 1 spot left.
     /// Only ONE should succeed, the other MUST fail with ConcurrencyException.
     /// This validates the DCB specification's optimistic concurrency control.
+    /// Uses isolated scope for proper file system isolation during concurrent operations.
     /// </summary>
     [Fact]
     public async Task ConcurrentEnrollments_WhenCourseHasOneSpotLeft_ShouldAllowOnlyOne()
     {
-        // Arrange - Create course with capacity of 10, enroll 9 students
+        // Arrange - Use isolated scope to avoid file locking conflicts
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
+        // Create course with capacity of 10, enroll 9 students
         var courseId = Guid.NewGuid();
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, 10));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, 10));
 
         // Enroll 9 students to fill 9 out of 10 spots
         for (int i = 0; i < 9; i++)
         {
             var studentId = Guid.NewGuid();
-            await _mediator.InvokeAsync<CommandResult>(
+            await mediator.InvokeAsync<CommandResult>(
                 new EnrollStudentToCourseCommand(courseId, studentId));
         }
 
         // Verify we have 9 students enrolled
         var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
-        var events = await _eventStore.ReadAsync(courseQuery);
+        var events = await eventStore.ReadAsync(courseQuery);
         var enrolledCount = events.Count(e => e.Event.EventType == nameof(StudentEnrolledToCourseEvent));
         Assert.Equal(9, enrolledCount);
 
@@ -90,7 +104,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 try
                 {
-                    return await _mediator.InvokeAsync<CommandResult>(
+                    return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, student10Id));
                 }
                 catch (ConcurrencyException)
@@ -102,7 +116,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 try
                 {
-                    return await _mediator.InvokeAsync<CommandResult>(
+                    return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, student11Id));
                 }
                 catch (ConcurrencyException)
@@ -120,7 +134,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         Assert.Equal(1, failureCount);
 
         // Verify final enrollment count is exactly 10
-        events = await _eventStore.ReadAsync(courseQuery);
+        events = await eventStore.ReadAsync(courseQuery);
         enrolledCount = events.Count(e => e.Event.EventType == nameof(StudentEnrolledToCourseEvent));
         Assert.Equal(10, enrolledCount);
     }
@@ -128,25 +142,30 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// <summary>
     /// Scenario 3: Multiple concurrent enrollments to different courses should all succeed.
     /// This validates that locking is per-context and doesn't create false conflicts.
+    /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
     public async Task ConcurrentEnrollments_ToDifferentCourses_ShouldAllSucceed()
     {
-        // Arrange
+        // Arrange - Use isolated scope
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
         var studentId = Guid.NewGuid();
         var course1Id = Guid.NewGuid();
         var course2Id = Guid.NewGuid();
         var course3Id = Guid.NewGuid();
 
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course1Id, 30));
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course2Id, 30));
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course3Id, 30));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course1Id, 30));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course2Id, 30));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course3Id, 30));
 
         // Act - Enroll same student to 3 different courses simultaneously
         var results = await Task.WhenAll(
-            _mediator.InvokeAsync<CommandResult>(new EnrollStudentToCourseCommand(course1Id, studentId)),
-            _mediator.InvokeAsync<CommandResult>(new EnrollStudentToCourseCommand(course2Id, studentId)),
-            _mediator.InvokeAsync<CommandResult>(new EnrollStudentToCourseCommand(course3Id, studentId))
+            mediator.InvokeAsync<CommandResult>(new EnrollStudentToCourseCommand(course1Id, studentId)),
+            mediator.InvokeAsync<CommandResult>(new EnrollStudentToCourseCommand(course2Id, studentId)),
+            mediator.InvokeAsync<CommandResult>(new EnrollStudentToCourseCommand(course3Id, studentId))
         );
 
         // Assert - All should succeed (student limit is 5, enrolling in 3 courses)
@@ -161,28 +180,33 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             }
         );
 
-        var studentEvents = await _eventStore.ReadAsync(studentQuery);
+        var studentEvents = await eventStore.ReadAsync(studentQuery);
         Assert.Equal(3, studentEvents.Length);
     }
 
     /// <summary>
     /// Scenario 4: Same student trying to enroll in same course twice should fail.
     /// This tests idempotency and duplicate detection.
+    /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
     public async Task ConcurrentEnrollments_SameStudentSameCourse_ShouldOnlyAllowOnce()
     {
-        // Arrange
+        // Arrange - Use isolated scope
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
         var studentId = Guid.NewGuid();
         var courseId = Guid.NewGuid();
 
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, 30));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, 30));
 
         // Act - Try to enroll same student twice simultaneously
         var results = await Task.WhenAll(
-            Task.Run(() => _mediator.InvokeAsync<CommandResult>(
+            Task.Run(() => mediator.InvokeAsync<CommandResult>(
                 new EnrollStudentToCourseCommand(courseId, studentId))),
-            Task.Run(() => _mediator.InvokeAsync<CommandResult>(
+            Task.Run(() => mediator.InvokeAsync<CommandResult>(
                 new EnrollStudentToCourseCommand(courseId, studentId)))
         );
 
@@ -201,7 +225,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             }
         );
 
-        var events = await _eventStore.ReadAsync(query);
+        var events = await eventStore.ReadAsync(query);
         
         // Should only have 1 enrollment event (not 2)
         // The second attempt should either:
@@ -214,16 +238,21 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// <summary>
     /// Scenario 5: Stress test - Many concurrent enrollments to same course.
     /// Only the first N (up to capacity) should succeed.
+    /// Uses isolated service scope to prevent file locking issues during concurrent operations.
     /// </summary>
     [Fact]
     public async Task ConcurrentEnrollments_ManyStudentsOneCourse_ShouldRespectCapacity()
     {
-        // Arrange
+        // Arrange - Use isolated scope to avoid file locking conflicts
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
         var courseId = Guid.NewGuid();
         var capacity = 10;
         var attemptCount = 20; // 20 students try to enroll in course with capacity of 10
 
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, capacity));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, capacity));
 
         // Act - 20 students try to enroll simultaneously
         var tasks = Enumerable.Range(0, attemptCount)
@@ -232,7 +261,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 try
                 {
-                    return await _mediator.InvokeAsync<CommandResult>(
+                    return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, studentId));
                 }
                 catch (ConcurrencyException)
@@ -253,7 +282,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
 
         // Verify exactly 10 enrollment events exist
         var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
-        var events = await _eventStore.ReadAsync(courseQuery);
+        var events = await eventStore.ReadAsync(courseQuery);
         var enrolledCount = events.Count(e => e.Event.EventType == nameof(StudentEnrolledToCourseEvent));
 
         Assert.Equal(capacity, enrolledCount);
@@ -262,25 +291,29 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// <summary>
     /// Scenario 6: Test that failed operations release the lock properly.
     /// A failed append should not block subsequent operations.
+    /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
     public async Task FailedAppend_ShouldReleaseLock_AllowingSubsequentOperations()
     {
-        // Arrange
+        // Arrange - Use isolated scope
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+
         var courseId = Guid.NewGuid();
         var studentId = Guid.NewGuid();
 
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, 1));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(courseId, 1));
 
         // Act - First enrollment succeeds
-        var result1 = await _mediator.InvokeAsync<CommandResult>(
+        var result1 = await mediator.InvokeAsync<CommandResult>(
             new EnrollStudentToCourseCommand(courseId, studentId));
 
         Assert.True(result1.Success);
 
         // Second enrollment fails (course full)
         var student2Id = Guid.NewGuid();
-        var result2 = await _mediator.InvokeAsync<CommandResult>(
+        var result2 = await mediator.InvokeAsync<CommandResult>(
             new EnrollStudentToCourseCommand(courseId, student2Id));
 
         Assert.False(result2.Success);
@@ -288,9 +321,9 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         // Third operation should work (proves lock was released after failure)
         var student3Id = Guid.NewGuid();
         var course2Id = Guid.NewGuid();
-        await _mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course2Id, 1));
+        await mediator.InvokeAsync<CommandResult>(new CreateCourseCommand(course2Id, 1));
 
-        var result3 = await _mediator.InvokeAsync<CommandResult>(
+        var result3 = await mediator.InvokeAsync<CommandResult>(
             new EnrollStudentToCourseCommand(course2Id, student3Id));
 
         Assert.True(result3.Success); // Should succeed - proves lock works correctly
@@ -299,11 +332,15 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// <summary>
     /// Scenario 7: Test AppendCondition with AfterSequencePosition.
     /// Direct EventStore test without mediator.
+    /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
     public async Task AppendAsync_WithAfterSequencePosition_ShouldDetectStaleReads()
     {
-        // Arrange
+        // Arrange - Use isolated scope
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
         var courseId = Guid.NewGuid();
         var studentId = Guid.NewGuid();
 
@@ -319,11 +356,11 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        await _eventStore.AppendAsync([createEvent], null);
+        await eventStore.AppendAsync([createEvent], null);
 
         // Read events and note the position
         var query = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
-        var events = await _eventStore.ReadAsync(query);
+        var events = await eventStore.ReadAsync(query);
         var lastPosition = events[^1].Position;
 
         // Another operation appends an event (simulating concurrent modification)
@@ -338,7 +375,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        await _eventStore.AppendAsync([concurrentEvent], null);
+        await eventStore.AppendAsync([concurrentEvent], null);
 
         // Act - Try to append with stale AfterSequencePosition
         var appendCondition = new AppendCondition
@@ -360,17 +397,21 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
 
         // Assert - Should throw ConcurrencyException
         await Assert.ThrowsAsync<ConcurrencyException>(async () =>
-            await _eventStore.AppendAsync([newEvent], appendCondition));
+            await eventStore.AppendAsync([newEvent], appendCondition));
     }
 
     /// <summary>
     /// Scenario 8: Test AppendCondition with FailIfEventsMatch.
     /// Direct EventStore test without mediator.
+    /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
     public async Task AppendAsync_WithFailIfEventsMatch_ShouldDetectConflictingEvents()
     {
-        // Arrange
+        // Arrange - Use isolated scope
+        using var scope = _fixture.GetIsolatedServiceScope();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+
         var courseId = Guid.NewGuid();
 
         // Create initial event
@@ -385,7 +426,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        await _eventStore.AppendAsync([createEvent], null);
+        await eventStore.AppendAsync([createEvent], null);
 
         // Append a conflicting event
         var enrollEvent = new SequencedEvent
@@ -399,7 +440,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        await _eventStore.AppendAsync([enrollEvent], null);
+        await eventStore.AppendAsync([enrollEvent], null);
 
         // Act - Try to append with condition that should fail
         var conflictQuery = Query.FromItems(
@@ -428,7 +469,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
 
         // Assert - Should throw ConcurrencyException
         await Assert.ThrowsAsync<ConcurrencyException>(async () =>
-            await _eventStore.AppendAsync([newEvent], appendCondition));
+            await eventStore.AppendAsync([newEvent], appendCondition));
     }
 }
 

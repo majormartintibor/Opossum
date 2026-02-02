@@ -12,8 +12,7 @@ public sealed record GetStudentsShortInfoQuery(
     Tier? TierFilter = null,
     bool? IsMaxedOut = null,
     StudentSortField SortBy = StudentSortField.Name,
-    SortOrder SortOrder = SortOrder.Ascending,
-    bool IncludeEnrollmentCounts = false
+    SortOrder SortOrder = SortOrder.Ascending
 ) : PaginationQuery
 {
     public new int PageNumber { get; init; } = PageNumber;
@@ -46,7 +45,6 @@ public static class Endpoint
             bool? isMaxedOut,
             StudentSortField sortBy,
             SortOrder sortOrder,
-            bool includeEnrollmentCounts,
             IMediator mediator) =>
         {
             var query = new GetStudentsShortInfoQuery(
@@ -55,8 +53,7 @@ public static class Endpoint
                 TierFilter: tierFilter,
                 IsMaxedOut: isMaxedOut,
                 SortBy: sortBy,
-                SortOrder: sortOrder,
-                IncludeEnrollmentCounts: includeEnrollmentCounts
+                SortOrder: sortOrder
             );
 
             var commandResult = await mediator.InvokeAsync<CommandResult<PaginatedResponse<StudentShortInfo>>>(query);

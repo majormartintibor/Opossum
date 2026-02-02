@@ -6,6 +6,7 @@ namespace Opossum.Storage.FileSystem;
 /// <summary>
 /// Manages an index of event positions by event type.
 /// Stores positions in JSON files organized by event type.
+/// Thread-safe: Uses internal locking to protect Read-Modify-Write operations.
 /// </summary>
 internal class EventTypeIndex
 {
@@ -14,9 +15,14 @@ internal class EventTypeIndex
         WriteIndented = true
     };
 
+    // Per-instance lock for defense in depth
+    // Protects Read-Modify-Write operations on index files
+    private readonly SemaphoreSlim _lock = new(1, 1);
+
     /// <summary>
     /// Adds a position to the index for a specific event type.
     /// Creates the index file if it doesn't exist.
+    /// Thread-safe: Protected by internal semaphore.
     /// </summary>
     public async Task AddPositionAsync(string indexPath, string eventType, long position)
     {
@@ -29,18 +35,27 @@ internal class EventTypeIndex
 
         var indexFilePath = GetIndexFilePath(indexPath, eventType);
 
-        // Read existing positions or create new list
-        var positions = await ReadPositionsAsync(indexFilePath);
-
-        // Add position if not already present
-        if (!positions.Contains(position))
+        // Acquire lock for Read-Modify-Write atomic operation
+        await _lock.WaitAsync();
+        try
         {
-            positions.Add(position);
-            positions.Sort(); // Keep positions sorted
-        }
+            // Read existing positions or create new list
+            var positions = await ReadPositionsAsync(indexFilePath);
 
-        // Write updated positions atomically
-        await WritePositionsAsync(indexFilePath, positions);
+            // Add position if not already present
+            if (!positions.Contains(position))
+            {
+                positions.Add(position);
+                positions.Sort(); // Keep positions sorted
+            }
+
+            // Write updated positions atomically
+            await WritePositionsAsync(indexFilePath, positions);
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     /// <summary>
@@ -108,6 +123,38 @@ internal class EventTypeIndex
             return [];
         }
 
+        // Retry logic for concurrent read/write scenarios
+        var maxRetries = 5;
+        var retryDelay = 10;
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                var json = await File.ReadAllTextAsync(indexFilePath);
+                var indexData = JsonSerializer.Deserialize<IndexData>(json);
+                return indexData?.Positions ?? [];
+            }
+            catch (JsonException)
+            {
+                // Handle corrupted index file by returning empty list
+                return [];
+            }
+            catch (IOException) when (attempt < maxRetries - 1)
+            {
+                // File might be locked by a writer, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2;
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
+            {
+                // File might be being replaced, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2;
+            }
+        }
+
+        // Final attempt without catching IO exceptions
         try
         {
             var json = await File.ReadAllTextAsync(indexFilePath);
@@ -116,7 +163,6 @@ internal class EventTypeIndex
         }
         catch (JsonException)
         {
-            // Handle corrupted index file by returning empty list
             return [];
         }
     }
@@ -138,10 +184,49 @@ internal class EventTypeIndex
 
         // Write to temp file first
         var tempFilePath = $"{indexFilePath}.tmp.{Guid.NewGuid():N}";
-        await File.WriteAllTextAsync(tempFilePath, json);
 
-        // Atomic replace
-        File.Move(tempFilePath, indexFilePath, overwrite: true);
+        // Use FileStream to ensure file is properly closed before move
+        await using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
+        await using (var writer = new StreamWriter(fileStream))
+        {
+            await writer.WriteAsync(json);
+            await writer.FlushAsync();
+        } // FileStream is disposed here, ensuring file handle is released
+
+        // Atomic replace with retry logic
+        await AtomicMoveWithRetryAsync(tempFilePath, indexFilePath);
+    }
+
+    /// <summary>
+    /// Atomically moves a file with retry logic to handle concurrent access.
+    /// </summary>
+    private static async Task AtomicMoveWithRetryAsync(string sourcePath, string destinationPath, int maxRetries = 10)
+    {
+        var retryDelay = 20; // Start with 20ms
+
+        for (int attempt = 0; attempt < maxRetries; attempt++)
+        {
+            try
+            {
+                File.Move(sourcePath, destinationPath, overwrite: true);
+                return; // Success
+            }
+            catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
+            {
+                // File might be locked by a reader, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2; // Exponential backoff
+            }
+            catch (IOException) when (attempt < maxRetries - 1)
+            {
+                // File might be in use, wait and retry
+                await Task.Delay(retryDelay);
+                retryDelay *= 2; // Exponential backoff
+            }
+        }
+
+        // Final attempt without catching exceptions
+        File.Move(sourcePath, destinationPath, overwrite: true);
     }
 
     /// <summary>
