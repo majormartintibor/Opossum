@@ -1,16 +1,16 @@
 <Solution>
-  <Folder Name="/CopilotRules/">
-    <File Path="CopilotRules/CodeingRules.MD" />
-    <File Path="CopilotRules/nuget-package-management.md" />
-    <File Path="CopilotRules/using-statements.md" />
-    <File Path="CopilotRules/WorkflowRules.MD" />
+  <Folder Name="/.github/">
+    <File Path=".github/copilot-instructions.md" />
   </Folder>
-  <Folder Name="/Documentation/" />
+  <Folder Name="/.github/workflows/" />
+  <Folder Name="/docs/" />
   <Folder Name="/Samples/">
     <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />
     <Project Path="Samples/Opossum.Samples.DataSeeder/Opossum.Samples.DataSeeder.csproj" Id="d2fb5b4e-cee3-48f1-b61e-9db18a950231" />
   </Folder>
   <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="Directory.Packages.props" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Specification/">
