@@ -3,10 +3,7 @@
     <File Path=".github/copilot-instructions.md" />
   </Folder>
   <Folder Name="/.github/workflows/" />
-  <Folder Name="/docs/">
-    <File Path="docs/README.md" />
-    <File Path="docs/REFACTORING_SUMMARY.md" />
-  </Folder>
+  <Folder Name="/docs/" />
   <Folder Name="/Samples/">
     <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />
     <Project Path="Samples/Opossum.Samples.DataSeeder/Opossum.Samples.DataSeeder.csproj" Id="d2fb5b4e-cee3-48f1-b61e-9db18a950231" />
