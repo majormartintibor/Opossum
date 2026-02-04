@@ -126,8 +126,14 @@ public sealed class EnrollStudentToCourseCommandHandler()
         //    - If new events exist → our aggregate state is stale → append fails ❌
         // 
         // B) FailIfEventsMatch (Business Rule Enforcement):
-        //    - Additional check for specific business rule violations
-        //    - E.g., prevent duplicate enrollments that might slip through
+        //    - Explicit, fast-fail check for duplicate enrollments
+        //    - While AfterSequencePosition WOULD catch duplicates (by detecting the stale read),
+        //      FailIfEventsMatch provides:
+        //      1. Performance: O(1) pattern match vs O(n) aggregate rebuild. AfterSequencePosition fail triggers retry with re-reading all events, rebuilding aggregate, etc.
+        //      2. Clarity: Explicit "duplicate check" vs ambiguous "state changed"
+        //      3. Robustness: Works even if enrollmentQuery is refactored to exclude enrollments
+        //      4. Defense in depth: Two independent layers of protection
+        //    - Without this, duplicate prevention relies on enrollmentQuery breadth (fragile)
         // 
         // Race conditions prevented:
         // 
