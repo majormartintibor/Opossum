@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Opossum.Configuration;
+using Opossum.Core;
 
 namespace Opossum.Projections;
 
@@ -11,13 +12,20 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 {
     private readonly string _projectionPath;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly ProjectionTagIndex _tagIndex;
+    private readonly IProjectionTagProvider<TState>? _tagProvider;
+    private readonly Dictionary<string, List<Tag>> _projectionTags = new();
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
         PropertyNameCaseInsensitive = true
     };
 
-    public FileSystemProjectionStore(OpossumOptions options, string projectionName)
+    public FileSystemProjectionStore(
+        OpossumOptions options, 
+        string projectionName,
+        IProjectionTagProvider<TState>? tagProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
@@ -29,6 +37,8 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
         var contextPath = Path.Combine(options.RootPath, options.Contexts[0]);
         _projectionPath = Path.Combine(contextPath, "Projections", projectionName);
+        _tagProvider = tagProvider;
+        _tagIndex = new ProjectionTagIndex();
 
         Directory.CreateDirectory(_projectionPath);
     }
@@ -93,6 +103,70 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         return all.Where(predicate).ToList();
     }
 
+    public async Task<IReadOnlyList<TState>> QueryByTagAsync(Tag tag, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+
+        if (_tagProvider == null)
+        {
+            // No tag provider configured - fall back to GetAllAsync with filter
+            return Array.Empty<TState>();
+        }
+
+        var keys = await _tagIndex.GetProjectionKeysByTagAsync(_projectionPath, tag);
+        var results = new List<TState>(keys.Length);
+
+        foreach (var key in keys)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var state = await GetAsync(key, cancellationToken);
+            if (state != null)
+            {
+                results.Add(state);
+            }
+        }
+
+        return results;
+    }
+
+    public async Task<IReadOnlyList<TState>> QueryByTagsAsync(IEnumerable<Tag> tags, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(tags);
+
+        var tagArray = tags.ToArray();
+        if (tagArray.Length == 0)
+        {
+            return Array.Empty<TState>();
+        }
+
+        if (_tagProvider == null)
+        {
+            // No tag provider configured - return empty
+            return Array.Empty<TState>();
+        }
+
+        if (tagArray.Length == 1)
+        {
+            return await QueryByTagAsync(tagArray[0], cancellationToken);
+        }
+
+        // Multi-tag query (AND logic)
+        var keys = await _tagIndex.GetProjectionKeysByTagsAsync(_projectionPath, tagArray);
+        var results = new List<TState>(keys.Length);
+
+        foreach (var key in keys)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var state = await GetAsync(key, cancellationToken);
+            if (state != null)
+            {
+                results.Add(state);
+            }
+        }
+
+        return results;
+    }
+
     public async Task SaveAsync(string key, TState state, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
@@ -100,11 +174,58 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
         var filePath = GetFilePath(key);
 
+        // Extract tags if provider is configured
+        List<Tag>? newTags = null;
+        if (_tagProvider != null)
+        {
+            try
+            {
+                newTags = _tagProvider.GetTags(state).ToList();
+            }
+            catch (Exception ex)
+            {
+                // Fail-fast: tag extraction failure prevents save
+                throw new InvalidOperationException(
+                    $"Failed to extract tags from projection state for key '{key}'. " +
+                    $"Tag provider: {_tagProvider.GetType().Name}",
+                    ex);
+            }
+        }
+
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            // Save projection file
             var json = JsonSerializer.Serialize(state, _jsonOptions);
             await File.WriteAllTextAsync(filePath, json, cancellationToken);
+
+            // Update tag indices if tags are configured
+            if (newTags != null)
+            {
+                // Get old tags if projection existed before
+                _projectionTags.TryGetValue(key, out var oldTags);
+
+                if (oldTags != null)
+                {
+                    // Update indices: remove old tags, add new tags
+                    await _tagIndex.UpdateProjectionTagsAsync(
+                        _projectionPath,
+                        key,
+                        oldTags,
+                        newTags);
+                }
+                else
+                {
+                    // New projection: just add tags
+                    foreach (var tag in newTags)
+                    {
+                        await _tagIndex.AddProjectionAsync(_projectionPath, tag, key);
+                    }
+                }
+
+                // Update in-memory tracking
+                _projectionTags[key] = newTags;
+            }
         }
         finally
         {
@@ -126,12 +247,33 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         await _lock.WaitAsync(cancellationToken);
         try
         {
+            // Delete projection file
             File.Delete(filePath);
+
+            // Remove from tag indices if tags were tracked
+            if (_projectionTags.TryGetValue(key, out var tags))
+            {
+                foreach (var tag in tags)
+                {
+                    await _tagIndex.RemoveProjectionAsync(_projectionPath, tag, key);
+                }
+                _projectionTags.Remove(key);
+            }
         }
         finally
         {
             _lock.Release();
         }
+    }
+
+    /// <summary>
+    /// Internal method to delete all indices for this projection.
+    /// Used during rebuild to ensure clean state.
+    /// </summary>
+    internal void DeleteAllIndices()
+    {
+        _tagIndex.DeleteAllIndices(_projectionPath);
+        _projectionTags.Clear();
     }
 
     private string GetFilePath(string key)

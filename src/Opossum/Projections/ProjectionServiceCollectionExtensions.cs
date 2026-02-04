@@ -88,16 +88,42 @@ public static class ProjectionServiceCollectionExtensions
                     var definitionInterfaceType = typeof(IProjectionDefinition<>).MakeGenericType(stateType);
                     services.AddSingleton(definitionInterfaceType, instance);
 
+                    // Check for ProjectionTags attribute and register tag provider
+                    var tagsAttribute = projectionType.GetCustomAttribute<ProjectionTagsAttribute>();
+                    Type? tagProviderType = null;
+
+                    if (tagsAttribute != null)
+                    {
+                        tagProviderType = tagsAttribute.TagProviderType;
+
+                        // Store tag provider type in options for later use
+                        options.TagProviders[projectionName] = tagProviderType;
+
+                        // Register tag provider as singleton in DI
+                        var tagProviderInterface = typeof(IProjectionTagProvider<>).MakeGenericType(stateType);
+                        services.AddSingleton(tagProviderInterface, tagProviderType);
+                    }
+
                     // Register the projection store for this specific state type using a factory
                     var storeInterfaceType = typeof(IProjectionStore<>).MakeGenericType(stateType);
                     var capturedProjectionName = projectionName; // Capture for closure
                     var capturedStateType = stateType; // Capture for closure
+                    var capturedTagProviderType = tagProviderType; // Capture for closure
 
                     services.AddSingleton(storeInterfaceType, sp =>
                     {
                         var opts = sp.GetRequiredService<OpossumOptions>();
                         var storeType = typeof(FileSystemProjectionStore<>).MakeGenericType(capturedStateType);
-                        return Activator.CreateInstance(storeType, opts, capturedProjectionName)!;
+
+                        // Get tag provider instance if registered
+                        object? tagProvider = null;
+                        if (capturedTagProviderType != null)
+                        {
+                            var tagProviderInterfaceType = typeof(IProjectionTagProvider<>).MakeGenericType(capturedStateType);
+                            tagProvider = sp.GetService(tagProviderInterfaceType);
+                        }
+
+                        return Activator.CreateInstance(storeType, opts, capturedProjectionName, tagProvider)!;
                     });
                 }
                 catch (Exception)

@@ -13,6 +13,7 @@ namespace Opossum.Samples.CourseManagement.StudentShortInfo;
 /// Projection definition for StudentShortInfo materialized view
 /// </summary>
 [ProjectionDefinition("StudentShortInfo")]
+[ProjectionTags(typeof(StudentShortInfoTagProvider))]
 public sealed class StudentShortInfoProjection : IProjectionDefinition<StudentShortInfo>
 {
     public string ProjectionName => "StudentShortInfo";

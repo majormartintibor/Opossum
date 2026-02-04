@@ -94,50 +94,62 @@ public sealed class GetStudentsShortInfoCommandHandler()
         GetStudentsShortInfoQuery query,
         IProjectionStore<StudentShortInfo> projectionStore)
     {
-        // Step 1: Load all students from projection store
-        var allStudents = await projectionStore.GetAllAsync();
+        // Step 1: Query students using tag indices (much more efficient than GetAllAsync)
+        IReadOnlyList<StudentShortInfo> students;
 
-        // Step 2: Apply filters
-        var filteredStudents = allStudents.AsEnumerable();
+        // Build tag list based on filters
+        var tags = new List<Tag>();
 
         if (query.TierFilter.HasValue)
         {
-            filteredStudents = filteredStudents.Where(s => s.EnrollmentTier == query.TierFilter.Value);
+            tags.Add(new Tag { Key = "EnrollmentTier", Value = query.TierFilter.Value.ToString() });
         }
 
         if (query.IsMaxedOut.HasValue)
         {
-            filteredStudents = filteredStudents.Where(s => s.IsMaxedOut == query.IsMaxedOut.Value);
+            tags.Add(new Tag { Key = "IsMaxedOut", Value = query.IsMaxedOut.Value.ToString() });
         }
 
-        // Step 3: Apply sorting
+        // Use tag indices if filters are specified, otherwise get all
+        if (tags.Count > 0)
+        {
+            // Query by tags (AND logic) - only loads matching students from indices
+            students = await projectionStore.QueryByTagsAsync(tags);
+        }
+        else
+        {
+            // No filters - load all students
+            students = await projectionStore.GetAllAsync();
+        }
+
+        // Step 2: Apply sorting (in-memory on filtered subset)
         var sortedStudents = query.SortBy switch
         {
             StudentSortField.EnrollmentTier => query.SortOrder == SortOrder.Ascending
-                ? filteredStudents.OrderBy(s => s.EnrollmentTier)
-                : filteredStudents.OrderByDescending(s => s.EnrollmentTier),
+                ? students.OrderBy(s => s.EnrollmentTier)
+                : students.OrderByDescending(s => s.EnrollmentTier),
 
             StudentSortField.EnrollmentCount => query.SortOrder == SortOrder.Ascending
-                ? filteredStudents.OrderBy(s => s.CurrentEnrollmentCount)
-                : filteredStudents.OrderByDescending(s => s.CurrentEnrollmentCount),
+                ? students.OrderBy(s => s.CurrentEnrollmentCount)
+                : students.OrderByDescending(s => s.CurrentEnrollmentCount),
 
             StudentSortField.Name => query.SortOrder == SortOrder.Ascending
-                ? filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
-                : filteredStudents.OrderByDescending(s => s.LastName).ThenByDescending(s => s.FirstName),
+                ? students.OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
+                : students.OrderByDescending(s => s.LastName).ThenByDescending(s => s.FirstName),
 
-            _ => filteredStudents.OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
+            _ => students.OrderBy(s => s.LastName).ThenBy(s => s.FirstName)
         };
 
         var studentList = sortedStudents.ToList();
 
-        // Step 4: Apply pagination
+        // Step 3: Apply pagination
         var totalCount = studentList.Count;
         var paginatedStudents = studentList
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToList();
 
-        // Step 5: Return paginated response
+        // Step 4: Return paginated response
         var response = new PaginatedResponse<StudentShortInfo>
         {
             Items = paginatedStudents,

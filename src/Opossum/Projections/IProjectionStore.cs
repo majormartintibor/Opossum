@@ -1,3 +1,5 @@
+using Opossum.Core;
+
 namespace Opossum.Projections;
 
 /// <summary>
@@ -28,6 +30,27 @@ public interface IProjectionStore<TState> where TState : class
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Filtered list of projection instances</returns>
     Task<IReadOnlyList<TState>> QueryAsync(Func<TState, bool> predicate, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Queries projection instances by a single tag using the tag index.
+    /// Much more efficient than GetAllAsync when projections have tag providers configured.
+    /// Returns empty list if tag index doesn't exist.
+    /// </summary>
+    /// <param name="tag">The tag to query (case-insensitive comparison)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of projection instances matching the tag</returns>
+    Task<IReadOnlyList<TState>> QueryByTagAsync(Tag tag, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Queries projection instances by multiple tags using tag indices (AND logic).
+    /// Returns only projections that match ALL specified tags.
+    /// Much more efficient than GetAllAsync when projections have tag providers configured.
+    /// Returns empty list if any tag index doesn't exist.
+    /// </summary>
+    /// <param name="tags">The tags to query (all must match, case-insensitive comparison)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>List of projection instances matching all tags</returns>
+    Task<IReadOnlyList<TState>> QueryByTagsAsync(IEnumerable<Tag> tags, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Saves or updates a projection instance (internal use by ProjectionManager)

@@ -31,6 +31,12 @@ public sealed class ProjectionOptions
     public List<Assembly> ScanAssemblies { get; } = new();
 
     /// <summary>
+    /// Discovered tag providers mapped by projection name.
+    /// Populated during assembly scanning.
+    /// </summary>
+    internal Dictionary<string, Type> TagProviders { get; } = new();
+
+    /// <summary>
     /// Adds an assembly to scan for projection definitions
     /// </summary>
     /// <param name="assembly">Assembly to scan</param>
@@ -38,12 +44,12 @@ public sealed class ProjectionOptions
     public ProjectionOptions ScanAssembly(Assembly assembly)
     {
         ArgumentNullException.ThrowIfNull(assembly);
-        
+
         if (!ScanAssemblies.Contains(assembly))
         {
             ScanAssemblies.Add(assembly);
         }
-        
+
         return this;
     }
 }

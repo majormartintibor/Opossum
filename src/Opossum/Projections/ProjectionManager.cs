@@ -11,6 +11,7 @@ internal sealed class ProjectionManager : IProjectionManager
 {
     private readonly OpossumOptions _options;
     private readonly IEventStore _eventStore;
+    private readonly IServiceProvider _serviceProvider;
     private readonly string _checkpointPath;
     private readonly Dictionary<string, ProjectionRegistration> _projections = new();
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -21,13 +22,15 @@ internal sealed class ProjectionManager : IProjectionManager
         PropertyNameCaseInsensitive = true
     };
 
-    public ProjectionManager(OpossumOptions options, IEventStore eventStore)
+    public ProjectionManager(OpossumOptions options, IEventStore eventStore, IServiceProvider serviceProvider)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(serviceProvider);
 
         _options = options;
         _eventStore = eventStore;
+        _serviceProvider = serviceProvider;
 
         if (options.Contexts.Count == 0)
         {
@@ -52,7 +55,15 @@ internal sealed class ProjectionManager : IProjectionManager
                 throw new InvalidOperationException($"Projection '{definition.ProjectionName}' is already registered");
             }
 
-            var store = new FileSystemProjectionStore<TState>(_options, definition.ProjectionName);
+            // Resolve store from DI (includes tag provider if configured)
+            var storeType = typeof(IProjectionStore<>).MakeGenericType(typeof(TState));
+            var store = _serviceProvider.GetRequiredService(storeType) as IProjectionStore<TState>;
+
+            if (store == null)
+            {
+                throw new InvalidOperationException($"Could not resolve projection store for {typeof(TState).Name}");
+            }
+
             var registration = new ProjectionRegistration<TState>(definition, store, _eventStore);
 
             _projections[definition.ProjectionName] = registration;
@@ -194,12 +205,12 @@ internal sealed class ProjectionManager : IProjectionManager
     private sealed class ProjectionRegistration<TState> : ProjectionRegistration where TState : class
     {
         private readonly IProjectionDefinition<TState> _definition;
-        private readonly FileSystemProjectionStore<TState> _store;
+        private readonly IProjectionStore<TState> _store;
         private readonly IEventStore? _eventStore;
 
         public ProjectionRegistration(
             IProjectionDefinition<TState> definition, 
-            FileSystemProjectionStore<TState> store,
+            IProjectionStore<TState> store,
             IEventStore? eventStore = null)
         {
             _definition = definition;
@@ -251,19 +262,24 @@ internal sealed class ProjectionManager : IProjectionManager
 
         public override async Task ClearAsync(CancellationToken cancellationToken)
         {
-            var all = await _store.GetAllAsync(cancellationToken);
-
-            // Extract keys from state objects (assumes state has a property matching the key)
-            // For now, we'll need to delete files directly
-            var projectionPath = Path.Combine(_store.GetType().GetField("_projectionPath", 
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                ?.GetValue(_store) as string ?? "");
-
-            if (Directory.Exists(projectionPath))
+            // Delete all projection files and indices
+            // Cast to FileSystemProjectionStore to access DeleteAllIndices method
+            if (_store is FileSystemProjectionStore<TState> fsStore)
             {
-                foreach (var file in Directory.GetFiles(projectionPath, "*.json"))
+                // Delete indices first
+                fsStore.DeleteAllIndices();
+
+                // Then delete projection files
+                var projectionPath = fsStore.GetType().GetField("_projectionPath", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    ?.GetValue(fsStore) as string ?? "";
+
+                if (Directory.Exists(projectionPath))
                 {
-                    File.Delete(file);
+                    foreach (var file in Directory.GetFiles(projectionPath, "*.json"))
+                    {
+                        File.Delete(file);
+                    }
                 }
             }
         }

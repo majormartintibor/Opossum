@@ -88,45 +88,49 @@ public sealed class GetCoursesShortInfoCommandHandler()
         GetCoursesShortInfoQuery query,
         IProjectionStore<CourseShortInfo> projectionStore)
     {
-        // Step 1: Load all courses from projection store
-        var allCourses = await projectionStore.GetAllAsync();
-
-        // Step 2: Apply filters
-        var filteredCourses = allCourses.AsEnumerable();
+        // Step 1: Query courses using tag index if filter is specified
+        IReadOnlyList<CourseShortInfo> courses;
 
         if (query.IsFull.HasValue)
         {
-            filteredCourses = filteredCourses.Where(c => c.IsFull == query.IsFull.Value);
+            // Use tag index - only loads courses matching the IsFull filter
+            courses = await projectionStore.QueryByTagAsync(
+                new Tag { Key = "IsFull", Value = query.IsFull.Value.ToString() });
+        }
+        else
+        {
+            // No filter - load all courses
+            courses = await projectionStore.GetAllAsync();
         }
 
-        // Step 3: Apply sorting
+        // Step 2: Apply sorting (in-memory on filtered subset)
         var sortedCourses = query.SortBy switch
         {
             CourseSortField.EnrollmentCount => query.SortOrder == SortOrder.Ascending
-                ? filteredCourses.OrderBy(c => c.CurrentEnrollmentCount)
-                : filteredCourses.OrderByDescending(c => c.CurrentEnrollmentCount),
+                ? courses.OrderBy(c => c.CurrentEnrollmentCount)
+                : courses.OrderByDescending(c => c.CurrentEnrollmentCount),
 
             CourseSortField.Capacity => query.SortOrder == SortOrder.Ascending
-                ? filteredCourses.OrderBy(c => c.MaxStudentCount)
-                : filteredCourses.OrderByDescending(c => c.MaxStudentCount),
+                ? courses.OrderBy(c => c.MaxStudentCount)
+                : courses.OrderByDescending(c => c.MaxStudentCount),
 
             CourseSortField.Name => query.SortOrder == SortOrder.Ascending
-                ? filteredCourses.OrderBy(c => c.Name)
-                : filteredCourses.OrderByDescending(c => c.Name),
+                ? courses.OrderBy(c => c.Name)
+                : courses.OrderByDescending(c => c.Name),
 
-            _ => filteredCourses.OrderBy(c => c.Name)
+            _ => courses.OrderBy(c => c.Name)
         };
 
         var courseList = sortedCourses.ToList();
 
-        // Step 4: Apply pagination
+        // Step 3: Apply pagination
         var totalCount = courseList.Count;
         var paginatedCourses = courseList
             .Skip((query.PageNumber - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToList();
 
-        // Step 5: Return paginated response
+        // Step 4: Return paginated response
         var response = new PaginatedResponse<CourseShortInfo>
         {
             Items = paginatedCourses,

@@ -11,6 +11,7 @@ namespace Opossum.Samples.CourseManagement.CourseShortInfo;
 /// Projection definition for CourseShortInfo materialized view
 /// </summary>
 [ProjectionDefinition("CourseShortInfo")]
+[ProjectionTags(typeof(CourseShortInfoTagProvider))]
 public sealed class CourseShortInfoProjection : IProjectionDefinition<CourseShortInfo>
 {
     public string ProjectionName => "CourseShortInfo";
