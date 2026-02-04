@@ -72,7 +72,26 @@ public sealed class RegisterStudentCommandHandler()
             .WithTag("studentEmail", command.Email)
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        // Append to event store        
+        // Append to event store with optimistic concurrency control using DCB
+        // 
+        // Dynamic Consistency Boundary (DCB) Pattern:
+        // We enforce email uniqueness across ALL students (the consistency boundary).
+        // 
+        // Between our validation check (line 63) and this append, another concurrent request
+        // might have registered a student with the same email. The AppendCondition ensures
+        // atomicity by re-checking the condition at append time:
+        // 
+        // 1. If NO events match validateEmailNotTakenQuery → Append succeeds ✅
+        // 2. If ANY event matches (email was taken) → Append fails, throws exception ❌
+        // 
+        // This prevents the race condition:
+        //   Thread A: Check email → available
+        //   Thread B: Check email → available  
+        //   Thread B: Append event → success
+        //   Thread A: Append event → MUST FAIL (email now taken)
+        // 
+        // The FailIfEventsMatch condition acts as an optimistic lock, ensuring the consistency
+        // boundary (unique emails) is maintained without requiring distributed transactions.
         await eventStore.AppendAsync(
             sequencedEvent,
             condition: new AppendCondition() { FailIfEventsMatch = validateEmailNotTakenQuery });

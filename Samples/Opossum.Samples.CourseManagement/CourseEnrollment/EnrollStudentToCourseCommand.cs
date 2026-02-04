@@ -104,13 +104,54 @@ public sealed class EnrollStudentToCourseCommandHandler()
             .WithTag("studentId", command.StudentId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        // Append with condition to prevent race conditions
         var appendCondition = new AppendCondition
         {
             AfterSequencePosition = events.Length > 0 ? events.Max(e => e.Position) : null,
             FailIfEventsMatch = command.GetFailIfMatchQuery()
         };
 
+        // Append with Dynamic Consistency Boundary (DCB) spanning multiple aggregates
+        // 
+        // This is a complex DCB scenario where the consistency boundary includes:
+        //   1. Course aggregate (capacity limit)
+        //   2. Student aggregate (enrollment limit per tier)
+        //   3. Course-Student relationship (no duplicate enrollments)
+        // 
+        // We use TWO append conditions to maintain consistency:
+        // 
+        // A) AfterSequencePosition (Optimistic Concurrency):
+        //    - We read all relevant events up to position X
+        //    - We built our aggregate state based on those events
+        //    - Condition ensures NO new relevant events were added since position X
+        //    - If new events exist → our aggregate state is stale → append fails ❌
+        // 
+        // B) FailIfEventsMatch (Business Rule Enforcement):
+        //    - Additional check for specific business rule violations
+        //    - E.g., prevent duplicate enrollments that might slip through
+        // 
+        // Race conditions prevented:
+        // 
+        //   Scenario 1: Course capacity exceeded
+        //     Thread A: Read → 9/10 enrolled, enroll student → 10/10 ✅
+        //     Thread B: Read → 9/10 enrolled, enroll student → would be 11/10 ❌
+        //     → AfterSequencePosition ensures Thread B fails because Thread A's event
+        //       was appended after Thread B's read
+        // 
+        //   Scenario 2: Student enrollment limit exceeded
+        //     Thread A: Read → student has 2/3 courses, enroll → 3/3 ✅
+        //     Thread B: Read → student has 2/3 courses, enroll → would be 4/3 ❌
+        //     → Same protection as Scenario 1
+        // 
+        //   Scenario 3: Duplicate enrollment
+        //     Thread A: Read → not enrolled, enroll → success ✅
+        //     Thread B: Read → not enrolled, enroll → duplicate ❌
+        //     → FailIfEventsMatch catches duplicate enrollment attempts
+        // 
+        // If append fails (AppendConditionFailedException), the retry logic (lines 23-44)
+        // will re-read events, rebuild aggregate, re-check invariants, and try again with
+        // updated conditions. This optimistic concurrency pattern handles expected conflicts
+        // gracefully without requiring distributed locks or two-phase commit.
+        // 
         // This will throw AppendConditionFailedException if there's a conflict
         await eventStore.AppendAsync(sequencedEvent, appendCondition);
 
