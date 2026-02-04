@@ -231,3 +231,56 @@ Never use "D:\\Database" directly in tests.
 ### New features
 When adding new features make sure to add sufficient unit and integration tests to cover the new functionality.
 All tests must pass before committing new code.
+
+## Definition of Done
+
+A feature or task is ONLY considered complete when ALL of the following criteria are met:
+
+### 1. Code Quality
+- ✅ All code compiles successfully (`dotnet build`)
+- ✅ No compiler warnings introduced
+- ✅ Follows all copilot-instructions rules (namespaces, usings, etc.)
+- ✅ Code is properly documented with XML comments where appropriate
+
+### 2. Testing - MANDATORY
+- ✅ **ALL existing tests pass** - Run full test suite:
+  ```bash
+  dotnet test tests/Opossum.UnitTests/Opossum.UnitTests.csproj
+  dotnet test tests/Opossum.IntegrationTests/Opossum.IntegrationTests.csproj
+  ```
+- ✅ New unit tests added for new functionality
+- ✅ New integration tests added for new features
+- ✅ Test coverage is sufficient (edge cases, error conditions, happy paths)
+- ✅ All new tests pass
+
+### 3. Documentation
+- ✅ All .md files placed in `docs` folder
+- ✅ Feature documentation written (if applicable)
+- ✅ Code comments updated (if needed)
+- ✅ README updated (if needed)
+
+### 4. Verification Checklist
+
+Before claiming "Implementation Complete", you MUST explicitly confirm:
+
+```markdown
+## Pre-Completion Verification
+
+- [ ] ✅ Build successful: `dotnet build`
+- [ ] ✅ Unit tests passing: `dotnet test tests/Opossum.UnitTests/`
+- [ ] ✅ Integration tests passing: `dotnet test tests/Opossum.IntegrationTests/`
+- [ ] ✅ Sample app runs without errors (if applicable)
+- [ ] ✅ No breaking changes to existing APIs
+- [ ] ✅ All documentation updated
+- [ ] ✅ Copilot-instructions followed
+```
+
+### 5. Breaking Changes
+
+If you introduce breaking changes:
+- ✅ Explicitly document them
+- ✅ Update all affected tests
+- ✅ Update sample applications
+- ✅ Get explicit approval from the user BEFORE implementation
+
+**NEVER claim a feature is complete without running the full test suite and confirming all tests pass.**

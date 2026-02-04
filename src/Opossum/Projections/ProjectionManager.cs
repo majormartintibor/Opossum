@@ -55,13 +55,20 @@ internal sealed class ProjectionManager : IProjectionManager
                 throw new InvalidOperationException($"Projection '{definition.ProjectionName}' is already registered");
             }
 
-            // Resolve store from DI (includes tag provider if configured)
+            // Try to resolve store from DI first (for auto-discovered projections with tag providers)
             var storeType = typeof(IProjectionStore<>).MakeGenericType(typeof(TState));
-            var store = _serviceProvider.GetRequiredService(storeType) as IProjectionStore<TState>;
+            var store = _serviceProvider.GetService(storeType) as IProjectionStore<TState>;
+
+            // If not in DI, create manually (for manual registration in tests or without tag providers)
+            if (store == null)
+            {
+                var fileSystemStoreType = typeof(FileSystemProjectionStore<>).MakeGenericType(typeof(TState));
+                store = Activator.CreateInstance(fileSystemStoreType, _options, definition.ProjectionName, null) as IProjectionStore<TState>;
+            }
 
             if (store == null)
             {
-                throw new InvalidOperationException($"Could not resolve projection store for {typeof(TState).Name}");
+                throw new InvalidOperationException($"Could not create or resolve projection store for {typeof(TState).Name}");
             }
 
             var registration = new ProjectionRegistration<TState>(definition, store, _eventStore);
