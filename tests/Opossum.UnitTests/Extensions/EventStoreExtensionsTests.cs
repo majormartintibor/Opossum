@@ -1,20 +1,15 @@
-using Moq;
 using Opossum.Core;
 using Opossum.Extensions;
 
 namespace Opossum.UnitTests.Extensions;
 
 /// <summary>
-/// Unit tests for EventStoreExtensions
+/// Unit tests for EventStoreExtensions.
+/// These tests verify the extension methods correctly transform and delegate to the core IEventStore methods.
+/// Uses a simple stub implementation instead of mocking to follow unit test principles.
 /// </summary>
 public class EventStoreExtensionsTests
 {
-    private readonly Mock<IEventStore> _mockEventStore;
-
-    public EventStoreExtensionsTests()
-    {
-        _mockEventStore = new Mock<IEventStore>();
-    }
 
     #region AppendAsync - Single Event Tests
 
@@ -22,68 +17,48 @@ public class EventStoreExtensionsTests
     public async Task AppendAsync_SingleEvent_CallsCoreMethodWithArray()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var sequencedEvent = CreateTestEvent(1);
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((events, _) => capturedEvents = events)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendAsync(sequencedEvent);
+        await stub.AppendAsync(sequencedEvent);
 
         // Assert
-        _mockEventStore.Verify(x => x.AppendAsync(
-            It.IsAny<SequencedEvent[]>(),
-            It.IsAny<AppendCondition?>()), Times.Once);
-
-        Assert.NotNull(capturedEvents);
-        Assert.Single(capturedEvents);
-        Assert.Same(sequencedEvent, capturedEvents[0]);
+        Assert.Single(stub.LastAppendedEvents);
+        Assert.Same(sequencedEvent, stub.LastAppendedEvents[0]);
     }
 
     [Fact]
     public async Task AppendAsync_SingleEvent_PassesNullCondition()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var sequencedEvent = CreateTestEvent(1);
-        AppendCondition? capturedCondition = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((_, condition) => capturedCondition = condition)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendAsync(sequencedEvent);
+        await stub.AppendAsync(sequencedEvent);
 
         // Assert
-        Assert.Null(capturedCondition);
+        Assert.Null(stub.LastAppendCondition);
     }
 
     [Fact]
     public async Task AppendAsync_SingleEventWithCondition_PassesCondition()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var sequencedEvent = CreateTestEvent(1);
         var appendCondition = new AppendCondition 
         { 
             FailIfEventsMatch = Query.All(),
             AfterSequencePosition = 10 
         };
-        AppendCondition? capturedCondition = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((_, condition) => capturedCondition = condition)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendAsync(sequencedEvent, appendCondition);
+        await stub.AppendAsync(sequencedEvent, appendCondition);
 
         // Assert
-        Assert.Same(appendCondition, capturedCondition);
+        Assert.Same(appendCondition, stub.LastAppendCondition);
     }
 
     [Fact]
@@ -102,11 +77,12 @@ public class EventStoreExtensionsTests
     public async Task AppendAsync_SingleEvent_ThrowsIfEventIsNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         SequencedEvent? nullEvent = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _mockEventStore.Object.AppendAsync(nullEvent!));
+            async () => await stub.AppendAsync(nullEvent!));
     }
 
     #endregion
@@ -117,25 +93,20 @@ public class EventStoreExtensionsTests
     public async Task AppendAsync_ArrayWithoutCondition_CallsCoreMethodWithNullCondition()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var events = new[]
         {
             CreateTestEvent(1),
             CreateTestEvent(2),
             CreateTestEvent(3)
         };
-        AppendCondition? capturedCondition = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((_, condition) => capturedCondition = condition)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendAsync(events);
+        await stub.AppendAsync(events);
 
         // Assert
-        Assert.Null(capturedCondition);
-        _mockEventStore.Verify(x => x.AppendAsync(events, null), Times.Once);
+        Assert.Null(stub.LastAppendCondition);
+        Assert.Same(events, stub.LastAppendedEvents);
     }
 
     [Fact]
@@ -154,11 +125,12 @@ public class EventStoreExtensionsTests
     public async Task AppendAsync_ArrayWithoutCondition_ThrowsIfEventsIsNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         SequencedEvent[]? nullEvents = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _mockEventStore.Object.AppendAsync(nullEvents!));
+            async () => await stub.AppendAsync(nullEvents!));
     }
 
     #endregion
@@ -169,22 +141,17 @@ public class EventStoreExtensionsTests
     public async Task ReadAsync_SingleReadOption_CallsCoreMethodWithArray()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var query = Query.All();
         var readOption = ReadOption.Descending;
-        ReadOption[]? capturedOptions = null;
-
-        _mockEventStore
-            .Setup(x => x.ReadAsync(It.IsAny<Query>(), It.IsAny<ReadOption[]?>()))
-            .Callback<Query, ReadOption[]?>((_, options) => capturedOptions = options)
-            .ReturnsAsync([]);
 
         // Act
-        await _mockEventStore.Object.ReadAsync(query, readOption);
+        await stub.ReadAsync(query, readOption);
 
         // Assert
-        Assert.NotNull(capturedOptions);
-        Assert.Single(capturedOptions);
-        Assert.Equal(ReadOption.Descending, capturedOptions[0]);
+        Assert.NotNull(stub.LastReadOptions);
+        Assert.Single(stub.LastReadOptions);
+        Assert.Equal(ReadOption.Descending, stub.LastReadOptions[0]);
     }
 
     [Fact]
@@ -203,11 +170,12 @@ public class EventStoreExtensionsTests
     public async Task ReadAsync_SingleReadOption_ThrowsIfQueryIsNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         Query? nullQuery = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _mockEventStore.Object.ReadAsync(nullQuery!, ReadOption.Descending));
+            async () => await stub.ReadAsync(nullQuery!, ReadOption.Descending));
     }
 
     #endregion
@@ -218,20 +186,15 @@ public class EventStoreExtensionsTests
     public async Task ReadAsync_NoOptions_CallsCoreMethodWithNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var query = Query.All();
-        ReadOption[]? capturedOptions = null;
-
-        _mockEventStore
-            .Setup(x => x.ReadAsync(It.IsAny<Query>(), It.IsAny<ReadOption[]?>()))
-            .Callback<Query, ReadOption[]?>((_, options) => capturedOptions = options)
-            .ReturnsAsync([]);
 
         // Act
-        await _mockEventStore.Object.ReadAsync(query);
+        await stub.ReadAsync(query);
 
         // Assert
-        Assert.Null(capturedOptions);
-        _mockEventStore.Verify(x => x.ReadAsync(query, null), Times.Once);
+        Assert.Null(stub.LastReadOptions);
+        Assert.Same(query, stub.LastQuery);
     }
 
     [Fact]
@@ -244,13 +207,10 @@ public class EventStoreExtensionsTests
             CreateTestEvent(1),
             CreateTestEvent(2)
         };
-
-        _mockEventStore
-            .Setup(x => x.ReadAsync(It.IsAny<Query>(), It.IsAny<ReadOption[]?>()))
-            .ReturnsAsync(expectedEvents);
+        var stub = new EventStoreStub { EventsToReturn = expectedEvents };
 
         // Act
-        var result = await _mockEventStore.Object.ReadAsync(query);
+        var result = await stub.ReadAsync(query);
 
         // Assert
         Assert.Same(expectedEvents, result);
@@ -272,11 +232,12 @@ public class EventStoreExtensionsTests
     public async Task ReadAsync_NoOptions_ThrowsIfQueryIsNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         Query? nullQuery = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _mockEventStore.Object.ReadAsync(nullQuery!));
+            async () => await stub.ReadAsync(nullQuery!));
     }
 
     #endregion
@@ -564,98 +525,78 @@ public class EventStoreExtensionsTests
     public async Task AppendEventAsync_WithMinimalParameters_CreatesSequencedEvent()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var @event = new TestEventData { Id = Guid.NewGuid() };
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((events, _) => capturedEvents = events)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventAsync(@event);
+        await stub.AppendEventAsync(@event);
 
         // Assert
-        Assert.NotNull(capturedEvents);
-        Assert.Single(capturedEvents);
-        Assert.Equal("TestEventData", capturedEvents[0].Event.EventType);
-        Assert.Same(@event, capturedEvents[0].Event.Event);
+        Assert.NotNull(stub.LastAppendedEvents);
+        Assert.Single(stub.LastAppendedEvents);
+        Assert.Equal("TestEventData", stub.LastAppendedEvents[0].Event.EventType);
+        Assert.Same(@event, stub.LastAppendedEvents[0].Event.Event);
     }
 
     [Fact]
     public async Task AppendEventAsync_WithTags_AttachesTags()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var @event = new TestEventData { Id = Guid.NewGuid() };
         var tags = new[]
         {
             new Tag { Key = "studentId", Value = "123" },
             new Tag { Key = "email", Value = "test@example.com" }
         };
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((events, _) => capturedEvents = events)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventAsync(@event, tags: tags);
+        await stub.AppendEventAsync(@event, tags: tags);
 
         // Assert
-        Assert.NotNull(capturedEvents);
-        Assert.Equal(2, capturedEvents[0].Event.Tags.Count);
-        Assert.Equal("studentId", capturedEvents[0].Event.Tags[0].Key);
-        Assert.Equal("email", capturedEvents[0].Event.Tags[1].Key);
+        Assert.NotNull(stub.LastAppendedEvents);
+        Assert.Equal(2, stub.LastAppendedEvents[0].Event.Tags.Count);
+        Assert.Equal("studentId", stub.LastAppendedEvents[0].Event.Tags[0].Key);
+        Assert.Equal("email", stub.LastAppendedEvents[0].Event.Tags[1].Key);
     }
 
     [Fact]
     public async Task AppendEventAsync_WithMetadata_UsesProvidedMetadata()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var @event = new TestEventData { Id = Guid.NewGuid() };
         var customMetadata = new Metadata
         {
             Timestamp = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
             CorrelationId = Guid.NewGuid()
         };
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((events, _) => capturedEvents = events)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventAsync(@event, metadata: customMetadata);
+        await stub.AppendEventAsync(@event, metadata: customMetadata);
 
         // Assert
-        Assert.NotNull(capturedEvents);
-        Assert.Same(customMetadata, capturedEvents[0].Metadata);
+        Assert.NotNull(stub.LastAppendedEvents);
+        Assert.Same(customMetadata, stub.LastAppendedEvents[0].Metadata);
     }
 
     [Fact]
     public async Task AppendEventAsync_WithCondition_PassesCondition()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var @event = new TestEventData { Id = Guid.NewGuid() };
         var condition = new AppendCondition 
         { 
             FailIfEventsMatch = Query.All(),
             AfterSequencePosition = 10 
         };
-        AppendCondition? capturedCondition = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((_, c) => capturedCondition = c)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventAsync(@event, condition: condition);
+        await stub.AppendEventAsync(@event, condition: condition);
 
         // Assert
-        Assert.Same(condition, capturedCondition);
+        Assert.Same(condition, stub.LastAppendCondition);
     }
 
     [Fact]
@@ -674,11 +615,12 @@ public class EventStoreExtensionsTests
     public async Task AppendEventAsync_ThrowsIfEventIsNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         IEvent? nullEvent = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _mockEventStore.Object.AppendEventAsync(nullEvent!));
+            async () => await stub.AppendEventAsync(nullEvent!));
     }
 
     #endregion
@@ -689,32 +631,28 @@ public class EventStoreExtensionsTests
     public async Task AppendEventsAsync_WithMinimalParameters_CreatesSequencedEvents()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var events = new IEvent[]
         {
             new TestEventData { Id = Guid.NewGuid() },
             new TestEventData { Id = Guid.NewGuid() }
         };
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((e, _) => capturedEvents = e)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventsAsync(events);
+        await stub.AppendEventsAsync(events);
 
         // Assert
-        Assert.NotNull(capturedEvents);
-        Assert.Equal(2, capturedEvents.Length);
-        Assert.Equal("TestEventData", capturedEvents[0].Event.EventType);
-        Assert.Equal("TestEventData", capturedEvents[1].Event.EventType);
+        Assert.NotNull(stub.LastAppendedEvents);
+        Assert.Equal(2, stub.LastAppendedEvents.Length);
+        Assert.Equal("TestEventData", stub.LastAppendedEvents[0].Event.EventType);
+        Assert.Equal("TestEventData", stub.LastAppendedEvents[1].Event.EventType);
     }
 
     [Fact]
     public async Task AppendEventsAsync_WithSharedMetadata_UsesSameMetadataForAll()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var events = new IEvent[]
         {
             new TestEventData { Id = Guid.NewGuid() },
@@ -725,48 +663,37 @@ public class EventStoreExtensionsTests
             Timestamp = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
             CorrelationId = Guid.NewGuid()
         };
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((e, _) => capturedEvents = e)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventsAsync(events, metadata: sharedMetadata);
+        await stub.AppendEventsAsync(events, metadata: sharedMetadata);
 
         // Assert
-        Assert.NotNull(capturedEvents);
-        Assert.Same(sharedMetadata, capturedEvents[0].Metadata);
-        Assert.Same(sharedMetadata, capturedEvents[1].Metadata);
+        Assert.NotNull(stub.LastAppendedEvents);
+        Assert.Same(sharedMetadata, stub.LastAppendedEvents[0].Metadata);
+        Assert.Same(sharedMetadata, stub.LastAppendedEvents[1].Metadata);
     }
 
     [Fact]
     public async Task AppendEventsAsync_WithSharedTags_UsesTagsForAllEvents()
     {
         // Arrange
+        var stub = new EventStoreStub();
         var events = new IEvent[]
         {
             new TestEventData { Id = Guid.NewGuid() },
             new TestEventData { Id = Guid.NewGuid() }
         };
         var sharedTags = new[] { new Tag { Key = "batch", Value = "import-2024" } };
-        SequencedEvent[]? capturedEvents = null;
-
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Callback<SequencedEvent[], AppendCondition?>((e, _) => capturedEvents = e)
-            .Returns(Task.CompletedTask);
 
         // Act
-        await _mockEventStore.Object.AppendEventsAsync(events, tags: sharedTags);
+        await stub.AppendEventsAsync(events, tags: sharedTags);
 
         // Assert
-        Assert.NotNull(capturedEvents);
-        Assert.Single(capturedEvents[0].Event.Tags);
-        Assert.Single(capturedEvents[1].Event.Tags);
-        Assert.Equal("batch", capturedEvents[0].Event.Tags[0].Key);
-        Assert.Equal("batch", capturedEvents[1].Event.Tags[0].Key);
+        Assert.NotNull(stub.LastAppendedEvents);
+        Assert.Single(stub.LastAppendedEvents[0].Event.Tags);
+        Assert.Single(stub.LastAppendedEvents[1].Event.Tags);
+        Assert.Equal("batch", stub.LastAppendedEvents[0].Event.Tags[0].Key);
+        Assert.Equal("batch", stub.LastAppendedEvents[1].Event.Tags[0].Key);
     }
 
     [Fact]
@@ -785,11 +712,12 @@ public class EventStoreExtensionsTests
     public async Task AppendEventsAsync_ThrowsIfEventsIsNull()
     {
         // Arrange
+        var stub = new EventStoreStub();
         IEvent[]? nullEvents = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _mockEventStore.Object.AppendEventsAsync(nullEvents!));
+            async () => await stub.AppendEventsAsync(nullEvents!));
     }
 
     #endregion
@@ -797,37 +725,25 @@ public class EventStoreExtensionsTests
     #region Integration Tests
 
     [Fact]
-    public async Task Extensions_WorkWithMockedEventStore()
+    public async Task Extensions_WorkWithStubEventStore()
     {
         // Arrange
-        var events = new[] { CreateTestEvent(1), CreateTestEvent(2) };
+        var stub = new EventStoreStub
+        {
+            EventsToReturn = new[] { CreateTestEvent(1), CreateTestEvent(2) }
+        };
         var query = Query.All();
 
-        _mockEventStore
-            .Setup(x => x.AppendAsync(It.IsAny<SequencedEvent[]>(), It.IsAny<AppendCondition?>()))
-            .Returns(Task.CompletedTask);
-
-        _mockEventStore
-            .Setup(x => x.ReadAsync(It.IsAny<Query>(), It.IsAny<ReadOption[]?>()))
-            .ReturnsAsync(events);
-
         // Act - Use all extension methods
-        await _mockEventStore.Object.AppendAsync(events[0]); // Single event
-        await _mockEventStore.Object.AppendAsync(events); // Array without condition
-        var readResult1 = await _mockEventStore.Object.ReadAsync(query); // No options
-        var readResult2 = await _mockEventStore.Object.ReadAsync(query, ReadOption.Descending); // Single option
+        await stub.AppendAsync(stub.EventsToReturn[0]); // Single event
+        await stub.AppendAsync(stub.EventsToReturn); // Array without condition
+        var readResult1 = await stub.ReadAsync(query); // No options
+        var readResult2 = await stub.ReadAsync(query, ReadOption.Descending); // Single option
 
-        // Assert
-        _mockEventStore.Verify(x => x.AppendAsync(
-            It.IsAny<SequencedEvent[]>(),
-            It.IsAny<AppendCondition?>()), Times.Exactly(2));
-
-        _mockEventStore.Verify(x => x.ReadAsync(
-            It.IsAny<Query>(),
-            It.IsAny<ReadOption[]?>()), Times.Exactly(2));
-
-        Assert.Same(events, readResult1);
-        Assert.Same(events, readResult2);
+        // Assert - Verify all methods were called correctly
+        Assert.Same(stub.EventsToReturn, readResult1);
+        Assert.Same(stub.EventsToReturn, readResult2);
+        Assert.Same(stub.EventsToReturn, stub.LastAppendedEvents);
     }
 
     [Fact]
@@ -866,6 +782,37 @@ public class EventStoreExtensionsTests
                 Timestamp = DateTimeOffset.UtcNow
             }
         };
+    }
+
+    #endregion
+
+    #region Test Helpers
+
+    /// <summary>
+    /// Simple stub implementation of IEventStore for unit testing extension methods.
+    /// Captures method calls and parameters for verification without using mocking frameworks.
+    /// </summary>
+    private class EventStoreStub : IEventStore
+    {
+        public SequencedEvent[]? LastAppendedEvents { get; private set; }
+        public AppendCondition? LastAppendCondition { get; private set; }
+        public Query? LastQuery { get; private set; }
+        public ReadOption[]? LastReadOptions { get; private set; }
+        public SequencedEvent[] EventsToReturn { get; set; } = [];
+
+        public Task AppendAsync(SequencedEvent[] events, AppendCondition? condition)
+        {
+            LastAppendedEvents = events;
+            LastAppendCondition = condition;
+            return Task.CompletedTask;
+        }
+
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions)
+        {
+            LastQuery = query;
+            LastReadOptions = readOptions;
+            return Task.FromResult(EventsToReturn);
+        }
     }
 
     private class TestEventData : IEvent

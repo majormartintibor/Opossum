@@ -1,9 +1,31 @@
 # Copilot Instructions
 
+## What is Opossum?
+Opossum is a .NET library that turns your file system into an event store database.
+It also provides features like projections, mediator pattern, and dependency injection integration.
+It follows the DCB (Dynamic Consistency Boundaries) specification for event sourcing.
+
+## Glossary
+- **Event Store**: A database that stores events as the primary source of truth.
+- **Projection**: A read model derived from events in the event store.
+- **DCB (Dynamic Consistency Boundaries)**: read D:\Codeing\FileSystemEventStoreWithDCB\Opossum\Specification\DCB-Specification.md
+
 ## Language and Framework
 
 Use .NET 10 and C# 14
 Prefer using the newest language features
+
+## Documentation
+
+All documentation files (*.md) must be placed in the `docs` folder at the solution root.
+This includes:
+- Architecture documentation
+- Feature specifications
+- Refactoring summaries
+- Design decisions
+- API documentation
+
+Never create .md files in the solution root or scattered across project folders.
 
 ## External Libraries
 In the core Opossum project and its test projects, avoid using external libraries.
@@ -182,7 +204,6 @@ Use xUnit for all tests.
 ### Unit Tests
 Unit Test project may only contain tests that work on pure data without any external dependencies.
 No mocking is allowed in Unit Tests.
-Currently this rule is violated, you must fix this the next time you work and refactor accordingly. You can then remove this line.
 
 ### Integration Tests
 Integration Test project may contain tests that depend on external dependencies like databases, file systems, etc.
