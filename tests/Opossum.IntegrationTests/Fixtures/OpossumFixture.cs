@@ -1,9 +1,7 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Opossum.DependencyInjection;
 using Opossum.Mediator;
 
-namespace Opossum.IntegrationTests;
+namespace Opossum.IntegrationTests.Fixtures;
 
 /// <summary>
 /// Test fixture that provides configured Opossum services for integration tests.

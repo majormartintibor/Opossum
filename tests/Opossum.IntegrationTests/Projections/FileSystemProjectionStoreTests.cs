@@ -1,4 +1,3 @@
-using Opossum.Configuration;
 using Opossum.Projections;
 
 namespace Opossum.IntegrationTests.Projections;

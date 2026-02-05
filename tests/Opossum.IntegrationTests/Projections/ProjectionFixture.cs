@@ -1,8 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Opossum.Configuration;
 using Opossum.DependencyInjection;
-using Opossum.Mediator;
 using Opossum.Projections;
 
 namespace Opossum.IntegrationTests.Projections;

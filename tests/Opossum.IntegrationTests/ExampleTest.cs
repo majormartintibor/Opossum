@@ -1,6 +1,7 @@
 ﻿using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
+using Opossum.IntegrationTests.Fixtures;
 
 namespace Opossum.IntegrationTests;
 

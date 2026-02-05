@@ -1,3 +1,5 @@
+using Opossum.IntegrationTests.Fixtures;
+
 namespace Opossum.IntegrationTests;
 
 /// <summary>

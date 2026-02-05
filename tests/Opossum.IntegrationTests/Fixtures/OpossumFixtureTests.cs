@@ -1,7 +1,6 @@
-using Microsoft.Extensions.DependencyInjection;
 using Opossum.Mediator;
 
-namespace Opossum.IntegrationTests.Tests;
+namespace Opossum.IntegrationTests.Fixtures;
 
 /// <summary>
 /// Unit tests for OpossumFixture to ensure proper initialization and cleanup

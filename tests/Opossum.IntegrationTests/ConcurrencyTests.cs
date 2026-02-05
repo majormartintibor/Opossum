@@ -2,6 +2,7 @@ using Opossum.Core;
 using Opossum.Exceptions;
 using Opossum.Extensions;
 using Opossum.Mediator;
+using Opossum.IntegrationTests.Fixtures;
 
 namespace Opossum.IntegrationTests;
 
