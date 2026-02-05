@@ -13,6 +13,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     private readonly string _projectionPath;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private readonly ProjectionTagIndex _tagIndex;
+    private readonly ProjectionMetadataIndex _metadataIndex;
     private readonly IProjectionTagProvider<TState>? _tagProvider;
     private readonly Dictionary<string, List<Tag>> _projectionTags = new();
 
@@ -39,6 +40,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         _projectionPath = Path.Combine(contextPath, "Projections", projectionName);
         _tagProvider = tagProvider;
         _tagIndex = new ProjectionTagIndex();
+        _metadataIndex = new ProjectionMetadataIndex();
 
         Directory.CreateDirectory(_projectionPath);
     }
@@ -48,7 +50,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
         var filePath = GetFilePath(key);
-        
+
         if (!File.Exists(filePath))
         {
             return null;
@@ -58,7 +60,16 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         try
         {
             var json = await File.ReadAllTextAsync(filePath, cancellationToken);
-            return JsonSerializer.Deserialize<TState>(json, _jsonOptions);
+
+            // Deserialize wrapper (all new projections have metadata)
+            var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
+
+            if (wrapper == null)
+            {
+                return null;
+            }
+
+            return wrapper.Data;
         }
         finally
         {
@@ -74,15 +85,15 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         foreach (var file in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            
+
             try
             {
                 var json = await File.ReadAllTextAsync(file, cancellationToken);
-                var state = JsonSerializer.Deserialize<TState>(json, _jsonOptions);
-                
-                if (state != null)
+                var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
+
+                if (wrapper?.Data != null)
                 {
-                    results.Add(state);
+                    results.Add(wrapper.Data);
                 }
             }
             catch (Exception)
@@ -195,9 +206,54 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         await _lock.WaitAsync(cancellationToken);
         try
         {
-            // Save projection file
-            var json = JsonSerializer.Serialize(state, _jsonOptions);
+            // Get existing metadata or create new
+            var existingMetadata = await _metadataIndex.GetAsync(_projectionPath, key);
+            var now = DateTimeOffset.UtcNow;
+
+            ProjectionMetadata metadata;
+            if (existingMetadata != null)
+            {
+                // Update existing projection
+                metadata = new ProjectionMetadata
+                {
+                    CreatedAt = existingMetadata.CreatedAt,
+                    LastUpdatedAt = now,
+                    Version = existingMetadata.Version + 1,
+                    SizeInBytes = 0 // Will be updated after serialization
+                };
+            }
+            else
+            {
+                // New projection
+                metadata = new ProjectionMetadata
+                {
+                    CreatedAt = now,
+                    LastUpdatedAt = now,
+                    Version = 1,
+                    SizeInBytes = 0 // Will be updated after serialization
+                };
+            }
+
+            // Wrap state with metadata
+            var wrapper = new ProjectionWithMetadata<TState>
+            {
+                Data = state,
+                Metadata = metadata
+            };
+
+            // Serialize and save
+            var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
+
+            // Update metadata with actual size
+            metadata = metadata with { SizeInBytes = json.Length };
+            wrapper = wrapper with { Metadata = metadata };
+
+            // Re-serialize with updated size
+            json = JsonSerializer.Serialize(wrapper, _jsonOptions);
             await File.WriteAllTextAsync(filePath, json, cancellationToken);
+
+            // Save metadata to index
+            await _metadataIndex.SaveAsync(_projectionPath, key, metadata);
 
             // Update tag indices if tags are configured
             if (newTags != null)
@@ -250,6 +306,9 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             // Delete projection file
             File.Delete(filePath);
 
+            // Remove from metadata index
+            await _metadataIndex.DeleteAsync(_projectionPath, key);
+
             // Remove from tag indices if tags were tracked
             if (_projectionTags.TryGetValue(key, out var tags))
             {
@@ -273,6 +332,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     internal void DeleteAllIndices()
     {
         _tagIndex.DeleteAllIndices(_projectionPath);
+        _metadataIndex.ClearAsync(_projectionPath).GetAwaiter().GetResult();
         _projectionTags.Clear();
     }
 
