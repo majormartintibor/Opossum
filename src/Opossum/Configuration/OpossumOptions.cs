@@ -48,7 +48,9 @@ public sealed class OpossumOptions
     }
 
     /// <summary>
-    /// Validates that a string is a valid directory name
+    /// Validates that a string is a valid directory name.
+    /// Uses a consistent set of forbidden characters across all platforms
+    /// to ensure predictable behavior and prevent confusing directory names.
     /// </summary>
     private static bool IsValidDirectoryName(string name)
     {
@@ -57,10 +59,13 @@ public sealed class OpossumOptions
             return false;
         }
 
-        // Get invalid file name characters (covers directory names too)
-        char[] invalidChars = Path.GetInvalidFileNameChars();
+        // Explicitly forbidden characters (consistent across platforms)
+        // These are problematic for directory names regardless of OS:
+        // / \ : * ? " < > | (path separators, wildcards, reserved on Windows)
+        // \0 (null character, invalid everywhere)
+        char[] forbiddenChars = { '/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0' };
 
-        // Check if name contains any invalid characters
-        return !name.Any(c => invalidChars.Contains(c));
+        // Check if name contains any forbidden characters
+        return !name.Any(c => forbiddenChars.Contains(c));
     }
 }
