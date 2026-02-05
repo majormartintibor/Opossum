@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using Opossum.Configuration;
 using Opossum.DependencyInjection;
 using Opossum.Storage.FileSystem;

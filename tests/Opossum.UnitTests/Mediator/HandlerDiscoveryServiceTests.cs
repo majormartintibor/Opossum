@@ -1,4 +1,3 @@
-using System.Reflection;
 using Opossum.Mediator;
 
 namespace Opossum.UnitTests.Mediator;

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Opossum.Core;
 using Opossum.Storage.FileSystem;
 

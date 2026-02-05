@@ -1,6 +1,5 @@
 using Opossum.Core;
 using Opossum.Storage.FileSystem;
-using System.Collections.Concurrent;
 
 namespace Opossum.UnitTests.Storage.FileSystem;
 
