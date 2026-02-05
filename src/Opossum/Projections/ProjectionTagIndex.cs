@@ -274,9 +274,10 @@ internal sealed class ProjectionTagIndex
 
     private static string GetIndexFilePath(string indexPath, Tag tag)
     {
-        // Sanitize tag for file system (case-sensitive storage)
-        var safeKey = string.Join("_", tag.Key.Split(Path.GetInvalidFileNameChars()));
-        var safeValue = string.Join("_", tag.Value.Split(Path.GetInvalidFileNameChars()));
+        // Normalize to lowercase for case-insensitive matching across platforms
+        // This ensures consistent behavior on Windows (case-insensitive) and Linux (case-sensitive)
+        var safeKey = string.Join("_", tag.Key.ToLowerInvariant().Split(Path.GetInvalidFileNameChars()));
+        var safeValue = string.Join("_", tag.Value.ToLowerInvariant().Split(Path.GetInvalidFileNameChars()));
         return Path.Combine(indexPath, $"{safeKey}_{safeValue}.json");
     }
 
