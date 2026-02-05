@@ -34,7 +34,8 @@ public class ProjectionTagIndexTests : IDisposable
         await _index.AddProjectionAsync(_tempPath, tag, projectionKey);
 
         // Assert
-        var indexFile = Path.Combine(_tempPath, "Indices", "Status_Active.json");
+        // Index files are now stored in lowercase for platform-agnostic case-insensitive matching
+        var indexFile = Path.Combine(_tempPath, "Indices", "status_active.json");
         Assert.True(File.Exists(indexFile));
     }
 
@@ -101,7 +102,8 @@ public class ProjectionTagIndexTests : IDisposable
         await _index.RemoveProjectionAsync(_tempPath, tag, "proj-1");
 
         // Assert
-        var indexFile = Path.Combine(_tempPath, "Indices", "Status_Active.json");
+        // Index files are now stored in lowercase for platform-agnostic case-insensitive matching
+        var indexFile = Path.Combine(_tempPath, "Indices", "status_active.json");
         Assert.False(File.Exists(indexFile));
     }
 
