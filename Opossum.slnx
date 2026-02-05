@@ -1,9 +1,14 @@
 <Solution>
   <Folder Name="/.github/">
     <File Path=".github/copilot-instructions.md" />
+    <File Path=".github/pull_request_template.md" />
   </Folder>
-  <Folder Name="/.github/workflows/" />
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/samples-ci.yml" />
+  </Folder>
   <Folder Name="/docs/">
+    <File Path="docs/LEDGER.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_IMPLEMENTATION_SUMMARY.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_PROGRESS.md" />

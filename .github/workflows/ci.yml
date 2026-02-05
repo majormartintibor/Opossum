@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - '**'  # Run on all branches
+  pull_request:
+    branches:
+      - main  # Run on PRs to main
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+      fail-fast: false  # Continue testing on other OS if one fails
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      
+      - name: Display .NET info
+        run: dotnet --info
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
+      - name: Build solution
+        run: dotnet build --no-restore --configuration Release
+      
+      - name: Run Unit Tests
+        run: dotnet test tests/Opossum.UnitTests/Opossum.UnitTests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=unit-tests.trx"
+      
+      - name: Run Integration Tests
+        run: dotnet test tests/Opossum.IntegrationTests/Opossum.IntegrationTests.csproj --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=integration-tests.trx"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            **/TestResults/*.trx
+          retention-days: 30
+  
+  test-summary:
+    name: Test Summary
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.build-and-test.result }}" == "failure" ]; then
+            echo "❌ Tests failed on at least one platform"
+            exit 1
+          elif [ "${{ needs.build-and-test.result }}" == "success" ]; then
+            echo "✅ All tests passed on all platforms"
+            exit 0
+          else
+            echo "⚠️ Tests did not complete normally"
+            exit 1
+          fi

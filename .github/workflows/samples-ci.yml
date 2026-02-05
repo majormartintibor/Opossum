@@ -1,0 +1,52 @@
+name: Samples CI
+
+on:
+  push:
+    branches:
+      - '**'
+    paths:
+      - 'Samples/**'
+      - 'tests/Samples/**'
+      - 'src/**'  # Samples depend on core library
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'Samples/**'
+      - 'tests/Samples/**'
+      - 'src/**'
+
+jobs:
+  test-samples:
+    name: Test Samples
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      
+      - name: Restore dependencies
+        run: dotnet restore
+      
+      - name: Build Samples
+        run: dotnet build Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj --configuration Release
+      
+      - name: Run Sample Unit Tests
+        run: dotnet test tests/Samples/Opossum.Samples.CourseManagement.UnitTests/Opossum.Samples.CourseManagement.UnitTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=sample-unit-tests.trx"
+      
+      - name: Run Sample Integration Tests
+        run: dotnet test tests/Samples/Opossum.Samples.CourseManagement.IntegrationTests/Opossum.Samples.CourseManagement.IntegrationTests.csproj --configuration Release --verbosity normal --logger "trx;LogFileName=sample-integration-tests.trx"
+      
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sample-test-results
+          path: |
+            **/TestResults/*.trx
+          retention-days: 30
