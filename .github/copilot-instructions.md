@@ -9,7 +9,7 @@ It follows the DCB (Dynamic Consistency Boundaries) specification for event sour
 - **Event Store**: A database that stores events as the primary source of truth.
 - **Projection**: A read model derived from events in the event store.
 - **DCB (Dynamic Consistency Boundaries)**: read D:\Codeing\FileSystemEventStoreWithDCB\Opossum\Specification\DCB-Specification.md
-- **Durability**: Guarantee that persisted events survive power failures (see docs/Durability-Guarantees-Implementation.md)
+- **Durability**: Guarantee that persisted events survive power failures (see docs/implementation/durability-guarantees.md)
 
 ## Language and Framework
 
