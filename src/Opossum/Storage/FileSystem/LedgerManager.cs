@@ -24,7 +24,7 @@ internal sealed class LedgerManager
     {
         ArgumentNullException.ThrowIfNull(contextPath);
 
-        var lastPosition = await GetLastSequencePositionAsync(contextPath);
+        var lastPosition = await GetLastSequencePositionAsync(contextPath).ConfigureAwait(false);
         return lastPosition + 1;
     }
 
@@ -60,7 +60,7 @@ internal sealed class LedgerManager
                     FileAccess.Read,
                     FileShare.Read);
 
-                var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream);
+                var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream).ConfigureAwait(false);
                 return ledgerData?.LastSequencePosition ?? 0;
             }
             catch (JsonException)
@@ -71,13 +71,13 @@ internal sealed class LedgerManager
             catch (IOException) when (attempt < maxRetries - 1)
             {
                 // File might be locked by a writer, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2;
             }
             catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
             {
                 // File might be being replaced, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2;
             }
         }
@@ -91,7 +91,7 @@ internal sealed class LedgerManager
                 FileAccess.Read,
                 FileShare.Read);
 
-            var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream);
+            var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream).ConfigureAwait(false);
             return ledgerData?.LastSequencePosition ?? 0;
         }
         catch (JsonException)
@@ -139,12 +139,12 @@ internal sealed class LedgerManager
                 FileAccess.Write,
                 FileShare.None))
             {
-                await JsonSerializer.SerializeAsync(fileStream, ledgerData, JsonOptions);
-                await fileStream.FlushAsync();
+                await JsonSerializer.SerializeAsync(fileStream, ledgerData, JsonOptions).ConfigureAwait(false);
+                await fileStream.FlushAsync().ConfigureAwait(false);
             }
 
             // Atomic rename with retry logic to handle concurrent access
-            await AtomicMoveWithRetryAsync(tempPath, ledgerPath);
+            await AtomicMoveWithRetryAsync(tempPath, ledgerPath).ConfigureAwait(false);
         }
         catch
         {
@@ -174,13 +174,13 @@ internal sealed class LedgerManager
             catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
             {
                 // File might be locked by a reader, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2; // Exponential backoff
             }
             catch (IOException) when (attempt < maxRetries - 1)
             {
                 // File might be in use, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2; // Exponential backoff
             }
         }
@@ -215,7 +215,7 @@ internal sealed class LedgerManager
             };
 
             await File.WriteAllTextAsync(ledgerPath, 
-                JsonSerializer.Serialize(initialData, JsonOptions));
+                JsonSerializer.Serialize(initialData, JsonOptions)).ConfigureAwait(false);
         }
 
         // Open file with exclusive access
@@ -251,7 +251,7 @@ internal sealed class LedgerManager
         {
             if (_fileStream != null)
             {
-                await _fileStream.DisposeAsync();
+                await _fileStream.DisposeAsync().ConfigureAwait(false);
             }
         }
     }

@@ -76,17 +76,17 @@ internal class FileSystemEventStore : IEventStore
         var contextPath = GetContextPath(_options.Contexts[0]);
 
         // 3. Use semaphore for atomic operation (one append at a time)
-        await _appendLock.WaitAsync();
+        await _appendLock.WaitAsync().ConfigureAwait(false);
         try
         {
             // 4. Check AppendCondition
             if (condition != null)
             {
-                await ValidateAppendConditionAsync(contextPath, condition);
+                await ValidateAppendConditionAsync(contextPath, condition).ConfigureAwait(false);
             }
 
             // 5. Allocate sequence positions
-            var startPosition = await _ledgerManager.GetNextSequencePositionAsync(contextPath);
+            var startPosition = await _ledgerManager.GetNextSequencePositionAsync(contextPath).ConfigureAwait(false);
 
             for (int i = 0; i < events.Length; i++)
             {
@@ -103,18 +103,18 @@ internal class FileSystemEventStore : IEventStore
             var eventsPath = GetEventsPath(contextPath);
             foreach (var evt in events)
             {
-                await _eventFileManager.WriteEventAsync(eventsPath, evt);
+                await _eventFileManager.WriteEventAsync(eventsPath, evt).ConfigureAwait(false);
             }
 
             // 7. Update indices
             foreach (var evt in events)
             {
-                await _indexManager.AddEventToIndicesAsync(contextPath, evt);
+                await _indexManager.AddEventToIndicesAsync(contextPath, evt).ConfigureAwait(false);
             }
 
             // 8. Update ledger
             var lastPosition = startPosition + events.Length - 1;
-            await _ledgerManager.UpdateSequencePositionAsync(contextPath, lastPosition);
+            await _ledgerManager.UpdateSequencePositionAsync(contextPath, lastPosition).ConfigureAwait(false);
         }
         finally
         {
@@ -136,7 +136,7 @@ internal class FileSystemEventStore : IEventStore
         var contextPath = GetContextPath(_options.Contexts[0]);
 
         // 3. Get positions matching query
-        var positions = await GetPositionsForQueryAsync(contextPath, query);
+        var positions = await GetPositionsForQueryAsync(contextPath, query).ConfigureAwait(false);
 
         if (positions.Length == 0)
         {
@@ -145,7 +145,7 @@ internal class FileSystemEventStore : IEventStore
 
         // 4. Read events from files
         var eventsPath = GetEventsPath(contextPath);
-        var events = await _eventFileManager.ReadEventsAsync(eventsPath, positions);
+        var events = await _eventFileManager.ReadEventsAsync(eventsPath, positions).ConfigureAwait(false);
 
         // 5. Apply ReadOptions
         if (readOptions != null && readOptions.Contains(ReadOption.Descending))
@@ -165,7 +165,7 @@ internal class FileSystemEventStore : IEventStore
         // Handle Query.All() - return all positions from ledger
         if (query.QueryItems.Count == 0)
         {
-            return await GetAllPositionsAsync(contextPath);
+            return await GetAllPositionsAsync(contextPath).ConfigureAwait(false);
         }
 
         var allPositions = new HashSet<long>();
@@ -173,7 +173,7 @@ internal class FileSystemEventStore : IEventStore
         // OR logic between QueryItems
         foreach (var queryItem in query.QueryItems)
         {
-            var positions = await GetPositionsForQueryItemAsync(contextPath, queryItem);
+            var positions = await GetPositionsForQueryItemAsync(contextPath, queryItem).ConfigureAwait(false);
             foreach (var pos in positions)
             {
                 allPositions.Add(pos);
@@ -199,7 +199,7 @@ internal class FileSystemEventStore : IEventStore
         {
             var typePositionsArray = await _indexManager.GetPositionsByEventTypesAsync(
                 contextPath,
-                queryItem.EventTypes.ToArray());
+                queryItem.EventTypes.ToArray()).ConfigureAwait(false);
 
             eventTypePositions = new HashSet<long>(typePositionsArray);
         }
@@ -212,7 +212,7 @@ internal class FileSystemEventStore : IEventStore
 
             foreach (var tag in queryItem.Tags)
             {
-                var positions = await _indexManager.GetPositionsByTagAsync(contextPath, tag);
+                var positions = await _indexManager.GetPositionsByTagAsync(contextPath, tag).ConfigureAwait(false);
                 tagPositionSets.Add(positions);
             }
 
@@ -254,7 +254,7 @@ internal class FileSystemEventStore : IEventStore
     /// </summary>
     private async Task<long[]> GetAllPositionsAsync(string contextPath)
     {
-        var lastPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        var lastPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath).ConfigureAwait(false);
 
         if (lastPosition == 0)
         {
@@ -279,7 +279,7 @@ internal class FileSystemEventStore : IEventStore
     private async Task ValidateAppendConditionAsync(string contextPath, AppendCondition condition)
     {
         // Get current ledger position for comparison
-        var currentPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        var currentPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath).ConfigureAwait(false);
 
         // Check AfterSequencePosition constraint
         // This checks if ANY events were added since the specified position
@@ -292,7 +292,7 @@ internal class FileSystemEventStore : IEventStore
                 if (condition.FailIfEventsMatch != null && condition.FailIfEventsMatch.QueryItems.Count > 0)
                 {
                     // Get all positions matching the query
-                    var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch);
+                    var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch).ConfigureAwait(false);
 
                     // Filter to only positions AFTER our read (> AfterSequencePosition)
                     var newMatchingPositions = matchingPositions
@@ -318,7 +318,7 @@ internal class FileSystemEventStore : IEventStore
             // AfterSequencePosition not provided - check all matching events
             if (condition.FailIfEventsMatch != null && condition.FailIfEventsMatch.QueryItems.Count > 0)
             {
-                var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch);
+                var matchingPositions = await GetPositionsForQueryAsync(contextPath, condition.FailIfEventsMatch).ConfigureAwait(false);
 
                 if (matchingPositions.Length > 0)
                 {

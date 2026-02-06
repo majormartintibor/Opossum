@@ -46,7 +46,7 @@ internal sealed class EventFileManager
         try
         {
             // Write to temp file
-            await File.WriteAllTextAsync(tempPath, json);
+            await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
 
             // Atomic move
             File.Move(tempPath, filePath, overwrite: true);
@@ -64,6 +64,7 @@ internal sealed class EventFileManager
 
     /// <summary>
     /// Reads a SequencedEvent from a file at the specified position.
+    /// Uses optimized FileStream with 1KB buffer for small JSON files (Strategy 3).
     /// </summary>
     /// <param name="eventsPath">Path to the Events directory</param>
     /// <param name="position">The sequence position to read</param>
@@ -87,12 +88,23 @@ internal sealed class EventFileManager
             throw new FileNotFoundException($"Event file not found for position {position}", filePath);
         }
 
-        var json = await File.ReadAllTextAsync(filePath);
+        // Use FileStream with 1KB buffer for small JSON files (reduces GC pressure)
+        using var stream = new FileStream(
+            filePath,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            bufferSize: 1024,
+            useAsync: true);
+
+        using var reader = new StreamReader(stream);
+        var json = await reader.ReadToEndAsync().ConfigureAwait(false);
         return _serializer.Deserialize(json);
     }
 
     /// <summary>
     /// Reads multiple SequencedEvents from files at the specified positions.
+    /// Uses parallel reads to saturate SSD I/O and utilize multiple CPU cores (Strategy 1).
     /// Returns events in the same order as the positions array.
     /// </summary>
     /// <param name="eventsPath">Path to the Events directory</param>
@@ -110,14 +122,34 @@ internal sealed class EventFileManager
             return [];
         }
 
-        var events = new SequencedEvent[positions.Length];
-
-        for (int i = 0; i < positions.Length; i++)
+        // For small batches, sequential read is more efficient (avoid parallelization overhead)
+        if (positions.Length < 10)
         {
-            events[i] = await ReadEventAsync(eventsPath, positions[i]);
+            var events = new SequencedEvent[positions.Length];
+            for (int i = 0; i < positions.Length; i++)
+            {
+                events[i] = await ReadEventAsync(eventsPath, positions[i]).ConfigureAwait(false);
+            }
+            return events;
         }
 
-        return events;
+        // Parallel read for larger batches using Parallel.ForEachAsync (optimal for I/O-bound work)
+        var parallelEvents = new SequencedEvent[positions.Length];
+        var options = new ParallelOptions
+        {
+            // 2x CPU count for I/O-bound work to keep SSD saturated
+            MaxDegreeOfParallelism = Environment.ProcessorCount * 2
+        };
+
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, positions.Length),
+            options,
+            async (i, ct) =>
+            {
+                parallelEvents[i] = await ReadEventAsync(eventsPath, positions[i]).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
+        return parallelEvents;
     }
 
     /// <summary>

@@ -37,7 +37,7 @@ public sealed class Mediator(
 
         var effectiveToken = cts?.Token ?? cancellation;
         
-        var response = await handler.HandleAsync(message, _serviceProvider, effectiveToken);
+        var response = await handler.HandleAsync(message, _serviceProvider, effectiveToken).ConfigureAwait(false);
         
         if (response == null)
         {

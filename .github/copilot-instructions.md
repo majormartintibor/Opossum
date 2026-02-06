@@ -193,6 +193,53 @@ Use file-scoped namespaces:
 ✅ `namespace Opossum.DependencyInjection;`
 ❌ `namespace Opossum.DependencyInjection { }`
 
+## Async/Await Best Practices for Library Code
+
+**Opossum is a library (will be distributed as NuGet package), not an application.**
+
+### CRITICAL RULE: Always Use ConfigureAwait(false)
+
+**ALL `await` statements in library code (`src/Opossum/`) MUST use `.ConfigureAwait(false)`.**
+
+✅ **Correct:**
+```csharp
+var data = await File.ReadAllTextAsync(path).ConfigureAwait(false);
+await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
+var events = await _eventStore.ReadAsync(query).ConfigureAwait(false);
+```
+
+❌ **Wrong:**
+```csharp
+var data = await File.ReadAllTextAsync(path); // ❌ Missing ConfigureAwait(false)
+await _lock.WaitAsync(cancellationToken);     // ❌ Missing ConfigureAwait(false)
+```
+
+### Why This Matters
+
+1. **Prevents Deadlocks:** When Opossum is consumed by UI applications (WPF, WinForms, Blazor), missing ConfigureAwait(false) can cause deadlocks
+2. **Better Performance:** Avoids unnecessary context marshaling (~10% performance gain when sync context exists)
+3. **Industry Standard:** Microsoft's official best practice for library code
+
+### Where to Apply
+
+✅ **DO use ConfigureAwait(false) in:**
+- `src/Opossum/**/*.cs` - All library code
+
+❌ **DO NOT use ConfigureAwait(false) in:**
+- `Samples/**/*.cs` - Application code (needs context for HTTP requests, etc.)
+- `tests/**/*.cs` - Test code (doesn't matter)
+
+### Analyzer Enforcement
+
+The project uses `Microsoft.VisualStudio.Threading.Analyzers` to enforce this rule.
+
+If you see warning **VSTHRD111**, add `.ConfigureAwait(false)` to the await statement.
+
+### References
+
+- [Microsoft: ConfigureAwait FAQ](https://devblogs.microsoft.com/dotnet/configureawait-faq/)
+- [David Fowler: Async Guidance](https://github.com/davidfowl/AspNetCoreDiagnosticScenarios/blob/master/AsyncGuidance.md)
+
 ## Compiler
 All code you submit must compile without errors.
 

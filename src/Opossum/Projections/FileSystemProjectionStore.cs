@@ -56,61 +56,92 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             return null;
         }
 
-        await _lock.WaitAsync(cancellationToken);
-        try
+        // No lock needed for reads - file system reads are inherently thread-safe
+        // and we want to allow parallel reads for performance
+        var json = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+
+        // Deserialize wrapper (all new projections have metadata)
+        var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
+
+        if (wrapper == null)
         {
-            var json = await File.ReadAllTextAsync(filePath, cancellationToken);
-
-            // Deserialize wrapper (all new projections have metadata)
-            var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
-
-            if (wrapper == null)
-            {
-                return null;
-            }
-
-            return wrapper.Data;
+            return null;
         }
-        finally
-        {
-            _lock.Release();
-        }
+
+        return wrapper.Data;
     }
 
     public async Task<IReadOnlyList<TState>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var files = Directory.GetFiles(_projectionPath, "*.json");
-        var results = new List<TState>(files.Length);
 
-        foreach (var file in files)
+        if (files.Length == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            try
-            {
-                var json = await File.ReadAllTextAsync(file, cancellationToken);
-                var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
-
-                if (wrapper?.Data != null)
-                {
-                    results.Add(wrapper.Data);
-                }
-            }
-            catch (Exception)
-            {
-                // Skip corrupted files
-                continue;
-            }
+            return Array.Empty<TState>();
         }
 
-        return results;
+        // For small sets, sequential read is more efficient
+        if (files.Length < 10)
+        {
+            var results = new List<TState>(files.Length);
+            foreach (var file in files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    var json = await File.ReadAllTextAsync(file, cancellationToken).ConfigureAwait(false);
+                    var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
+
+                    if (wrapper?.Data != null)
+                    {
+                        results.Add(wrapper.Data);
+                    }
+                }
+                catch (Exception)
+                {
+                    // Skip corrupted files
+                    continue;
+                }
+            }
+            return results;
+        }
+
+        // Parallel read for larger sets (Strategy 1: 4-6x speedup expected)
+        var parallelResults = new TState?[files.Length];
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount * 2,
+            CancellationToken = cancellationToken
+        };
+
+        await Parallel.ForEachAsync(
+            files.Select((file, index) => (file, index)),
+            options,
+            async (item, ct) =>
+            {
+                try
+                {
+                    var json = await File.ReadAllTextAsync(item.file, ct).ConfigureAwait(false);
+                    var wrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(json, _jsonOptions);
+                    parallelResults[item.index] = wrapper?.Data;
+                }
+                catch (Exception)
+                {
+                    // Skip corrupted files
+                    parallelResults[item.index] = null;
+                }
+            }).ConfigureAwait(false);
+
+        // Filter out nulls and return
+        return parallelResults.Where(r => r != null).ToList()!;
     }
 
     public async Task<IReadOnlyList<TState>> QueryAsync(Func<TState, bool> predicate, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(predicate);
 
-        var all = await GetAllAsync(cancellationToken);
+        var all = await GetAllAsync(cancellationToken).ConfigureAwait(false);
         return all.Where(predicate).ToList();
     }
 
@@ -124,20 +155,46 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             return Array.Empty<TState>();
         }
 
-        var keys = await _tagIndex.GetProjectionKeysByTagAsync(_projectionPath, tag);
-        var results = new List<TState>(keys.Length);
+        var keys = await _tagIndex.GetProjectionKeysByTagAsync(_projectionPath, tag).ConfigureAwait(false);
 
-        foreach (var key in keys)
+        if (keys.Length == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var state = await GetAsync(key, cancellationToken);
-            if (state != null)
-            {
-                results.Add(state);
-            }
+            return Array.Empty<TState>();
         }
 
-        return results;
+        // For small sets, sequential read is more efficient
+        if (keys.Length < 10)
+        {
+            var results = new List<TState>(keys.Length);
+            foreach (var key in keys)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var state = await GetAsync(key, cancellationToken).ConfigureAwait(false);
+                if (state != null)
+                {
+                    results.Add(state);
+                }
+            }
+            return results;
+        }
+
+        // Parallel read for larger sets
+        var parallelResults = new TState?[keys.Length];
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount * 2,
+            CancellationToken = cancellationToken
+        };
+
+        await Parallel.ForEachAsync(
+            keys.Select((key, index) => (key, index)),
+            options,
+            async (item, ct) =>
+            {
+                parallelResults[item.index] = await GetAsync(item.key, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
+        return parallelResults.Where(r => r != null).ToList()!;
     }
 
     public async Task<IReadOnlyList<TState>> QueryByTagsAsync(IEnumerable<Tag> tags, CancellationToken cancellationToken = default)
@@ -158,24 +215,50 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
         if (tagArray.Length == 1)
         {
-            return await QueryByTagAsync(tagArray[0], cancellationToken);
+            return await QueryByTagAsync(tagArray[0], cancellationToken).ConfigureAwait(false);
         }
 
         // Multi-tag query (AND logic)
-        var keys = await _tagIndex.GetProjectionKeysByTagsAsync(_projectionPath, tagArray);
-        var results = new List<TState>(keys.Length);
+        var keys = await _tagIndex.GetProjectionKeysByTagsAsync(_projectionPath, tagArray).ConfigureAwait(false);
 
-        foreach (var key in keys)
+        if (keys.Length == 0)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var state = await GetAsync(key, cancellationToken);
-            if (state != null)
-            {
-                results.Add(state);
-            }
+            return Array.Empty<TState>();
         }
 
-        return results;
+        // For small sets, sequential read is more efficient
+        if (keys.Length < 10)
+        {
+            var results = new List<TState>(keys.Length);
+            foreach (var key in keys)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var state = await GetAsync(key, cancellationToken).ConfigureAwait(false);
+                if (state != null)
+                {
+                    results.Add(state);
+                }
+            }
+            return results;
+        }
+
+        // Parallel read for larger sets
+        var parallelResults = new TState?[keys.Length];
+        var options = new ParallelOptions
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount * 2,
+            CancellationToken = cancellationToken
+        };
+
+        await Parallel.ForEachAsync(
+            keys.Select((key, index) => (key, index)),
+            options,
+            async (item, ct) =>
+            {
+                parallelResults[item.index] = await GetAsync(item.key, ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+
+        return parallelResults.Where(r => r != null).ToList()!;
     }
 
     public async Task SaveAsync(string key, TState state, CancellationToken cancellationToken = default)
@@ -203,11 +286,11 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             }
         }
 
-        await _lock.WaitAsync(cancellationToken);
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             // Get existing metadata or create new
-            var existingMetadata = await _metadataIndex.GetAsync(_projectionPath, key);
+            var existingMetadata = await _metadataIndex.GetAsync(_projectionPath, key).ConfigureAwait(false);
             var now = DateTimeOffset.UtcNow;
 
             ProjectionMetadata metadata;
@@ -250,10 +333,10 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
             // Re-serialize with updated size
             json = JsonSerializer.Serialize(wrapper, _jsonOptions);
-            await File.WriteAllTextAsync(filePath, json, cancellationToken);
+            await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
 
             // Save metadata to index
-            await _metadataIndex.SaveAsync(_projectionPath, key, metadata);
+            await _metadataIndex.SaveAsync(_projectionPath, key, metadata).ConfigureAwait(false);
 
             // Update tag indices if tags are configured
             if (newTags != null)
@@ -268,14 +351,14 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
                         _projectionPath,
                         key,
                         oldTags,
-                        newTags);
+                        newTags).ConfigureAwait(false);
                 }
                 else
                 {
                     // New projection: just add tags
                     foreach (var tag in newTags)
                     {
-                        await _tagIndex.AddProjectionAsync(_projectionPath, tag, key);
+                        await _tagIndex.AddProjectionAsync(_projectionPath, tag, key).ConfigureAwait(false);
                     }
                 }
 
@@ -300,21 +383,21 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             return;
         }
 
-        await _lock.WaitAsync(cancellationToken);
+        await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             // Delete projection file
             File.Delete(filePath);
 
             // Remove from metadata index
-            await _metadataIndex.DeleteAsync(_projectionPath, key);
+            await _metadataIndex.DeleteAsync(_projectionPath, key).ConfigureAwait(false);
 
             // Remove from tag indices if tags were tracked
             if (_projectionTags.TryGetValue(key, out var tags))
             {
                 foreach (var tag in tags)
                 {
-                    await _tagIndex.RemoveProjectionAsync(_projectionPath, tag, key);
+                    await _tagIndex.RemoveProjectionAsync(_projectionPath, tag, key).ConfigureAwait(false);
                 }
                 _projectionTags.Remove(key);
             }

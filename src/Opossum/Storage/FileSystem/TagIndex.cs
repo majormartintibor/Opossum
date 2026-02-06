@@ -37,11 +37,11 @@ internal class TagIndex
         var indexFilePath = GetIndexFilePath(indexPath, tag);
 
         // Acquire lock for Read-Modify-Write atomic operation
-        await _lock.WaitAsync();
+        await _lock.WaitAsync().ConfigureAwait(false);
         try
         {
             // Read existing positions or create new list
-            var positions = await ReadPositionsAsync(indexFilePath);
+            var positions = await ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
 
             // Add position if not already present
             if (!positions.Contains(position))
@@ -51,7 +51,7 @@ internal class TagIndex
             }
 
             // Write updated positions atomically
-            await WritePositionsAsync(indexFilePath, positions);
+            await WritePositionsAsync(indexFilePath, positions).ConfigureAwait(false);
         }
         finally
         {
@@ -76,7 +76,7 @@ internal class TagIndex
             return [];
         }
 
-        var positions = await ReadPositionsAsync(indexFilePath);
+        var positions = await ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
         return positions.ToArray();
     }
 
@@ -135,7 +135,7 @@ internal class TagIndex
         {
             try
             {
-                var json = await File.ReadAllTextAsync(indexFilePath);
+                var json = await File.ReadAllTextAsync(indexFilePath).ConfigureAwait(false);
                 var indexData = JsonSerializer.Deserialize<IndexData>(json);
                 return indexData?.Positions ?? [];
             }
@@ -147,13 +147,13 @@ internal class TagIndex
             catch (IOException) when (attempt < maxRetries - 1)
             {
                 // File might be locked by a writer, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2;
             }
             catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
             {
                 // File might be being replaced, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2;
             }
         }
@@ -161,7 +161,7 @@ internal class TagIndex
         // Final attempt without catching IO exceptions
         try
         {
-            var json = await File.ReadAllTextAsync(indexFilePath);
+            var json = await File.ReadAllTextAsync(indexFilePath).ConfigureAwait(false);
             var indexData = JsonSerializer.Deserialize<IndexData>(json);
             return indexData?.Positions ?? [];
         }
@@ -193,12 +193,12 @@ internal class TagIndex
         await using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
         await using (var writer = new StreamWriter(fileStream))
         {
-            await writer.WriteAsync(json);
-            await writer.FlushAsync();
+            await writer.WriteAsync(json).ConfigureAwait(false);
+            await writer.FlushAsync().ConfigureAwait(false);
         } // FileStream is disposed here, ensuring file handle is released
 
         // Atomic replace with retry logic
-        await AtomicMoveWithRetryAsync(tempFilePath, indexFilePath);
+        await AtomicMoveWithRetryAsync(tempFilePath, indexFilePath).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -218,13 +218,13 @@ internal class TagIndex
             catch (UnauthorizedAccessException) when (attempt < maxRetries - 1)
             {
                 // File might be locked by a reader, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2; // Exponential backoff
             }
             catch (IOException) when (attempt < maxRetries - 1)
             {
                 // File might be in use, wait and retry
-                await Task.Delay(retryDelay);
+                await Task.Delay(retryDelay).ConfigureAwait(false);
                 retryDelay *= 2; // Exponential backoff
             }
         }
