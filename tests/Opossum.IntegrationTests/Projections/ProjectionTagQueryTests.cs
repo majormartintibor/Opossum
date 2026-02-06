@@ -173,7 +173,7 @@ public class ProjectionTagQueryTests : IDisposable
         await store.SaveAsync("2", proj2);
 
         // Act
-        store.DeleteAllIndices();
+        await store.DeleteAllIndicesAsync();
 
         // Assert - Indices should be gone
         var results = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Active" });

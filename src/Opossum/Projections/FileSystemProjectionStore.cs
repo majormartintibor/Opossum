@@ -412,10 +412,10 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     /// Internal method to delete all indices for this projection.
     /// Used during rebuild to ensure clean state.
     /// </summary>
-    internal void DeleteAllIndices()
+    internal async Task DeleteAllIndicesAsync()
     {
         _tagIndex.DeleteAllIndices(_projectionPath);
-        _metadataIndex.ClearAsync(_projectionPath).GetAwaiter().GetResult();
+        await _metadataIndex.ClearAsync(_projectionPath).ConfigureAwait(false);
         _projectionTags.Clear();
     }
 
