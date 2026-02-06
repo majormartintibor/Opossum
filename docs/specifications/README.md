@@ -8,7 +8,7 @@ This directory contains detailed specifications for planned Opossum features. Ea
 
 | Spec | Title | Status | Dependencies | Priority |
 |------|-------|--------|--------------|----------|
-| [SPEC-001](SPEC-001-Projection-Metadata.md) | Projection Metadata & Indexing | Draft | None | **P0** (Foundation) |
+| [SPEC-001](SPEC-001-Projection-Metadata.md) | Projection Metadata & Indexing | ✅ Implemented | None | **P0** (Foundation) |
 | [SPEC-002](SPEC-002-Cache-Warming.md) | Cache Warming | Draft | SPEC-001 | P1 |
 | [SPEC-003](SPEC-003-Retention-Policies.md) | Retention Policies | Draft | SPEC-001 | P1 |
 | [SPEC-004](SPEC-004-Archiving-Compression.md) | Archiving & Compression | Draft | SPEC-001, SPEC-003 | P2 |
