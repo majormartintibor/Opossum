@@ -75,7 +75,7 @@ public sealed class ReflectionMessageHandler : IMessageHandler
         // Handle async results
         if (result is Task task)
         {
-            await task;
+            await task.ConfigureAwait(false);
 
             // Get the result from Task<T>
             if (_method.ReturnType.IsGenericType && 

@@ -98,20 +98,20 @@ internal sealed class ProjectionManager : IProjectionManager
             var events = await _eventStore.ReadAsync(query, null);
 
             // Clear existing projection data
-            await registration.ClearAsync(cancellationToken);
+            await registration.ClearAsync(cancellationToken).ConfigureAwait(false);
 
             // Rebuild from events
             foreach (var evt in events.OrderBy(e => e.Position))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await registration.ApplyAsync(evt, cancellationToken);
+                await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
             }
 
             // Save checkpoint
             if (events.Length > 0)
             {
                 var lastPosition = events.Max(e => e.Position);
-                await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken);
+                await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
             }
         }
         finally
@@ -144,11 +144,11 @@ internal sealed class ProjectionManager : IProjectionManager
             foreach (var evt in relevantEvents)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await registration.ApplyAsync(evt, cancellationToken);
+                await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
             }
 
             var lastPosition = relevantEvents.Max(e => e.Position);
-            await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken);
+            await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -163,7 +163,7 @@ internal sealed class ProjectionManager : IProjectionManager
             return 0;
         }
 
-        var json = await File.ReadAllTextAsync(filePath, cancellationToken);
+        var json = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
         var checkpoint = JsonSerializer.Deserialize<ProjectionCheckpoint>(json, _jsonOptions);
 
         return checkpoint?.LastProcessedPosition ?? 0;
@@ -173,8 +173,8 @@ internal sealed class ProjectionManager : IProjectionManager
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
 
-        var currentCheckpoint = await GetCheckpointAsync(projectionName, cancellationToken);
-        
+        var currentCheckpoint = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
+
         var checkpoint = new ProjectionCheckpoint
         {
             ProjectionName = projectionName,
@@ -186,7 +186,7 @@ internal sealed class ProjectionManager : IProjectionManager
         var filePath = GetCheckpointFilePath(projectionName);
         var json = JsonSerializer.Serialize(checkpoint, _jsonOptions);
 
-        await File.WriteAllTextAsync(filePath, json, cancellationToken);
+        await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
     }
 
     public IReadOnlyList<string> GetRegisteredProjections()

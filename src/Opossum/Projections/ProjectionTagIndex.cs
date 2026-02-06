@@ -36,14 +36,14 @@ internal sealed class ProjectionTagIndex
         var tagLockKey = GetTagLockKey(projectionPath, tag);
         var semaphore = _tagLocks.GetOrAdd(tagLockKey, _ => new SemaphoreSlim(1, 1));
 
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync().ConfigureAwait(false);
         try
         {
             // Read existing keys
             HashSet<string> keys;
             if (File.Exists(indexFile))
             {
-                var json = await File.ReadAllTextAsync(indexFile);
+                var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
                 keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? new HashSet<string>();
             }
             else
@@ -56,7 +56,7 @@ internal sealed class ProjectionTagIndex
 
             // Write back
             var updatedJson = JsonSerializer.Serialize(keys, _jsonOptions);
-            await File.WriteAllTextAsync(indexFile, updatedJson);
+            await File.WriteAllTextAsync(indexFile, updatedJson).ConfigureAwait(false);
         }
         finally
         {
@@ -88,10 +88,10 @@ internal sealed class ProjectionTagIndex
         var tagLockKey = GetTagLockKey(projectionPath, tag);
         var semaphore = _tagLocks.GetOrAdd(tagLockKey, _ => new SemaphoreSlim(1, 1));
 
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync().ConfigureAwait(false);
         try
         {
-            var json = await File.ReadAllTextAsync(indexFile);
+            var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
             var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? new HashSet<string>();
 
             if (keys.Remove(projectionKey))
@@ -100,7 +100,7 @@ internal sealed class ProjectionTagIndex
                 {
                     // Update index file
                     var updatedJson = JsonSerializer.Serialize(keys, _jsonOptions);
-                    await File.WriteAllTextAsync(indexFile, updatedJson);
+                    await File.WriteAllTextAsync(indexFile, updatedJson).ConfigureAwait(false);
                 }
                 else
                 {
@@ -138,10 +138,10 @@ internal sealed class ProjectionTagIndex
         var tagLockKey = GetTagLockKey(projectionPath, tag);
         var semaphore = _tagLocks.GetOrAdd(tagLockKey, _ => new SemaphoreSlim(1, 1));
 
-        await semaphore.WaitAsync();
+        await semaphore.WaitAsync().ConfigureAwait(false);
         try
         {
-            var json = await File.ReadAllTextAsync(indexFile);
+            var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
             var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? new HashSet<string>();
             return keys.ToArray();
         }
@@ -171,14 +171,14 @@ internal sealed class ProjectionTagIndex
 
         if (tagArray.Length == 1)
         {
-            return await GetProjectionKeysByTagAsync(projectionPath, tagArray[0]);
+            return await GetProjectionKeysByTagAsync(projectionPath, tagArray[0]).ConfigureAwait(false);
         }
 
         // Query each tag index
         var keySets = new List<HashSet<string>>();
         foreach (var tag in tagArray)
         {
-            var keys = await GetProjectionKeysByTagAsync(projectionPath, tag);
+            var keys = await GetProjectionKeysByTagAsync(projectionPath, tag).ConfigureAwait(false);
             if (keys.Length == 0)
             {
                 // If any tag returns no results, intersection is empty
@@ -241,13 +241,13 @@ internal sealed class ProjectionTagIndex
         // Remove old tags
         foreach (var tag in tagsToRemove)
         {
-            await RemoveProjectionAsync(projectionPath, tag, projectionKey);
+            await RemoveProjectionAsync(projectionPath, tag, projectionKey).ConfigureAwait(false);
         }
 
         // Add new tags
         foreach (var tag in tagsToAdd)
         {
-            await AddProjectionAsync(projectionPath, tag, projectionKey);
+            await AddProjectionAsync(projectionPath, tag, projectionKey).ConfigureAwait(false);
         }
     }
 

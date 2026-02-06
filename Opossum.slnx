@@ -8,7 +8,15 @@
     <File Path=".github/workflows/samples-ci.yml" />
   </Folder>
   <Folder Name="/docs/">
+    <File Path="docs/ConfigureAwait-Analysis-And-Recommendation.md" />
+    <File Path="docs/ConfigureAwait-Complete.md" />
+    <File Path="docs/ConfigureAwait-Implementation-Guide.md" />
+    <File Path="docs/ConfigureAwait-Implementation-Summary.md" />
+    <File Path="docs/Implementation-Strategy-1-Parallel-Reads.md" />
     <File Path="docs/LEDGER.md" />
+    <File Path="docs/Parallel-Reads-Impact-Summary.md" />
+    <File Path="docs/Performance-Analysis-FileSystem-Read-Optimization.md" />
+    <File Path="docs/Performance-Fix-Remove-GetAsync-Lock.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_IMPLEMENTATION_SUMMARY.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_PROGRESS.md" />

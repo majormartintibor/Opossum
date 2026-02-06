@@ -36,12 +36,12 @@ internal sealed class ProjectionDaemon : BackgroundService
         _logger.LogInformation("Projection daemon starting...");
 
         // Wait a bit for application startup to complete
-        await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+        await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken).ConfigureAwait(false);
 
         // Auto-rebuild projections if enabled and checkpoints are missing
         if (_options.EnableAutoRebuild)
         {
-            await RebuildMissingProjectionsAsync(stoppingToken);
+            await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Projection daemon polling started with interval: {Interval}", _options.PollingInterval);
@@ -50,7 +50,7 @@ internal sealed class ProjectionDaemon : BackgroundService
         {
             try
             {
-                await ProcessNewEventsAsync(stoppingToken);
+                await ProcessNewEventsAsync(stoppingToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -62,7 +62,7 @@ internal sealed class ProjectionDaemon : BackgroundService
                 _logger.LogError(ex, "Error processing events in projection daemon");
             }
 
-            await Task.Delay(_options.PollingInterval, stoppingToken);
+            await Task.Delay(_options.PollingInterval, stoppingToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Projection daemon stopped");
@@ -76,12 +76,12 @@ internal sealed class ProjectionDaemon : BackgroundService
         {
             try
             {
-                var checkpoint = await _projectionManager.GetCheckpointAsync(projectionName, cancellationToken);
+                var checkpoint = await _projectionManager.GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
 
                 if (checkpoint == 0)
                 {
                     _logger.LogInformation("Rebuilding projection '{ProjectionName}' (no checkpoint found)", projectionName);
-                    await _projectionManager.RebuildAsync(projectionName, cancellationToken);
+                    await _projectionManager.RebuildAsync(projectionName, cancellationToken).ConfigureAwait(false);
                     _logger.LogInformation("Projection '{ProjectionName}' rebuilt successfully", projectionName);
                 }
             }
@@ -106,7 +106,7 @@ internal sealed class ProjectionDaemon : BackgroundService
 
         foreach (var projectionName in projections)
         {
-            var checkpoint = await _projectionManager.GetCheckpointAsync(projectionName, cancellationToken);
+            var checkpoint = await _projectionManager.GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
             minCheckpoint = Math.Min(minCheckpoint, checkpoint);
         }
 
@@ -118,7 +118,7 @@ internal sealed class ProjectionDaemon : BackgroundService
         // Read all events (we'll filter by position in memory for now)
         // TODO: Add position-based filtering to Query/QueryItem when available
         var query = Query.All();
-        var allEvents = await _eventStore.ReadAsync(query, null);
+        var allEvents = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
 
         // Filter to events after the minimum checkpoint
         var newEvents = allEvents
@@ -139,7 +139,7 @@ internal sealed class ProjectionDaemon : BackgroundService
 
         foreach (var batch in batches)
         {
-            await _projectionManager.UpdateAsync(batch.ToArray(), cancellationToken);
+            await _projectionManager.UpdateAsync(batch.ToArray(), cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogDebug("Processed {EventCount} events successfully", newEvents.Length);

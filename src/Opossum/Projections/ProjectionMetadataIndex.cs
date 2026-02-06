@@ -30,14 +30,14 @@ internal sealed class ProjectionMetadataIndex
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(metadata);
 
-        await _indexLock.WaitAsync();
+        await _indexLock.WaitAsync().ConfigureAwait(false);
         try
         {
             // Update cache
             _cache[key] = metadata;
 
             // Persist to disk
-            await PersistIndexAsync(projectionPath);
+            await PersistIndexAsync(projectionPath).ConfigureAwait(false);
         }
         finally
         {
@@ -63,7 +63,7 @@ internal sealed class ProjectionMetadataIndex
         }
 
         // Load from disk if not in cache
-        await LoadIndexAsync(projectionPath);
+        await LoadIndexAsync(projectionPath).ConfigureAwait(false);
 
         return _cache.TryGetValue(key, out var metadata) ? metadata : null;
     }
@@ -76,7 +76,7 @@ internal sealed class ProjectionMetadataIndex
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionPath);
 
-        await LoadIndexAsync(projectionPath);
+        await LoadIndexAsync(projectionPath).ConfigureAwait(false);
 
         return _cache.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
     }
@@ -92,7 +92,7 @@ internal sealed class ProjectionMetadataIndex
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionPath);
 
-        await LoadIndexAsync(projectionPath);
+        await LoadIndexAsync(projectionPath).ConfigureAwait(false);
 
         return _cache
             .Where(kvp => kvp.Value.LastUpdatedAt >= since)
@@ -111,14 +111,14 @@ internal sealed class ProjectionMetadataIndex
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        await _indexLock.WaitAsync();
+        await _indexLock.WaitAsync().ConfigureAwait(false);
         try
         {
             // Remove from cache
             _cache.TryRemove(key, out _);
 
             // Persist to disk
-            await PersistIndexAsync(projectionPath);
+            await PersistIndexAsync(projectionPath).ConfigureAwait(false);
         }
         finally
         {
@@ -135,7 +135,7 @@ internal sealed class ProjectionMetadataIndex
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionPath);
 
-        await _indexLock.WaitAsync();
+        await _indexLock.WaitAsync().ConfigureAwait(false);
         try
         {
             _cache.Clear();
@@ -164,10 +164,10 @@ internal sealed class ProjectionMetadataIndex
             return; // No index file yet
         }
 
-        await _indexLock.WaitAsync();
+        await _indexLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var json = await File.ReadAllTextAsync(indexFilePath);
+            var json = await File.ReadAllTextAsync(indexFilePath).ConfigureAwait(false);
             var index = JsonSerializer.Deserialize<Dictionary<string, ProjectionMetadata>>(json, _jsonOptions);
 
             if (index != null)
@@ -196,7 +196,7 @@ internal sealed class ProjectionMetadataIndex
         Directory.CreateDirectory(indexDirectory);
 
         var json = JsonSerializer.Serialize(_cache.ToDictionary(kvp => kvp.Key, kvp => kvp.Value), _jsonOptions);
-        await File.WriteAllTextAsync(indexFilePath, json);
+        await File.WriteAllTextAsync(indexFilePath, json).ConfigureAwait(false);
     }
 
     /// <summary>

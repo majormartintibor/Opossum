@@ -36,14 +36,14 @@ internal class IndexManager
         var indexPath = GetIndexPath(contextPath);
 
         // Add to EventType index
-        await _eventTypeIndex.AddPositionAsync(indexPath, sequencedEvent.Event.EventType, sequencedEvent.Position);
+        await _eventTypeIndex.AddPositionAsync(indexPath, sequencedEvent.Event.EventType, sequencedEvent.Position).ConfigureAwait(false);
 
         // Add to Tag indices
         if (sequencedEvent.Event.Tags != null)
         {
             foreach (var tag in sequencedEvent.Event.Tags)
             {
-                await _tagIndex.AddPositionAsync(indexPath, tag, sequencedEvent.Position);
+                await _tagIndex.AddPositionAsync(indexPath, tag, sequencedEvent.Position).ConfigureAwait(false);
             }
         }
     }
@@ -57,7 +57,7 @@ internal class IndexManager
         ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
 
         var indexPath = GetIndexPath(contextPath);
-        return await _eventTypeIndex.GetPositionsAsync(indexPath, eventType);
+        return await _eventTypeIndex.GetPositionsAsync(indexPath, eventType).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -79,7 +79,7 @@ internal class IndexManager
 
         foreach (var eventType in eventTypes)
         {
-            var positions = await _eventTypeIndex.GetPositionsAsync(indexPath, eventType);
+            var positions = await _eventTypeIndex.GetPositionsAsync(indexPath, eventType).ConfigureAwait(false);
             foreach (var position in positions)
             {
                 allPositions.Add(position);
@@ -100,7 +100,7 @@ internal class IndexManager
         ArgumentNullException.ThrowIfNull(tag);
 
         var indexPath = GetIndexPath(contextPath);
-        return await _tagIndex.GetPositionsAsync(indexPath, tag);
+        return await _tagIndex.GetPositionsAsync(indexPath, tag).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -122,7 +122,7 @@ internal class IndexManager
 
         foreach (var tag in tags)
         {
-            var positions = await _tagIndex.GetPositionsAsync(indexPath, tag);
+            var positions = await _tagIndex.GetPositionsAsync(indexPath, tag).ConfigureAwait(false);
             foreach (var position in positions)
             {
                 allPositions.Add(position);
