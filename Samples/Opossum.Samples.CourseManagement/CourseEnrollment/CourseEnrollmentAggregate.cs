@@ -51,6 +51,11 @@ public sealed record CourseEnrollmentAggregate
             this with { StudentEnrollmentTier = subscriptionUpdated.EnrollmentTier },
 
         // Enrollment events - track enrollment counts
+        // Note: Pattern matching evaluates in order and stops at first match
+        // This works correctly because:
+        // - For duplicate check: both CourseId AND StudentId match → sets duplicate flag
+        // - For course capacity: only CourseId matches → increments course count
+        // - For student limit: only StudentId matches → increments student count
         StudentEnrolledToCourseEvent enrolled when enrolled.CourseId == CourseId && enrolled.StudentId == StudentId =>
             this with { IsStudentAlreadyEnrolledInThisCourse = true },
 

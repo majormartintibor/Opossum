@@ -8,10 +8,13 @@
     <File Path=".github/workflows/samples-ci.yml" />
   </Folder>
   <Folder Name="/docs/">
+    <File Path="docs/BugFix-Enrollment-Tier-Limit-Not-Enforced.md" />
     <File Path="docs/ConfigureAwait-Analysis-And-Recommendation.md" />
     <File Path="docs/ConfigureAwait-Complete.md" />
     <File Path="docs/ConfigureAwait-Implementation-Guide.md" />
     <File Path="docs/ConfigureAwait-Implementation-Summary.md" />
+    <File Path="docs/DataSeeder-Fix-Complete.md" />
+    <File Path="docs/DataSeeder-Optimization-Complete.md" />
     <File Path="docs/Durability-Guarantees-Implementation.md" />
     <File Path="docs/Durability-Quick-Reference.md" />
     <File Path="docs/Implementation-Strategy-1-Parallel-Reads.md" />
@@ -20,6 +23,7 @@
     <File Path="docs/Performance-Analysis-FileSystem-Read-Optimization.md" />
     <File Path="docs/Performance-Fix-Remove-GetAsync-Lock.md" />
     <File Path="docs/Phase-1-2-Implementation-Summary.md" />
+    <File Path="docs/Phase-2A-Implementation-Summary.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_IMPLEMENTATION_SUMMARY.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_PROGRESS.md" />
