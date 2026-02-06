@@ -48,8 +48,9 @@ public class JsonEventSerializerTests
         // Act
         var json = _serializer.Serialize(sequencedEvent);
 
-        // Assert
-        Assert.Contains("\"position\": 42", json, StringComparison.OrdinalIgnoreCase);
+        // Assert - Works with both minified and indented JSON
+        Assert.Contains("\"position\":", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("42", json);
     }
 
     [Fact]

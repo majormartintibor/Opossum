@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Opossum.Core;
 using Opossum.Extensions;
+using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
@@ -13,6 +14,7 @@ namespace Opossum.Samples.DataSeeder;
 public class DataSeeder
 {
     private readonly IEventStore _eventStore;
+    private readonly IMediator _mediator;
     private readonly SeedingConfiguration _config;
     private readonly Random _random = new(42); // Fixed seed for reproducibility
 
@@ -24,6 +26,7 @@ public class DataSeeder
     public DataSeeder(IServiceProvider serviceProvider, SeedingConfiguration config)
     {
         _eventStore = serviceProvider.GetRequiredService<IEventStore>();
+        _mediator = serviceProvider.GetRequiredService<IMediator>();
         _config = config;
     }
 
@@ -87,7 +90,7 @@ public class DataSeeder
 
                 await _eventStore.AppendAsync(@event);
                 TotalEventsCreated++;
-                await Task.Delay(1); // Prevent file system lock contention
+                // OPTIMIZATION REMOVED: Task.Delay(1) - let optimized file I/O handle concurrency
 
                 _students.Add((studentId, tier, GetMaxCoursesForTier(tier)));
 
@@ -124,7 +127,7 @@ public class DataSeeder
 
                 await _eventStore.AppendAsync(@event);
                 TotalEventsCreated++;
-                await Task.Delay(1); // Prevent file system lock contention
+                // OPTIMIZATION REMOVED: Task.Delay(1) - let optimized file I/O handle concurrency
 
                 _courses.Add((courseId, courseName, capacity));
 
@@ -162,7 +165,7 @@ public class DataSeeder
 
             await _eventStore.AppendAsync(@event);
             TotalEventsCreated++;
-            await Task.Delay(1); // Prevent file system lock contention
+            // OPTIMIZATION REMOVED: Task.Delay(1) - let optimized file I/O handle concurrency
 
             // Update in-memory list
             var index = _students.FindIndex(s => s.StudentId == studentId);
@@ -200,7 +203,7 @@ public class DataSeeder
 
             await _eventStore.AppendAsync(@event);
             TotalEventsCreated++;
-            await Task.Delay(1); // Prevent file system lock contention
+            // OPTIMIZATION REMOVED: Task.Delay(1) - let optimized file I/O handle concurrency
 
             // Update in-memory list
             var index = _courses.FindIndex(c => c.CourseId == courseId);
@@ -223,7 +226,6 @@ public class DataSeeder
         int skippedDuplicates = 0;
         int skippedCapacity = 0;
         int skippedStudentLimit = 0;
-        int maxAttempts = _config.StudentCount * 10; // More generous limit
 
         // Track enrollments per course and per student
         var courseEnrollments = _courses.ToDictionary(c => c.CourseId, _ => 0);
@@ -237,49 +239,86 @@ public class DataSeeder
 
         Console.WriteLine($"   🎯 Target: {targetEnrollments} enrollments");
 
-        while (totalEnrollments < targetEnrollments && attempts < maxAttempts)
+        // OPTIMIZATION: Use smart selection instead of random picking
+        // Build lists of available students and courses, removing them as they fill up
+        var availableStudents = _students.ToList();
+        var availableCourses = _courses.ToList();
+
+        while (totalEnrollments < targetEnrollments && availableStudents.Count > 0 && availableCourses.Count > 0)
         {
             attempts++;
 
-            // Pick random student and course
-            var student = _students[_random.Next(_students.Count)];
-            var course = _courses[_random.Next(_courses.Count)];
+            // OPTIMIZATION: Pick student with fewest enrollments first (better distribution)
+            var student = availableStudents
+                .OrderBy(s => studentEnrollments[s.StudentId])
+                .ThenBy(_ => _random.Next()) // Randomize within same enrollment count
+                .First();
+
+            // OPTIMIZATION: Pick course with most available capacity first (better utilization)
+            var course = availableCourses
+                .OrderByDescending(c => c.MaxCapacity - courseEnrollments[c.CourseId])
+                .ThenBy(_ => _random.Next()) // Randomize within same availability
+                .First();
 
             // Check if this pair is already enrolled (DUPLICATE CHECK)
             if (enrolledPairs.Contains((student.StudentId, course.CourseId)))
             {
                 skippedDuplicates++;
-                continue; // Already enrolled
+                // Remove this course from consideration for this student
+                availableCourses = availableCourses.Where(c => c.CourseId != course.CourseId).ToList();
+                if (availableCourses.Count == 0)
+                {
+                    availableCourses = _courses.ToList(); // Reset
+                    availableStudents.Remove(student); // This student is done
+                }
+                continue; // Try again
             }
 
             // Check if student can enroll
             if (studentEnrollments[student.StudentId] >= student.MaxCourses)
             {
                 skippedStudentLimit++;
-                continue; // Student at limit
+                availableStudents.Remove(student); // Student at limit, remove from pool
+                continue;
             }
 
             // Check if course has capacity
             if (courseEnrollments[course.CourseId] >= course.MaxCapacity)
             {
                 skippedCapacity++;
-                continue; // Course full
+                availableCourses.Remove(course); // Course full, remove from pool
+                continue;
             }
 
-            // Enroll student
-            var @event = new StudentEnrolledToCourseEvent(
-                CourseId: course.CourseId,
-                StudentId: student.StudentId)
-                .ToDomainEvent()
-                .WithTag("courseId", course.CourseId.ToString())
-                .WithTag("studentId", student.StudentId.ToString())
-                .WithTimestamp(GetRandomPastTimestamp(120, 1)); // Recent enrollments
+            // Enroll student using COMMAND HANDLER (enforces business rules!)
+            var command = new EnrollStudentToCourseCommand(course.CourseId, student.StudentId);
+            var result = await _mediator.InvokeAsync<CommandResult>(command);
 
-            await _eventStore.AppendAsync(@event);
+            if (!result.Success)
+            {
+                // Command rejected - this should rarely happen with our smart selection
+                // but can occur due to race conditions or if our tracking is slightly off
+                if (result.ErrorMessage?.Contains("already enrolled") == true)
+                {
+                    skippedDuplicates++;
+                }
+                else if (result.ErrorMessage?.Contains("capacity") == true)
+                {
+                    skippedCapacity++;
+                    availableCourses.Remove(course);
+                }
+                else if (result.ErrorMessage?.Contains("enrollment limit") == true)
+                {
+                    skippedStudentLimit++;
+                    availableStudents.Remove(student);
+                }
+                continue; // Command failed, try next
+            }
+
             TotalEventsCreated++;
 
-            // Small delay to prevent file system lock contention (Windows)
-            await Task.Delay(1);
+            // OPTIMIZATION REMOVED: No more Task.Delay(1) - let parallel file I/O handle it
+            // The optimized EventFileManager with parallel reads can handle concurrent writes better
 
             // Update tracking
             courseEnrollments[course.CourseId]++;
@@ -295,6 +334,7 @@ public class DataSeeder
 
         Console.WriteLine($"   ✅ Created {totalEnrollments} enrollments in {attempts} attempts.                    ");
         Console.WriteLine($"      Skipped - Duplicates: {skippedDuplicates}, Capacity: {skippedCapacity}, Student Limit: {skippedStudentLimit}");
+        Console.WriteLine($"      💡 Efficiency: {(double)totalEnrollments / attempts * 100:F1}% successful enrollments");
     }
 
     // ============================================================================

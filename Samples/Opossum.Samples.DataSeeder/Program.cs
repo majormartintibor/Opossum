@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Opossum.DependencyInjection;
+using Opossum.Mediator;
+using Opossum.Samples.CourseManagement.CourseEnrollment; // For command handler discovery
 using Opossum.Samples.DataSeeder;
 
 Console.WriteLine("🌱 Opossum Baseline Data Seeder");
@@ -115,6 +117,13 @@ static IServiceProvider ConfigureServices(SeedingConfiguration config)
     {
         options.RootPath = config.RootPath;
         options.AddContext("OpossumSampleApp");
+    });
+
+    // Add mediator for command handling (DataSeeder now uses commands instead of direct event append)
+    // Scan CourseManagement assembly for command handlers
+    services.AddMediator(options =>
+    {
+        options.Assemblies.Add(typeof(EnrollStudentToCourseCommand).Assembly);
     });
 
     return services.BuildServiceProvider();
