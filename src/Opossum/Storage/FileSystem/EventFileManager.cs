@@ -9,11 +9,13 @@ namespace Opossum.Storage.FileSystem;
 internal sealed class EventFileManager
 {
     private readonly JsonEventSerializer _serializer;
+    private readonly bool _flushImmediately;
     private const int PositionPadding = 10; // Supports up to 10 billion events
 
-    public EventFileManager()
+    public EventFileManager(bool flushImmediately = true)
     {
         _serializer = new JsonEventSerializer();
+        _flushImmediately = flushImmediately;
     }
 
     /// <summary>
@@ -48,7 +50,15 @@ internal sealed class EventFileManager
             // Write to temp file
             await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
 
-            // Atomic move
+            // DURABILITY GUARANTEE: Flush to disk before making event visible
+            // This ensures event is physically on disk before we move it to final location.
+            // Critical for maintaining DCB guarantees and preventing data loss on power failure.
+            if (_flushImmediately)
+            {
+                await FlushFileToDiskAsync(tempPath).ConfigureAwait(false);
+            }
+
+            // Atomic move (now safe - data is on disk if flushing is enabled)
             File.Move(tempPath, filePath, overwrite: true);
         }
         catch
@@ -189,5 +199,25 @@ internal sealed class EventFileManager
 
         var filePath = GetEventFilePath(eventsPath, position);
         return File.Exists(filePath);
+    }
+
+    /// <summary>
+    /// Flushes file data to physical disk, ensuring durability.
+    /// Uses RandomAccess.FlushToDisk for maximum safety on .NET 10.
+    /// </summary>
+    /// <param name="filePath">Path to the file to flush</param>
+    private static async Task FlushFileToDiskAsync(string filePath)
+    {
+        // Use SafeFileHandle for proper async I/O in .NET 10
+        using var handle = File.OpenHandle(
+            filePath,
+            FileMode.Open,
+            FileAccess.ReadWrite,
+            FileShare.None,
+            FileOptions.None);
+
+        // RandomAccess.FlushToDisk ensures data is physically written to storage
+        // This is critical for durability - prevents data loss on power failure
+        await Task.Run(() => RandomAccess.FlushToDisk(handle)).ConfigureAwait(false);
     }
 }

@@ -18,6 +18,21 @@ public sealed class OpossumOptions
     public List<string> Contexts { get; } = new();
 
     /// <summary>
+    /// When true, forces events to be physically written to disk (flushed) before append completes.
+    /// This guarantees durability at the cost of performance (~1-5ms per event on modern SSDs).
+    /// 
+    /// Why this matters:
+    /// - TRUE (default): Events are guaranteed on disk before AppendAsync returns. 
+    ///   Safe for production. Prevents data loss on power failure.
+    /// - FALSE: Events may only be in OS page cache. Faster but risky. 
+    ///   Only use for testing or when you accept potential data loss.
+    /// 
+    /// Default: true (recommended for production)
+    /// Performance impact: ~1-5ms per event on SSD
+    /// </summary>
+    public bool FlushEventsImmediately { get; set; } = true;
+
+    /// <summary>
     /// Adds a bounded context to the event store.
     /// </summary>
     /// <param name="contextName">Name of the context (must be valid directory name)</param>

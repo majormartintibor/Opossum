@@ -18,8 +18,8 @@ internal class FileSystemEventStore : IEventStore
         ArgumentNullException.ThrowIfNull(options);
 
         _options = options;
-        _ledgerManager = new LedgerManager();
-        _eventFileManager = new EventFileManager();
+        _ledgerManager = new LedgerManager(options.FlushEventsImmediately);
+        _eventFileManager = new EventFileManager(options.FlushEventsImmediately);
         _indexManager = new IndexManager();
         _serializer = new JsonEventSerializer();
     }

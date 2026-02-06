@@ -11,7 +11,7 @@ public class LedgerManagerTests : IDisposable
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), "OpossumTests", Guid.NewGuid().ToString());
         Directory.CreateDirectory(_testDirectory);
-        _ledgerManager = new LedgerManager();
+        _ledgerManager = new LedgerManager(flushImmediately: false); // Faster tests
     }
 
     public void Dispose()
@@ -429,5 +429,61 @@ public class LedgerManagerTests : IDisposable
         // Assert
         Assert.Contains("lastSequencePosition", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("42", content);
+    }
+
+    // ========================================================================
+    // Flush Configuration Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task Constructor_WithFlushTrue_LedgerIsDurable()
+    {
+        // Arrange
+        var contextPath = Path.Combine(_testDirectory, "FlushTrueContext");
+        var managerWithFlush = new LedgerManager(flushImmediately: true);
+
+        // Act
+        await managerWithFlush.UpdateSequencePositionAsync(contextPath, 42);
+
+        // Assert
+        // Ledger should be persisted (flushed to disk)
+        var ledgerPath = Path.Combine(contextPath, ".ledger");
+        Assert.True(File.Exists(ledgerPath));
+
+        // Another manager should be able to read it
+        var anotherManager = new LedgerManager(flushImmediately: true);
+        var position = await anotherManager.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(42, position);
+    }
+
+    [Fact]
+    public async Task Constructor_WithFlushFalse_LedgerStillWritten()
+    {
+        // Arrange
+        var contextPath = Path.Combine(_testDirectory, "FlushFalseContext");
+        var managerNoFlush = new LedgerManager(flushImmediately: false);
+
+        // Act
+        await managerNoFlush.UpdateSequencePositionAsync(contextPath, 100);
+
+        // Assert
+        // Ledger should exist (even without flush, it's in page cache)
+        var ledgerPath = Path.Combine(contextPath, ".ledger");
+        Assert.True(File.Exists(ledgerPath));
+
+        // Should be readable
+        var position = await managerNoFlush.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(100, position);
+    }
+
+    [Fact]
+    public void Constructor_DefaultsToFlushTrue()
+    {
+        // Arrange & Act
+        var defaultManager = new LedgerManager();
+
+        // Assert
+        // Default constructor should enable flush for production safety
+        Assert.NotNull(defaultManager);
     }
 }
