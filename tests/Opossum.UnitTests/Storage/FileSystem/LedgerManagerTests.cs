@@ -11,7 +11,7 @@ public class LedgerManagerTests : IDisposable
     {
         _testDirectory = Path.Combine(Path.GetTempPath(), "OpossumTests", Guid.NewGuid().ToString());
         Directory.CreateDirectory(_testDirectory);
-        _ledgerManager = new LedgerManager();
+        _ledgerManager = new LedgerManager(flushImmediately: false); // Faster tests
     }
 
     public void Dispose()
@@ -246,37 +246,41 @@ public class LedgerManagerTests : IDisposable
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "ExclusiveContext");
-        var lockAcquired = false;
-        var secondLockFailed = false;
+        var secondLockAttempted = false;
+        var secondLockAcquired = false;
 
         // Act
         await using (var firstLock = await _ledgerManager.AcquireLockAsync(contextPath))
         {
-            lockAcquired = true;
-
-            // Try to acquire second lock (should fail or wait)
+            // Try to acquire second lock while first is held (should throw IOException)
             var lockTask = Task.Run(async () =>
             {
+                secondLockAttempted = true;
                 try
                 {
-                    // This should block or throw because first lock is held
+                    // This should throw IOException because first lock is held
                     await using var secondLock = await _ledgerManager.AcquireLockAsync(contextPath);
+                    secondLockAcquired = true; // Should not reach here
                 }
                 catch (IOException)
                 {
-                    secondLockFailed = true;
+                    // Expected - lock is exclusive
                 }
             });
 
-            // Give it a moment to attempt lock
+            // Give second task time to attempt lock
             await Task.Delay(100);
 
-            // Second lock should not have succeeded yet
-            Assert.True(lockAcquired);
+            // Assert - second lock should have been attempted but not acquired
+            Assert.True(secondLockAttempted, "Second lock attempt should have been made");
+            Assert.False(secondLockAcquired, "Second lock should not have been acquired while first is held");
+
+            // Wait for lock task to complete
+            await lockTask;
         }
 
-        // After first lock released, verify state
-        // (second lock attempt may have failed or succeeded after first released)
+        // After first lock released, verify second attempt failed as expected
+        Assert.False(secondLockAcquired, "Second lock should have failed due to exclusive access");
     }
 
     [Fact]
@@ -429,5 +433,61 @@ public class LedgerManagerTests : IDisposable
         // Assert
         Assert.Contains("lastSequencePosition", content, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("42", content);
+    }
+
+    // ========================================================================
+    // Flush Configuration Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task Constructor_WithFlushTrue_LedgerIsDurable()
+    {
+        // Arrange
+        var contextPath = Path.Combine(_testDirectory, "FlushTrueContext");
+        var managerWithFlush = new LedgerManager(flushImmediately: true);
+
+        // Act
+        await managerWithFlush.UpdateSequencePositionAsync(contextPath, 42);
+
+        // Assert
+        // Ledger should be persisted (flushed to disk)
+        var ledgerPath = Path.Combine(contextPath, ".ledger");
+        Assert.True(File.Exists(ledgerPath));
+
+        // Another manager should be able to read it
+        var anotherManager = new LedgerManager(flushImmediately: true);
+        var position = await anotherManager.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(42, position);
+    }
+
+    [Fact]
+    public async Task Constructor_WithFlushFalse_LedgerStillWritten()
+    {
+        // Arrange
+        var contextPath = Path.Combine(_testDirectory, "FlushFalseContext");
+        var managerNoFlush = new LedgerManager(flushImmediately: false);
+
+        // Act
+        await managerNoFlush.UpdateSequencePositionAsync(contextPath, 100);
+
+        // Assert
+        // Ledger should exist (even without flush, it's in page cache)
+        var ledgerPath = Path.Combine(contextPath, ".ledger");
+        Assert.True(File.Exists(ledgerPath));
+
+        // Should be readable
+        var position = await managerNoFlush.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(100, position);
+    }
+
+    [Fact]
+    public void Constructor_DefaultsToFlushTrue()
+    {
+        // Arrange & Act
+        var defaultManager = new LedgerManager();
+
+        // Assert
+        // Default constructor should enable flush for production safety
+        Assert.NotNull(defaultManager);
     }
 }

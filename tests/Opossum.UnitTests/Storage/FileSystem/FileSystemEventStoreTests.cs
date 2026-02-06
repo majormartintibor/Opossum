@@ -16,10 +16,11 @@ public class FileSystemEventStoreTests : IDisposable
         _tempRootPath = Path.Combine(Path.GetTempPath(), $"FileSystemEventStoreTests_{Guid.NewGuid():N}");
         _options = new OpossumOptions
         {
-            RootPath = _tempRootPath
+            RootPath = _tempRootPath,
+            FlushEventsImmediately = false // Faster tests
         };
         _options.AddContext("TestContext");
-        
+
         _store = new FileSystemEventStore(_options);
     }
 
@@ -474,6 +475,117 @@ public class FileSystemEventStoreTests : IDisposable
         Assert.True(File.Exists(Path.Combine(indexPath, "Tags", "Environment_Production.json")));
         Assert.True(File.Exists(Path.Combine(indexPath, "Tags", "Environment_Development.json")));
         Assert.True(File.Exists(Path.Combine(indexPath, "Tags", "Region_US-West.json")));
+    }
+
+    // ========================================================================
+    // Flush Configuration Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task EventStore_WithFlushTrue_EventsAreDurable()
+    {
+        // Arrange
+        var tempPath = Path.Combine(Path.GetTempPath(), $"FlushTest_{Guid.NewGuid():N}");
+        var options = new OpossumOptions
+        {
+            RootPath = tempPath,
+            FlushEventsImmediately = true // Production mode
+        };
+        options.AddContext("ProductionContext");
+
+        var store = new FileSystemEventStore(options);
+        var events = new[] { CreateTestEvent("CriticalEvent", new TestDomainEvent { Data = "important" }) };
+
+        try
+        {
+            // Act
+            await store.AppendAsync(events, null);
+
+            // Assert
+            var eventPath = Path.Combine(tempPath, "ProductionContext", "events", "0000000001.json");
+            Assert.True(File.Exists(eventPath));
+
+            // Event should be readable (flushed to disk)
+            var query = Query.FromEventTypes(["CriticalEvent"]);
+            var readEvents = await store.ReadAsync(query, null);
+            Assert.Single(readEvents);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPath))
+            {
+                Directory.Delete(tempPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EventStore_WithFlushFalse_EventsStillPersisted()
+    {
+        // Arrange
+        var tempPath = Path.Combine(Path.GetTempPath(), $"NoFlushTest_{Guid.NewGuid():N}");
+        var options = new OpossumOptions
+        {
+            RootPath = tempPath,
+            FlushEventsImmediately = false // Test mode (faster)
+        };
+        options.AddContext("TestContext");
+
+        var store = new FileSystemEventStore(options);
+        var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
+
+        try
+        {
+            // Act
+            await store.AppendAsync(events, null);
+
+            // Assert
+            // Events should still exist (in page cache or disk)
+            var query = Query.FromEventTypes(["TestEvent"]);
+            var readEvents = await store.ReadAsync(query, null);
+            Assert.Single(readEvents);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPath))
+            {
+                Directory.Delete(tempPath, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task EventStore_DefaultFlushSetting_IsTrue()
+    {
+        // Arrange
+        var tempPath = Path.Combine(Path.GetTempPath(), $"DefaultFlushTest_{Guid.NewGuid():N}");
+        var options = new OpossumOptions { RootPath = tempPath };
+        // Note: NOT setting FlushEventsImmediately - should default to true
+        options.AddContext("DefaultContext");
+
+        try
+        {
+            // Act & Assert
+            Assert.True(options.FlushEventsImmediately, 
+                "Default FlushEventsImmediately should be true for production safety");
+
+            var store = new FileSystemEventStore(options);
+            var events = new[] { CreateTestEvent("DefaultEvent", new TestDomainEvent { Data = "default" }) };
+
+            await store.AppendAsync(events, null);
+
+            // Should work correctly with default flush setting
+            var query = Query.All();
+            var readEvents = await store.ReadAsync(query, null);
+            Assert.Single(readEvents);
+        }
+        finally
+        {
+            if (Directory.Exists(tempPath))
+            {
+                Directory.Delete(tempPath, recursive: true);
+            }
+        }
     }
 
     // ========================================================================

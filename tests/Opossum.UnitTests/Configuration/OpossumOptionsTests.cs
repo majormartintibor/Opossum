@@ -204,4 +204,52 @@ public class OpossumOptionsTests
         Assert.Equal("Second", options.Contexts[1]);
         Assert.Equal("Third", options.Contexts[2]);
     }
+
+    [Fact]
+    public void Constructor_SetsFlushEventsImmediatelyToTrue_ByDefault()
+    {
+        // Arrange & Act
+        var options = new OpossumOptions();
+
+        // Assert
+        Assert.True(options.FlushEventsImmediately);
+    }
+
+    [Fact]
+    public void FlushEventsImmediately_CanBeSetToFalse()
+    {
+        // Arrange
+        var options = new OpossumOptions();
+
+        // Act
+        options.FlushEventsImmediately = false;
+
+        // Assert
+        Assert.False(options.FlushEventsImmediately);
+    }
+
+    [Fact]
+    public void FlushEventsImmediately_CanBeSetToTrue()
+    {
+        // Arrange
+        var options = new OpossumOptions { FlushEventsImmediately = false };
+
+        // Act
+        options.FlushEventsImmediately = true;
+
+        // Assert
+        Assert.True(options.FlushEventsImmediately);
+    }
+
+    [Fact]
+    public void FlushEventsImmediately_DefaultValue_IsSafeForProduction()
+    {
+        // Arrange & Act
+        var options = new OpossumOptions();
+
+        // Assert
+        // Default should be true to prevent data loss in production
+        Assert.True(options.FlushEventsImmediately, 
+            "FlushEventsImmediately should default to true for production safety");
+    }
 }

@@ -8,11 +8,17 @@ namespace Opossum.Storage.FileSystem;
 /// </summary>
 internal sealed class LedgerManager
 {
+    private readonly bool _flushImmediately;
     private const string LedgerFileName = ".ledger";
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
     };
+
+    public LedgerManager(bool flushImmediately = true)
+    {
+        _flushImmediately = flushImmediately;
+    }
 
     /// <summary>
     /// Gets the next available sequence position for appending events.
@@ -141,6 +147,13 @@ internal sealed class LedgerManager
             {
                 await JsonSerializer.SerializeAsync(fileStream, ledgerData, JsonOptions).ConfigureAwait(false);
                 await fileStream.FlushAsync().ConfigureAwait(false);
+
+                // DURABILITY GUARANTEE: Flush ledger to disk before moving
+                // Critical for maintaining sequence consistency across restarts
+                if (_flushImmediately)
+                {
+                    RandomAccess.FlushToDisk(fileStream.SafeFileHandle);
+                }
             }
 
             // Atomic rename with retry logic to handle concurrent access

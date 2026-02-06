@@ -12,17 +12,21 @@
     <File Path="docs/ConfigureAwait-Complete.md" />
     <File Path="docs/ConfigureAwait-Implementation-Guide.md" />
     <File Path="docs/ConfigureAwait-Implementation-Summary.md" />
+    <File Path="docs/Durability-Guarantees-Implementation.md" />
+    <File Path="docs/Durability-Quick-Reference.md" />
     <File Path="docs/Implementation-Strategy-1-Parallel-Reads.md" />
     <File Path="docs/LEDGER.md" />
     <File Path="docs/Parallel-Reads-Impact-Summary.md" />
     <File Path="docs/Performance-Analysis-FileSystem-Read-Optimization.md" />
     <File Path="docs/Performance-Fix-Remove-GetAsync-Lock.md" />
+    <File Path="docs/Phase-1-2-Implementation-Summary.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_IMPLEMENTATION_SUMMARY.md" />
     <File Path="docs/PROJECTION_TAG_INDEXING_PROGRESS.md" />
     <File Path="docs/QUICK_START_PROJECTION_TAGS.md" />
   	<File Path="docs/README.md" />
   	<File Path="docs/REFACTORING_SUMMARY.md" />
+    <File Path="docs/Test-Coverage-Durability-Feature.md" />
     <File Path="docs/USE_CASES.md" />
   </Folder>
   <Folder Name="/docs/specifications/">
