@@ -246,37 +246,41 @@ public class LedgerManagerTests : IDisposable
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "ExclusiveContext");
-        var lockAcquired = false;
-        var secondLockFailed = false;
+        var secondLockAttempted = false;
+        var secondLockAcquired = false;
 
         // Act
         await using (var firstLock = await _ledgerManager.AcquireLockAsync(contextPath))
         {
-            lockAcquired = true;
-
-            // Try to acquire second lock (should fail or wait)
+            // Try to acquire second lock while first is held (should throw IOException)
             var lockTask = Task.Run(async () =>
             {
+                secondLockAttempted = true;
                 try
                 {
-                    // This should block or throw because first lock is held
+                    // This should throw IOException because first lock is held
                     await using var secondLock = await _ledgerManager.AcquireLockAsync(contextPath);
+                    secondLockAcquired = true; // Should not reach here
                 }
                 catch (IOException)
                 {
-                    secondLockFailed = true;
+                    // Expected - lock is exclusive
                 }
             });
 
-            // Give it a moment to attempt lock
+            // Give second task time to attempt lock
             await Task.Delay(100);
 
-            // Second lock should not have succeeded yet
-            Assert.True(lockAcquired);
+            // Assert - second lock should have been attempted but not acquired
+            Assert.True(secondLockAttempted, "Second lock attempt should have been made");
+            Assert.False(secondLockAcquired, "Second lock should not have been acquired while first is held");
+
+            // Wait for lock task to complete
+            await lockTask;
         }
 
-        // After first lock released, verify state
-        // (second lock attempt may have failed or succeeded after first released)
+        // After first lock released, verify second attempt failed as expected
+        Assert.False(secondLockAcquired, "Second lock should have failed due to exclusive access");
     }
 
     [Fact]
