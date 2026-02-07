@@ -28,6 +28,27 @@ This includes:
 
 Never create .md files in the solution root or scattered across project folders.
 
+### Solution File (.slnx) Synchronization
+
+The `Opossum.slnx` file MUST always be kept in sync with the actual `docs` folder structure and content.
+
+**When adding/removing documentation:**
+1. ✅ Add or remove the file in the docs folder
+2. ✅ Update the corresponding entry in `Opossum.slnx`
+3. ✅ Maintain the correct folder hierarchy in the .slnx file
+4. ✅ Keep files sorted alphabetically within each folder section
+
+**Example:**
+If you add `docs/performance/new-benchmark.md`, you must also add:
+```xml
+<Folder Name="/docs/performance/">
+  <File Path="docs/performance/PERFORMANCE-BASELINE.md" />
+  <File Path="docs/performance/new-benchmark.md" />
+</Folder>
+```
+
+This ensures the documentation is visible and navigable in Visual Studio's Solution Explorer.
+
 ## External Libraries
 In the core Opossum project and its test projects, avoid using external libraries.
 Only official Microsoft packages are allowed.

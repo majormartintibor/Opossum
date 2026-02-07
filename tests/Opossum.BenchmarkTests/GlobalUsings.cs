@@ -1,0 +1,14 @@
+global using BenchmarkDotNet.Attributes;
+global using BenchmarkDotNet.Running;
+global using BenchmarkDotNet.Configs;
+global using BenchmarkDotNet.Jobs;
+global using BenchmarkDotNet.Environments;
+global using BenchmarkDotNet.Diagnosers;
+global using BenchmarkDotNet.Columns;
+global using BenchmarkDotNet.Exporters;
+global using BenchmarkDotNet.Exporters.Csv;
+global using Opossum.Configuration;
+global using Opossum.Core;
+global using Opossum.Storage.FileSystem;
+global using Opossum.DependencyInjection;
+global using Microsoft.Extensions.DependencyInjection;
