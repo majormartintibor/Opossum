@@ -270,11 +270,11 @@ internal sealed class ProjectionManager : IProjectionManager
         public override async Task ClearAsync(CancellationToken cancellationToken)
         {
             // Delete all projection files and indices
-            // Cast to FileSystemProjectionStore to access DeleteAllIndices method
+            // Cast to FileSystemProjectionStore to access DeleteAllIndicesAsync method
             if (_store is FileSystemProjectionStore<TState> fsStore)
             {
                 // Delete indices first
-                fsStore.DeleteAllIndices();
+                await fsStore.DeleteAllIndicesAsync().ConfigureAwait(false);
 
                 // Then delete projection files
                 var projectionPath = fsStore.GetType().GetField("_projectionPath", 

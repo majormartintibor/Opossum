@@ -85,6 +85,7 @@ public class DataSeeder
 
                 var @event = new StudentRegisteredEvent(studentId, firstName, lastName, email)
                     .ToDomainEvent()
+                    .WithTag("studentEmail", email)
                     .WithTag("studentId", studentId.ToString())
                     .WithTimestamp(GetRandomPastTimestamp(365, 180)); // 6-12 months ago
 
