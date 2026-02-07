@@ -27,6 +27,9 @@
     <PackageVersion Include="Swashbuckle.AspNetCore.Newtonsoft" Version="10.1.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.4" />
+    <!-- Benchmarking -->
+    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
     <!-- Code Analysis -->
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.12.19" />
     <!-- Visual Studio -->

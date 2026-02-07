@@ -16,11 +16,24 @@
     <File Path="docs/benchmarking/INDEX.md" />
     <File Path="docs/benchmarking/README.md" />
     <File Path="docs/benchmarking/SUMMARY.md" />
+    <File Path="docs/benchmarking/action-plan.md" />
     <File Path="docs/benchmarking/benchmarking-strategy.md" />
     <File Path="docs/benchmarking/implementation-checklist.md" />
+    <File Path="docs/benchmarking/phase-1-summary.md" />
+    <File Path="docs/benchmarking/phase-2-run-guide.md" />
+    <File Path="docs/benchmarking/phase-2-summary.md" />
     <File Path="docs/benchmarking/quick-reference.md" />
     <File Path="docs/benchmarking/visual-architecture.md" />
     <File Path="docs/benchmarking/why-benchmarking-matters.md" />
+  </Folder>
+  <Folder Name="/docs/benchmarking/results/">
+    <File Path="docs/benchmarking/results/baseline-results.md" />
+    <File Path="docs/benchmarking/results/critical-issues-fix-plan.md" />
+    <File Path="docs/benchmarking/results/phase-1-complete.md" />
+    <File Path="docs/benchmarking/results/phase-2-complete.md" />
+    <File Path="docs/benchmarking/results/phase-2-executive-summary.md" />
+    <File Path="docs/benchmarking/results/phase-2-results-analysis.md" />
+    <File Path="docs/benchmarking/results/summary.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
@@ -79,8 +92,8 @@
     <Project Path="src/Opossum/Opossum.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/Opossum.BenchmarkTests/Opossum.BenchmarkTests.csproj" />
     <File Path="tests/Opossum.BenchmarkTests/README.md" />
+    <Project Path="tests/Opossum.BenchmarkTests/Opossum.BenchmarkTests.csproj" />
     <Project Path="tests/Opossum.IntegrationTests/Opossum.IntegrationTests.csproj" />
     <Project Path="tests/Opossum.UnitTests/Opossum.UnitTests.csproj" />
   </Folder>
