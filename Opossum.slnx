@@ -7,33 +7,8 @@
     <File Path=".github/workflows/ci.yml" />
     <File Path=".github/workflows/samples-ci.yml" />
   </Folder>
-  <Folder Name="/docs/">
+    <Folder Name="/docs/">
     <File Path="docs/README.md" />
-  </Folder>
-  <Folder Name="/docs/architecture/">
-  </Folder>
-  <Folder Name="/docs/benchmarking/">
-    <File Path="docs/benchmarking/INDEX.md" />
-    <File Path="docs/benchmarking/README.md" />
-    <File Path="docs/benchmarking/SUMMARY.md" />
-    <File Path="docs/benchmarking/action-plan.md" />
-    <File Path="docs/benchmarking/benchmarking-strategy.md" />
-    <File Path="docs/benchmarking/implementation-checklist.md" />
-    <File Path="docs/benchmarking/phase-1-summary.md" />
-    <File Path="docs/benchmarking/phase-2-run-guide.md" />
-    <File Path="docs/benchmarking/phase-2-summary.md" />
-    <File Path="docs/benchmarking/quick-reference.md" />
-    <File Path="docs/benchmarking/visual-architecture.md" />
-    <File Path="docs/benchmarking/why-benchmarking-matters.md" />
-  </Folder>
-  <Folder Name="/docs/benchmarking/results/">
-    <File Path="docs/benchmarking/results/baseline-results.md" />
-    <File Path="docs/benchmarking/results/critical-issues-fix-plan.md" />
-    <File Path="docs/benchmarking/results/phase-1-complete.md" />
-    <File Path="docs/benchmarking/results/phase-2-complete.md" />
-    <File Path="docs/benchmarking/results/phase-2-executive-summary.md" />
-    <File Path="docs/benchmarking/results/phase-2-results-analysis.md" />
-    <File Path="docs/benchmarking/results/summary.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
@@ -42,6 +17,9 @@
   <Folder Name="/docs/features/">
     <File Path="docs/features/ledger.md" />
     <File Path="docs/features/projection-tag-indexing.md" />
+  </Folder>
+  <Folder Name="/docs/future-plans/">
+    <File Path="docs/future-plans/batched-flush-redesign-plan.md" />
   </Folder>
   <Folder Name="/docs/guides/">
     <File Path="docs/guides/configureawait-guide.md" />
@@ -68,6 +46,12 @@
     <File Path="docs/implementation/test-coverage-durability.md" />
     <File Path="docs/implementation/test-refactoring-summary.md" />
   </Folder>
+  <Folder Name="/docs/lessons-learned/">
+    <File Path="docs/lessons-learned/batched-flush-failure.md" />
+  </Folder>
+  <Folder Name="/docs/performance/">
+    <File Path="docs/performance/PERFORMANCE-BASELINE.md" />
+  </Folder>
   <Folder Name="/docs/specifications/">
     <File Path="docs/specifications/README.md" />
     <File Path="docs/specifications/spec-001-projection-metadata.md" />
@@ -75,7 +59,7 @@
     <File Path="docs/specifications/spec-003-retention-policies.md" />
     <File Path="docs/specifications/spec-004-archiving-compression.md" />
     <File Path="docs/specifications/spec-005-smart-retention.md" />
-  </Folder>
+  </Folder>  
   <Folder Name="/Samples/">
     <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />
     <Project Path="Samples/Opossum.Samples.DataSeeder/Opossum.Samples.DataSeeder.csproj" Id="d2fb5b4e-cee3-48f1-b61e-9db18a950231" />

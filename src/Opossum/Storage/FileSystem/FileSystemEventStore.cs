@@ -10,7 +10,6 @@ internal class FileSystemEventStore : IEventStore, IDisposable
     private readonly LedgerManager _ledgerManager;
     private readonly EventFileManager _eventFileManager;
     private readonly IndexManager _indexManager;
-    private readonly JsonEventSerializer _serializer;
     private readonly SemaphoreSlim _appendLock = new(1, 1);
 
     public FileSystemEventStore(OpossumOptions options)
@@ -21,7 +20,6 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         _ledgerManager = new LedgerManager(options.FlushEventsImmediately);
         _eventFileManager = new EventFileManager(options.FlushEventsImmediately);
         _indexManager = new IndexManager();
-        _serializer = new JsonEventSerializer();
     }
 
     // Constructor for testing with dependency injection
@@ -40,7 +38,6 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         _ledgerManager = ledgerManager;
         _eventFileManager = eventFileManager;
         _indexManager = indexManager;
-        _serializer = new JsonEventSerializer();
     }
 
     public void Dispose()
