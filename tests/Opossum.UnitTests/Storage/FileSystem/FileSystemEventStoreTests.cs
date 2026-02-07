@@ -589,6 +589,188 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     // ========================================================================
+    // Critical Fix Tests - Descending Order & Query.All() Performance
+    // ========================================================================
+
+    [Fact]
+    public async Task ReadAsync_WithDescendingOrder_ReturnsEventsInReverseOrder()
+    {
+        // Arrange - Add 10 events
+        var events = new[]
+        {
+            CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }),
+            CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }),
+            CreateTestEvent("Event3", new TestDomainEvent { Data = "3" }),
+            CreateTestEvent("Event4", new TestDomainEvent { Data = "4" }),
+            CreateTestEvent("Event5", new TestDomainEvent { Data = "5" }),
+            CreateTestEvent("Event6", new TestDomainEvent { Data = "6" }),
+            CreateTestEvent("Event7", new TestDomainEvent { Data = "7" }),
+            CreateTestEvent("Event8", new TestDomainEvent { Data = "8" }),
+            CreateTestEvent("Event9", new TestDomainEvent { Data = "9" }),
+            CreateTestEvent("Event10", new TestDomainEvent { Data = "10" })
+        };
+        await _store.AppendAsync(events, null);
+
+        // Act - Read in descending order
+        var query = Query.All();
+        var result = await _store.ReadAsync(query, [ReadOption.Descending]);
+
+        // Assert - Events should be in reverse order
+        Assert.Equal(10, result.Length);
+        Assert.Equal(10, result[0].Position); // Newest first
+        Assert.Equal(9, result[1].Position);
+        Assert.Equal(8, result[2].Position);
+        Assert.Equal(1, result[9].Position); // Oldest last
+
+        // Verify data is correct
+        Assert.Equal("10", ((TestDomainEvent)result[0].Event.Event).Data);
+        Assert.Equal("1", ((TestDomainEvent)result[9].Event.Event).Data);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithDescendingOrder_AndEventTypeQuery_ReturnsCorrectOrder()
+    {
+        // Arrange - Add events with different types
+        var events = new[]
+        {
+            CreateTestEvent("TypeA", new TestDomainEvent { Data = "A1" }),
+            CreateTestEvent("TypeB", new TestDomainEvent { Data = "B1" }),
+            CreateTestEvent("TypeA", new TestDomainEvent { Data = "A2" }),
+            CreateTestEvent("TypeB", new TestDomainEvent { Data = "B2" }),
+            CreateTestEvent("TypeA", new TestDomainEvent { Data = "A3" })
+        };
+        await _store.AppendAsync(events, null);
+
+        // Act - Query TypeA in descending order
+        var query = Query.FromEventTypes(["TypeA"]);
+        var result = await _store.ReadAsync(query, [ReadOption.Descending]);
+
+        // Assert - Should get TypeA events in reverse order
+        Assert.Equal(3, result.Length);
+        Assert.Equal(5, result[0].Position); // TypeA - A3
+        Assert.Equal(3, result[1].Position); // TypeA - A2
+        Assert.Equal(1, result[2].Position); // TypeA - A1
+
+        Assert.Equal("A3", ((TestDomainEvent)result[0].Event.Event).Data);
+        Assert.Equal("A2", ((TestDomainEvent)result[1].Event.Event).Data);
+        Assert.Equal("A1", ((TestDomainEvent)result[2].Event.Event).Data);
+    }
+
+    [Fact]
+    public async Task ReadAsync_QueryAll_HandlesLargeDatasets()
+    {
+        // Arrange - Add 1000 events
+        var events = new SequencedEvent[1000];
+        for (int i = 0; i < 1000; i++)
+        {
+            events[i] = CreateTestEvent($"Event{i}", new TestDomainEvent { Data = $"Data{i}" });
+        }
+        await _store.AppendAsync(events, null);
+
+        // Act - Query all events
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var query = Query.All();
+        var result = await _store.ReadAsync(query, null);
+        sw.Stop();
+
+        // Assert - All events returned
+        Assert.Equal(1000, result.Length);
+        Assert.Equal(1, result[0].Position);
+        Assert.Equal(1000, result[999].Position);
+
+        // Performance assertion - should be faster with batched reading
+        // Note: This is a sanity check, not a precise benchmark
+        Assert.True(sw.ElapsedMilliseconds < 5000, 
+            $"Query.All() for 1000 events took {sw.ElapsedMilliseconds}ms, expected <5000ms");
+    }
+
+    [Fact]
+    public async Task ReadAsync_QueryAll_WithDescending_HandlesLargeDatasets()
+    {
+        // Arrange - Add 1000 events
+        var events = new SequencedEvent[1000];
+        for (int i = 0; i < 1000; i++)
+        {
+            events[i] = CreateTestEvent($"Event{i}", new TestDomainEvent { Data = $"Data{i}" });
+        }
+        await _store.AppendAsync(events, null);
+
+        // Act - Query all events in descending order
+        var query = Query.All();
+        var result = await _store.ReadAsync(query, [ReadOption.Descending]);
+
+        // Assert - All events returned in reverse order
+        Assert.Equal(1000, result.Length);
+        Assert.Equal(1000, result[0].Position); // Newest first
+        Assert.Equal(1, result[999].Position); // Oldest last
+
+        // Verify data integrity
+        Assert.Equal("Data999", ((TestDomainEvent)result[0].Event.Event).Data);
+        Assert.Equal("Data0", ((TestDomainEvent)result[999].Event.Event).Data);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Descending_WithSmallResultSet_WorksCorrectly()
+    {
+        // Arrange - Add 3 events
+        var events = new[]
+        {
+            CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }),
+            CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }),
+            CreateTestEvent("Event3", new TestDomainEvent { Data = "3" })
+        };
+        await _store.AppendAsync(events, null);
+
+        // Act
+        var query = Query.All();
+        var result = await _store.ReadAsync(query, [ReadOption.Descending]);
+
+        // Assert
+        Assert.Equal(3, result.Length);
+        Assert.Equal(3, result[0].Position);
+        Assert.Equal(2, result[1].Position);
+        Assert.Equal(1, result[2].Position);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Descending_WithEmptyResult_ReturnsEmptyArray()
+    {
+        // Arrange - No events
+
+        // Act
+        var query = Query.FromEventTypes(["NonExistent"]);
+        var result = await _store.ReadAsync(query, [ReadOption.Descending]);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Descending_WithTagQuery_ReturnsCorrectOrder()
+    {
+        // Arrange - Add events with tags
+        var event1 = CreateTestEvent("Event1", new TestDomainEvent { Data = "1" });
+        event1.Event.Tags.Add(new Tag { Key = "Priority", Value = "High" });
+
+        var event2 = CreateTestEvent("Event2", new TestDomainEvent { Data = "2" });
+        event2.Event.Tags.Add(new Tag { Key = "Priority", Value = "Low" });
+
+        var event3 = CreateTestEvent("Event3", new TestDomainEvent { Data = "3" });
+        event3.Event.Tags.Add(new Tag { Key = "Priority", Value = "High" });
+
+        await _store.AppendAsync([event1, event2, event3], null);
+
+        // Act - Query High priority in descending order
+        var query = Query.FromTags([new Tag { Key = "Priority", Value = "High" }]);
+        var result = await _store.ReadAsync(query, [ReadOption.Descending]);
+
+        // Assert
+        Assert.Equal(2, result.Length);
+        Assert.Equal(3, result[0].Position); // Event3 (newest High)
+        Assert.Equal(1, result[1].Position); // Event1 (oldest High)
+    }
+
+    // ========================================================================
     // Helper Methods
     // ========================================================================
 
