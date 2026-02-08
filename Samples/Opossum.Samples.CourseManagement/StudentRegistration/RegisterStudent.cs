@@ -19,7 +19,7 @@ public static class Endpoint
             [FromServices] IMediator mediator) =>
         {
             var studentId = Guid.NewGuid();
-            
+
             var command = new RegisterStudentCommand(
                 StudentId: studentId,
                 FirstName: request.FirstName,
@@ -45,8 +45,7 @@ public sealed class RegisterStudentCommandHandler()
         RegisterStudentCommand command,
         IEventStore eventStore)
     {
-        //Validate Student with email does not exist
-        //This is dummed down validation
+        // Validate Student with email does not exist
         var validateEmailNotTakenQuery = Query.FromItems(
                 new QueryItem
                 {
@@ -77,12 +76,12 @@ public sealed class RegisterStudentCommandHandler()
         // Dynamic Consistency Boundary (DCB) Pattern:
         // We enforce email uniqueness across ALL students (the consistency boundary).
         // 
-        // Between our validation check (line 63) and this append, another concurrent request
+        // Between our validation check and this append, another concurrent request
         // might have registered a student with the same email. The AppendCondition ensures
         // atomicity by re-checking the condition at append time:
         // 
         // 1. If NO events match validateEmailNotTakenQuery → Append succeeds ✅
-        // 2. If ANY event matches (email was taken) → Append fails, throws exception ❌
+        // 2. If ANY event matches (email was taken) → Append fails with ConcurrencyException ❌
         // 
         // This prevents the race condition:
         //   Thread A: Check email → available
@@ -92,6 +91,9 @@ public sealed class RegisterStudentCommandHandler()
         // 
         // The FailIfEventsMatch condition acts as an optimistic lock, ensuring the consistency
         // boundary (unique emails) is maintained without requiring distributed transactions.
+        // 
+        // If a ConcurrencyException is thrown, the global exception handler will map it to
+        // HTTP 409 Conflict with a Problem Details response (see Program.cs).
         await eventStore.AppendAsync(
             sequencedEvent,
             condition: new AppendCondition() { FailIfEventsMatch = validateEmailNotTakenQuery });

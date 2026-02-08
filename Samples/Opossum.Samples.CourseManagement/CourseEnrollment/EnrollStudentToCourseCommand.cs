@@ -25,22 +25,33 @@ public sealed class EnrollStudentToCourseCommandHandler()
             {
                 return await TryEnrollStudentAsync(command, eventStore);
             }
-            catch (AppendConditionFailedException)
+            catch (ConcurrencyException) when (attempt < MaxRetryAttempts - 1)
             {
+                // Decision model was stale - retry with fresh read
                 attempt++;
-
-                // If we've exhausted all retries, return failure
-                if (attempt >= MaxRetryAttempts)
-                {
-                    return CommandResult.Fail(
-                        $"Failed to enroll student after {MaxRetryAttempts} attempts due to concurrent updates. Please try again.");
-                }
-
-                // Exponential backoff: 50ms, 100ms, 200ms
                 var delayMs = InitialRetryDelayMs * (int)Math.Pow(2, attempt - 1);
                 await Task.Delay(delayMs);
-
                 // Loop continues to retry
+            }
+            catch (AppendConditionFailedException) when (attempt < MaxRetryAttempts - 1)
+            {
+                // Append condition failed - retry with fresh read
+                attempt++;
+                var delayMs = InitialRetryDelayMs * (int)Math.Pow(2, attempt - 1);
+                await Task.Delay(delayMs);
+                // Loop continues to retry
+            }
+            catch (ConcurrencyException)
+            {
+                // Max retries exhausted with concurrency conflict
+                return CommandResult.Fail(
+                    $"Failed to enroll student after {MaxRetryAttempts} attempts due to concurrent updates. Please try again.");
+            }
+            catch (AppendConditionFailedException)
+            {
+                // Max retries exhausted with append condition failure
+                return CommandResult.Fail(
+                    $"Failed to enroll student after {MaxRetryAttempts} attempts due to concurrent updates. Please try again.");
             }
         }
 
@@ -107,7 +118,7 @@ public sealed class EnrollStudentToCourseCommandHandler()
         var appendCondition = new AppendCondition
         {
             AfterSequencePosition = events.Length > 0 ? events.Max(e => e.Position) : null,
-            FailIfEventsMatch = command.GetFailIfMatchQuery()
+            FailIfEventsMatch = enrollmentQuery // Use the SAME query that built our decision model
         };
 
         // Append with Dynamic Consistency Boundary (DCB) spanning multiple aggregates
@@ -117,41 +128,52 @@ public sealed class EnrollStudentToCourseCommandHandler()
         //   2. Student aggregate (enrollment limit per tier)
         //   3. Course-Student relationship (no duplicate enrollments)
         // 
-        // We use TWO append conditions to maintain consistency:
+        // CRITICAL DCB PATTERN:
+        // =====================
+        // We use the SAME query for both:
+        // A) Reading events to build our decision model (line 57)
+        // B) The FailIfEventsMatch append condition (line 110)
+        // 
+        // This ensures that if ANY event matching our query is added between our read
+        // and our append, the append will fail with ConcurrencyException.
+        // 
+        // AppendCondition Components:
         // 
         // A) AfterSequencePosition (Optimistic Concurrency):
         //    - We read all relevant events up to position X
         //    - We built our aggregate state based on those events
-        //    - Condition ensures NO new relevant events were added since position X
-        //    - If new events exist → our aggregate state is stale → append fails ❌
+        //    - Condition ensures NO new events exist after position X
+        //    - If new events exist → append fails ❌
         // 
-        // B) FailIfEventsMatch (Business Rule Enforcement):
-        //    - Explicit, fast-fail check for duplicate enrollments
-        //    - While AfterSequencePosition WOULD catch duplicates (by detecting the stale read),
-        //      FailIfEventsMatch provides:
-        //      1. Performance: O(1) pattern match vs O(n) aggregate rebuild. AfterSequencePosition fail triggers retry with re-reading all events, rebuilding aggregate, etc.
-        //      2. Clarity: Explicit "duplicate check" vs ambiguous "state changed"
-        //      3. Robustness: Works even if enrollmentQuery is refactored to exclude enrollments
-        //      4. Defense in depth: Two independent layers of protection
-        //    - Without this, duplicate prevention relies on enrollmentQuery breadth (fragile)
+        // B) FailIfEventsMatch (Decision Model Staleness Detection):
+        //    - Uses the SAME query (enrollmentQuery) that we used to read
+        //    - Checks: "Are there any events matching THIS query after position X?"
+        //    - This is the KEY to DCB: only events relevant to THIS decision cause conflicts
+        //    - Events outside our query (e.g., other courses) don't cause false conflicts
+        // 
+        // Why BOTH conditions are needed:
+        // - AfterSequencePosition alone: would need to check ALL events (too broad)
+        // - FailIfEventsMatch alone: doesn't know what position we read from
+        // - Together: "Fail if events matching MY query were added after MY read"
         // 
         // Race conditions prevented:
         // 
         //   Scenario 1: Course capacity exceeded
         //     Thread A: Read → 9/10 enrolled, enroll student → 10/10 ✅
         //     Thread B: Read → 9/10 enrolled, enroll student → would be 11/10 ❌
-        //     → AfterSequencePosition ensures Thread B fails because Thread A's event
-        //       was appended after Thread B's read
+        //     → Thread B's append fails because Thread A's StudentEnrolledToCourseEvent
+        //       matches enrollmentQuery (has courseId tag) and was added after Thread B's read
         // 
         //   Scenario 2: Student enrollment limit exceeded
-        //     Thread A: Read → student has 2/3 courses, enroll → 3/3 ✅
-        //     Thread B: Read → student has 2/3 courses, enroll → would be 4/3 ❌
-        //     → Same protection as Scenario 1
+        //     Thread A: Read → student has 2/5 courses, enroll → 3/5 ✅
+        //     Thread B: Read → student has 2/5 courses, enroll → would be 4/5 ❌
+        //     → Same protection as Scenario 1 (StudentEnrolledToCourseEvent has studentId tag)
         // 
         //   Scenario 3: Duplicate enrollment
         //     Thread A: Read → not enrolled, enroll → success ✅
         //     Thread B: Read → not enrolled, enroll → duplicate ❌
-        //     → FailIfEventsMatch catches duplicate enrollment attempts
+        //     → Thread B's append fails because Thread A's StudentEnrolledToCourseEvent
+        //       matches enrollmentQuery (has both courseId AND studentId tags)
         // 
         // If append fails (AppendConditionFailedException), the retry logic (lines 23-44)
         // will re-read events, rebuild aggregate, re-check invariants, and try again with

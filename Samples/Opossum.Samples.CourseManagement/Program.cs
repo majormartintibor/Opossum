@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Diagnostics;
 using Opossum.DependencyInjection;
+using Opossum.Exceptions;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.CourseDetails;
@@ -9,8 +11,7 @@ using Opossum.Samples.CourseManagement.StudentDetails;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
-using Scalar.AspNetCore;
-using System.Text.Json.Serialization;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,9 @@ builder.Services.AddProjections(options =>
 // Add mediator for command/query handling
 builder.Services.AddMediator();
 
+// Add Problem Details support (RFC 7807)
+builder.Services.AddProblemDetails();
+
 // Add OpenAPI with native .NET support (respects JsonStringEnumConverter)
 builder.Services.AddOpenApi();
 
@@ -65,6 +69,65 @@ if (app.Environment.IsDevelopment())
     // Redirect root to Scalar UI
     app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
 }
+
+// ============================================================================
+// GLOBAL EXCEPTION HANDLER - Maps Opossum exceptions to HTTP responses
+// ============================================================================
+app.UseExceptionHandler(exceptionHandlerApp =>
+{
+    exceptionHandlerApp.Run(async context =>
+    {
+        var exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
+        var exception = exceptionHandlerFeature?.Error;
+
+        // Map ConcurrencyException to HTTP 409 Conflict
+        // This occurs when DCB detects a stale decision model (optimistic concurrency control)
+        if (exception is ConcurrencyException concurrencyEx)
+        {
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Concurrency Conflict",
+                Detail = "The operation failed because the resource was modified by another request. " +
+                         "This typically means an email address was already taken or a course reached capacity. " +
+                         "Please refresh and try again.",
+                Instance = context.Request.Path,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
+            });
+            return;
+        }
+
+        // Map AppendConditionFailedException to HTTP 409 Conflict
+        // Similar to ConcurrencyException - DCB append condition failed
+        if (exception is AppendConditionFailedException appendEx)
+        {
+            context.Response.StatusCode = StatusCodes.Status409Conflict;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Append Condition Failed",
+                Detail = "The operation failed because an append condition was not met. " +
+                         "This typically indicates a constraint violation (e.g., duplicate email, course full). " +
+                         "Please refresh and try again.",
+                Instance = context.Request.Path,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
+            });
+            return;
+        }
+
+        // Default handler for other exceptions
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title = "Internal Server Error",
+            Detail = app.Environment.IsDevelopment() ? exception?.Message : "An unexpected error occurred.",
+            Instance = context.Request.Path,
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1"
+        });
+    });
+});
 
 app.UseHttpsRedirection();
 
