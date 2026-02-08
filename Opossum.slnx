@@ -45,6 +45,7 @@
     <File Path="docs/implementation/phase-2a-summary.md" />
     <File Path="docs/implementation/projection-tag-indexing-progress.md" />
     <File Path="docs/implementation/projection-tag-indexing-summary.md" />
+    <File Path="docs/implementation/student-registration-retry-logic.md" />
     <File Path="docs/implementation/test-coverage-durability.md" />
     <File Path="docs/implementation/test-refactoring-summary.md" />
   </Folder>
