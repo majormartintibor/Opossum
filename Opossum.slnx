@@ -29,6 +29,7 @@
     <File Path="docs/guides/use-cases.md" />
   </Folder>
   <Folder Name="/docs/implementation/">
+    <File Path="docs/implementation/bugfix-dcb-concurrency-control.md" />
     <File Path="docs/implementation/bugfix-enrollment-tier-limit.md" />
     <File Path="docs/implementation/configureawait-summary.md" />
     <File Path="docs/implementation/dataseeder-command-handler-fix.md" />
@@ -36,6 +37,7 @@
     <File Path="docs/implementation/dataseeder-optimization.md" />
     <File Path="docs/implementation/durability-guarantees.md" />
     <File Path="docs/implementation/filesystem-read-optimization.md" />
+    <File Path="docs/implementation/global-exception-handling.md" />
     <File Path="docs/implementation/parallel-reads-impact.md" />
     <File Path="docs/implementation/parallel-reads-strategy.md" />
     <File Path="docs/implementation/performance-getasync-lock-fix.md" />
@@ -59,6 +61,9 @@
     <File Path="docs/specifications/spec-003-retention-policies.md" />
     <File Path="docs/specifications/spec-004-archiving-compression.md" />
     <File Path="docs/specifications/spec-005-smart-retention.md" />
+  </Folder>
+  <Folder Name="/docs/testing/">
+    <File Path="docs/testing/sample-app-tests.md" />
   </Folder>  
   <Folder Name="/Samples/">
     <Project Path="Samples/Opossum.Samples.CourseManagement/Opossum.Samples.CourseManagement.csproj" />

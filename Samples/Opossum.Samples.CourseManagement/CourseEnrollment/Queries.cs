@@ -59,42 +59,4 @@ public static class EnrollStudentToCourseCommandExtensions
                 ]
             });
     }
-
-    extension(EnrollStudentToCourseCommand command)
-    {
-        /// <summary>
-        /// Builds a query for the FailIfEventsMatch append condition to prevent duplicate enrollments.
-        /// 
-        /// Query Logic (Boolean Algebra):
-        /// ================================
-        /// Returns events that match: (QueryItem1) - single item, no OR
-        /// 
-        /// QueryItem1 (Exact duplicate enrollment):
-        ///   - Must have: courseId tag (specific course)
-        ///   - AND must have: studentId tag (specific student)
-        ///   - AND must be: StudentEnrolledToCourseEvent
-        /// 
-        /// Example matches:
-        ///   ✅ StudentEnrolledToCourseEvent with courseId=X AND studentId=Y (exact duplicate!)
-        ///   ❌ StudentEnrolledToCourseEvent with courseId=X AND studentId=Z (different student)
-        ///   ❌ StudentEnrolledToCourseEvent with courseId=Z AND studentId=Y (different course)
-        ///   ❌ CourseCreatedEvent with courseId=X (wrong event type)
-        /// 
-        /// Why this structure?
-        /// - Single QueryItem = no OR logic, very specific check
-        /// - Both tags required = AND logic ensures EXACT match on course + student combo
-        /// - Used in AppendCondition.FailIfEventsMatch to fail fast on duplicate enrollments
-        /// - Complements AfterSequencePosition by providing explicit duplicate detection
-        /// </summary>
-        public Query GetFailIfMatchQuery() =>
-            Query.FromItems(
-            new QueryItem
-            {
-                Tags = [
-                    new Tag { Key = "courseId", Value = command.CourseId.ToString() },
-                    new Tag { Key = "studentId", Value = command.StudentId.ToString() }
-                ],
-                EventTypes = [nameof(StudentEnrolledToCourseEvent)]
-            });
-    }
 }
