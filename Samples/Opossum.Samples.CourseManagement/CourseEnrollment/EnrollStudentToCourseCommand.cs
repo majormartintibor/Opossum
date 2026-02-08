@@ -1,8 +1,7 @@
 ﻿using Opossum.Core;
 using Opossum.Exceptions;
 using Opossum.Extensions;
-using Opossum.Samples.CourseManagement.CourseCreation;
-using Opossum.Samples.CourseManagement.StudentRegistration;
+using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.CourseEnrollment;
 

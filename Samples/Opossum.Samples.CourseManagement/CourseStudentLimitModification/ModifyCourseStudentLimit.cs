@@ -1,13 +1,12 @@
 ﻿using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
-using Opossum.Samples.CourseManagement.CourseCreation;
+using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.CourseStudentLimitModification;
 
 public sealed record ModifyCourseStudentLimitRequest(int NewMaxStudentCount);
 public sealed record ModifyCourseStudentLimitCommand(Guid CourseId, int NewMaxStudentCount);
-public sealed record CourseStudentLimitModifiedEvent(Guid CourseId, int NewMaxStudentCount) : IEvent;
 
 public static class Endpoint
 {

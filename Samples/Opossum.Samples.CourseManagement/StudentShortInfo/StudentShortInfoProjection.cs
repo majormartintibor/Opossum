@@ -1,10 +1,8 @@
 using Opossum;
 using Opossum.Core;
 using Opossum.Projections;
-using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.EnrollmentTier;
-using Opossum.Samples.CourseManagement.StudentRegistration;
-using Opossum.Samples.CourseManagement.StudentSubscription;
+using Opossum.Samples.CourseManagement.Events;
 using Tier = Opossum.Samples.CourseManagement.EnrollmentTier.EnrollmentTier;
 
 namespace Opossum.Samples.CourseManagement.StudentShortInfo;

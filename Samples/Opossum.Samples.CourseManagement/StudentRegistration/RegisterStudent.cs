@@ -1,14 +1,13 @@
 ﻿using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
+using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.StudentRegistration;
 
 public sealed record RegisterStudentRequest(string FirstName, string LastName, string Email);
 //NOTE: Opossum is currently missing command validation.
 public sealed record RegisterStudentCommand(Guid StudentId, string FirstName, string LastName, string Email);
-public sealed record StudentRegisteredEvent(
-    Guid StudentId, string FirstName, string LastName, string Email) : IEvent;
 
 public static class Endpoint
 {

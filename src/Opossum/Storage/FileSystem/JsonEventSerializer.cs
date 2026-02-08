@@ -86,6 +86,13 @@ internal sealed class JsonEventSerializer
 
             // Resolve the type
             var eventType = Type.GetType(typeName);
+
+            // Handle namespace migrations for backward compatibility
+            if (eventType == null && typeName != null)
+            {
+                eventType = TryResolveRenamedType(typeName);
+            }
+
             if (eventType == null)
             {
                 throw new JsonException($"Could not resolve type: {typeName}");
@@ -96,6 +103,50 @@ internal sealed class JsonEventSerializer
             var result = JsonSerializer.Deserialize(rawText, eventType, options);
 
             return result as IEvent;
+        }
+
+        /// <summary>
+        /// Attempts to resolve renamed or relocated types for backward compatibility.
+        /// Handles namespace migrations where events have been moved to different namespaces.
+        /// </summary>
+        /// <param name="oldTypeName">The original assembly-qualified type name</param>
+        /// <returns>The resolved Type, or null if cannot be resolved</returns>
+        private static Type? TryResolveRenamedType(string oldTypeName)
+        {
+            // Extract just the type name and assembly name
+            var parts = oldTypeName.Split(',');
+            if (parts.Length < 2) return null;
+
+            var fullTypeName = parts[0].Trim();
+            var assemblyName = parts[1].Trim();
+
+            // Get the simple type name (last part after the last dot)
+            var lastDotIndex = fullTypeName.LastIndexOf('.');
+            if (lastDotIndex == -1) return null;
+
+            var simpleTypeName = fullTypeName.Substring(lastDotIndex + 1);
+
+            // Try to find the type by scanning all loaded assemblies for types with matching simple name
+            // This allows events to be moved between namespaces without breaking deserialization
+            var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (var assembly in loadedAssemblies)
+            {
+                // Only check assemblies that match the original assembly name
+                if (!assembly.FullName.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var types = assembly.GetTypes();
+                foreach (var type in types)
+                {
+                    if (type.Name == simpleTypeName && typeof(IEvent).IsAssignableFrom(type))
+                    {
+                        return type;
+                    }
+                }
+            }
+
+            return null;
         }
 
         public override void Write(Utf8JsonWriter writer, IEvent value, JsonSerializerOptions options)

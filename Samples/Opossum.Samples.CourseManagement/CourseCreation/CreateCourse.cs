@@ -1,12 +1,12 @@
 ﻿using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
+using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.CourseCreation;
 
 public sealed record CreateCourseRequest(string Name, string Description, int MaxStudentCount);
 public sealed record CreateCourseCommand(Guid CourseId, string Name, string Description, int MaxStudentCount);
-public sealed record CourseCreatedEvent(Guid CourseId, string Name, string Description, int MaxStudentCount) : IEvent;
 
 public static class Endpoint
 {

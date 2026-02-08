@@ -1,9 +1,6 @@
 using Opossum.Core;
 using Opossum.Projections;
-using Opossum.Samples.CourseManagement.CourseCreation;
-using Opossum.Samples.CourseManagement.CourseEnrollment;
-using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
-using Opossum.Samples.CourseManagement.StudentRegistration;
+using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.CourseDetails;
 
