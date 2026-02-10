@@ -25,10 +25,15 @@ public sealed class OpossumOptionsValidator : IValidateOptions<OpossumOptions>
                 failures.Add($"RootPath contains invalid characters: {options.RootPath}");
             }
 
-            // Check if path is rooted (absolute)
+            // Check if path is rooted (absolute) - cross-platform aware
+            // Windows: C:\path, D:\path, \\server\share
+            // Linux: /path
             if (!Path.IsPathRooted(options.RootPath))
             {
-                failures.Add($"RootPath must be an absolute path: {options.RootPath}");
+                // On Linux, relative paths starting with ~ are common but not supported by Path.IsPathRooted
+                // We require absolute paths for consistency
+                failures.Add($"RootPath must be an absolute path: {options.RootPath}. " +
+                    $"Examples: Windows 'C:\\Database', Linux '/var/opossum/data'");
             }
         }
 

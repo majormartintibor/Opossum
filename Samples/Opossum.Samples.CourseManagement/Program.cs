@@ -32,8 +32,22 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 // ============================================================================
 builder.Services.AddOpossum(options =>
 {
-    // Read RootPath from configuration (allows test override via environment variable)
-    options.RootPath = builder.Configuration["Opossum:RootPath"] ?? "D:\\Database";
+    // Read RootPath from configuration with cross-platform default
+    // Windows dev: Use appsettings.Development.json or environment variable
+    // Linux/Docker: Use environment variable OPOSSUM__ROOTPATH
+    var configuredPath = builder.Configuration["Opossum:RootPath"];
+
+    if (string.IsNullOrWhiteSpace(configuredPath))
+    {
+        // Default to platform-appropriate path
+        options.RootPath = OperatingSystem.IsWindows() 
+            ? Path.Combine("D:", "Database")  // Windows: D:\Database
+            : "/var/opossum/data";            // Linux: /var/opossum/data
+    }
+    else
+    {
+        options.RootPath = configuredPath;
+    }
 
     // Add contexts from configuration
     var contexts = builder.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
