@@ -300,31 +300,32 @@ public class ServiceCollectionExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void AddOpossum_WithRelativePath_CreatesDirectories()
+    public void AddOpossum_WithAbsolutePath_CreatesDirectories()
     {
         // Arrange
         var services = new ServiceCollection();
-        var relativePath = Path.Combine(".", "test-opossum-data", Guid.NewGuid().ToString());
+        // Use absolute path (validation requires absolute paths)
+        var absolutePath = Path.Combine(Path.GetTempPath(), "test-opossum-data", Guid.NewGuid().ToString());
 
         try
         {
             // Act
             services.AddOpossum(options =>
             {
-                options.RootPath = relativePath;
+                options.RootPath = absolutePath;
                 options.AddContext("CourseManagement");
             });
 
             // Assert
-            Assert.True(Directory.Exists(relativePath));
-            Assert.True(Directory.Exists(Path.Combine(relativePath, "CourseManagement")));
+            Assert.True(Directory.Exists(absolutePath));
+            Assert.True(Directory.Exists(Path.Combine(absolutePath, "CourseManagement")));
         }
         finally
         {
             // Cleanup
-            if (Directory.Exists(relativePath))
+            if (Directory.Exists(absolutePath))
             {
-                Directory.Delete(relativePath, recursive: true);
+                Directory.Delete(absolutePath, recursive: true);
             }
         }
     }

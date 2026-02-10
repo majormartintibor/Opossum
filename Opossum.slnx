@@ -8,6 +8,7 @@
     <File Path=".github/workflows/samples-ci.yml" />
   </Folder>
     <Folder Name="/docs/">
+      <File Path="docs/implementation-summary-parallel-projection-rebuilding.md" />
     <File Path="docs/README.md" />
   </Folder>
   <Folder Name="/docs/decisions/">

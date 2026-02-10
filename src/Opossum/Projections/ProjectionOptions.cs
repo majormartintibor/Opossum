@@ -1,4 +1,4 @@
-using System.Reflection;
+using System.ComponentModel.DataAnnotations;
 
 namespace Opossum.Projections;
 
@@ -11,12 +11,15 @@ public sealed class ProjectionOptions
     /// How often the projection daemon polls for new events
     /// Default: 5 seconds
     /// </summary>
+    [Range(typeof(TimeSpan), "00:00:00.100", "01:00:00", 
+        ErrorMessage = "PollingInterval must be between 100ms and 1 hour")]
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Maximum number of events to process in a single batch
     /// Default: 1000
     /// </summary>
+    [Range(1, 100000, ErrorMessage = "BatchSize must be between 1 and 100,000")]
     public int BatchSize { get; set; } = 1000;
 
     /// <summary>
@@ -24,6 +27,25 @@ public sealed class ProjectionOptions
     /// Default: true
     /// </summary>
     public bool EnableAutoRebuild { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of projections to rebuild concurrently.
+    /// 
+    /// DISK TYPE RECOMMENDATIONS:
+    /// - HDD (single disk): 2-4
+    /// - SSD: 4-8
+    /// - NVMe SSD: 8-16
+    /// - RAID array: 16-32
+    /// 
+    /// IMPORTANT: Higher values improve rebuild speed but increase:
+    /// - CPU usage (may slow HTTP requests)
+    /// - Memory usage (all events loaded in parallel)
+    /// - Disk I/O contention
+    /// 
+    /// Default: 4 (balanced for most scenarios)
+    /// </summary>
+    [Range(1, 64, ErrorMessage = "MaxConcurrentRebuilds must be between 1 and 64")]
+    public int MaxConcurrentRebuilds { get; set; } = 4;
 
     /// <summary>
     /// Assemblies to scan for projection definitions

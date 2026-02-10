@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Diagnostics;
 using Opossum.DependencyInjection;
 using Opossum.Exceptions;
 using Opossum.Mediator;
+using Opossum.Projections;
 using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.CourseDetails;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
@@ -27,22 +27,53 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-// Add event sourcing framework
+// ============================================================================
+// EVENT SOURCING FRAMEWORK CONFIGURATION
+// ============================================================================
 builder.Services.AddOpossum(options =>
 {
-    options.RootPath = "D:\\Database";
-    options.AddContext("OpossumSampleApp");
-    //TODO: multiple context support
-    //options.AddContext("ExampleAdditionalContext");
+    // Add contexts from configuration
+    var contexts = builder.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
+    if (contexts != null)
+    {
+        foreach (var context in contexts)
+        {
+            options.AddContext(context);
+        }
+    }
+
+    // Bind all properties from configuration (RootPath, FlushEventsImmediately, etc.)
+    builder.Configuration.GetSection("Opossum").Bind(options);
+
+    // AFTER binding, ensure RootPath is valid for the current platform
+    // This handles cases where config has Windows path (D:\Database) on Linux
+    if (string.IsNullOrWhiteSpace(options.RootPath))
+    {
+        // No path configured - use platform default
+        options.RootPath = OperatingSystem.IsWindows() 
+            ? Path.Combine("D:", "Database")              // Windows: D:\Database
+            : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
+    }
+    else if (!Path.IsPathRooted(options.RootPath))
+    {
+        // Path is not rooted (e.g., Windows drive letter on Linux)
+        // Replace with platform default
+        options.RootPath = OperatingSystem.IsWindows() 
+            ? Path.Combine("D:", "Database")              // Windows: D:\Database
+            : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
+    }
 });
 
-// Add projection system
+// ============================================================================
+// PROJECTION SYSTEM CONFIGURATION
+// ============================================================================
 builder.Services.AddProjections(options =>
 {
+    // Bind from appsettings.json "Projections" section
+    builder.Configuration.GetSection("Projections").Bind(options);
+
+    // Assembly scanning must be done in code (not possible via JSON)
     options.ScanAssembly(typeof(Program).Assembly);
-    options.PollingInterval = TimeSpan.FromSeconds(5);
-    options.BatchSize = 1000;
-    options.EnableAutoRebuild = true;
 });
 
 // Add mediator for command/query handling
@@ -141,6 +172,34 @@ app.MapGetCoursesShortInfoEndpoint();
 app.MapGetCourseDetailsEndpoint();
 app.MapModifyCourseStudentLimitEndpoint();
 app.MapEnrollStudentToCourseEndpoint();
+
+// ============================================================================
+// ADMIN ENDPOINTS - Projection Management
+// ============================================================================
+// These endpoints allow administrators to manually rebuild projections.
+//
+// DEVELOPMENT USAGE:
+// - After database resets/reseeds
+// - Testing projection changes
+// - Debugging projection issues
+//
+// PRODUCTION USAGE:
+// - After deploying new projection types
+// - Fixing buggy projection logic (deploy fix, then rebuild)
+// - Disaster recovery (lost projection files)
+//
+// SECURITY WARNING:
+// - In production, add proper authentication/authorization
+// - These endpoints can trigger expensive operations
+// - Consider rate limiting to prevent abuse
+//
+// Example: Add authorization requirement
+// if (app.Environment.IsProduction())
+// {
+//     app.MapGroup("/admin").RequireAuthorization("AdminOnly");
+// }
+// ============================================================================
+Opossum.Samples.CourseManagement.AdminEndpoints.MapProjectionAdminEndpoints(app);
 
 app.Run();
 

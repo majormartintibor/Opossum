@@ -22,6 +22,37 @@ public interface IProjectionManager
     Task RebuildAsync(string projectionName, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Rebuilds all registered projections in parallel.
+    /// Respects MaxConcurrentRebuilds configuration.
+    /// </summary>
+    /// <param name="forceRebuild">
+    /// If true, rebuilds even projections with existing checkpoints.
+    /// If false, only rebuilds projections with checkpoint = 0.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Rebuild result summary</returns>
+    Task<ProjectionRebuildResult> RebuildAllAsync(
+        bool forceRebuild = false, 
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Rebuilds specific projections in parallel.
+    /// Useful for rebuilding only buggy projections after a fix.
+    /// </summary>
+    /// <param name="projectionNames">Names of projections to rebuild</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Rebuild result summary</returns>
+    Task<ProjectionRebuildResult> RebuildAsync(
+        string[] projectionNames, 
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the current rebuild status (in-progress or completed).
+    /// </summary>
+    /// <returns>Rebuild status with progress information</returns>
+    Task<ProjectionRebuildStatus> GetRebuildStatusAsync();
+
+    /// <summary>
     /// Applies new events to all registered projections
     /// </summary>
     /// <param name="events">Events to apply</param>

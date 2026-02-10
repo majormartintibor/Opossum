@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Opossum.Configuration;
 using Opossum.Core;
 
@@ -12,9 +11,31 @@ internal sealed class ProjectionManager : IProjectionManager
     private readonly OpossumOptions _options;
     private readonly IEventStore _eventStore;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ProjectionOptions _projectionOptions;
+    private readonly ILogger<ProjectionManager> _logger;
     private readonly string _checkpointPath;
-    private readonly Dictionary<string, ProjectionRegistration> _projections = new();
-    private readonly SemaphoreSlim _lock = new(1, 1);
+
+    // Thread-safe projection registry - allows concurrent reads and writes
+    private readonly ConcurrentDictionary<string, ProjectionRegistration> _projections = new();
+
+    // Per-projection locks to prevent concurrent rebuilds/updates of the same projection
+    // NOTE: This dictionary grows with the number of unique projection names registered.
+    // In practice, this is typically <100 entries (one per projection type).
+    // Each SemaphoreSlim is ~48 bytes, so even 100 projections = ~5KB overhead.
+    // If this becomes a concern in very large deployments, we can implement:
+    // - Lock pooling strategy
+    // - Weak reference cleanup for unused projections
+    // - Configurable lock retention policy
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> _projectionLocks = new();
+
+    // Lock for rebuild status tracking
+    private readonly object _rebuildLock = new();
+    private ProjectionRebuildStatus _currentRebuildStatus = new()
+    {
+        IsRebuilding = false,
+        InProgressProjections = [],
+        QueuedProjections = []
+    };
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -22,15 +43,23 @@ internal sealed class ProjectionManager : IProjectionManager
         PropertyNameCaseInsensitive = true
     };
 
-    public ProjectionManager(OpossumOptions options, IEventStore eventStore, IServiceProvider serviceProvider)
+    public ProjectionManager(
+        OpossumOptions options, 
+        IEventStore eventStore, 
+        IServiceProvider serviceProvider,
+        ProjectionOptions projectionOptions,
+        ILogger<ProjectionManager>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(serviceProvider);
+        ArgumentNullException.ThrowIfNull(projectionOptions);
 
         _options = options;
         _eventStore = eventStore;
         _serviceProvider = serviceProvider;
+        _projectionOptions = projectionOptions;
+        _logger = logger ?? NullLogger<ProjectionManager>.Instance;
 
         if (options.Contexts.Count == 0)
         {
@@ -47,37 +76,28 @@ internal sealed class ProjectionManager : IProjectionManager
     {
         ArgumentNullException.ThrowIfNull(definition);
 
-        _lock.Wait();
-        try
+        // Try to resolve store from DI first (for auto-discovered projections with tag providers)
+        var storeType = typeof(IProjectionStore<>).MakeGenericType(typeof(TState));
+        var store = _serviceProvider.GetService(storeType) as IProjectionStore<TState>;
+
+        // If not in DI, create manually (for manual registration in tests or without tag providers)
+        if (store == null)
         {
-            if (_projections.ContainsKey(definition.ProjectionName))
-            {
-                throw new InvalidOperationException($"Projection '{definition.ProjectionName}' is already registered");
-            }
-
-            // Try to resolve store from DI first (for auto-discovered projections with tag providers)
-            var storeType = typeof(IProjectionStore<>).MakeGenericType(typeof(TState));
-            var store = _serviceProvider.GetService(storeType) as IProjectionStore<TState>;
-
-            // If not in DI, create manually (for manual registration in tests or without tag providers)
-            if (store == null)
-            {
-                var fileSystemStoreType = typeof(FileSystemProjectionStore<>).MakeGenericType(typeof(TState));
-                store = Activator.CreateInstance(fileSystemStoreType, _options, definition.ProjectionName, null) as IProjectionStore<TState>;
-            }
-
-            if (store == null)
-            {
-                throw new InvalidOperationException($"Could not create or resolve projection store for {typeof(TState).Name}");
-            }
-
-            var registration = new ProjectionRegistration<TState>(definition, store, _eventStore);
-
-            _projections[definition.ProjectionName] = registration;
+            var fileSystemStoreType = typeof(FileSystemProjectionStore<>).MakeGenericType(typeof(TState));
+            store = Activator.CreateInstance(fileSystemStoreType, _options, definition.ProjectionName, null) as IProjectionStore<TState>;
         }
-        finally
+
+        if (store == null)
         {
-            _lock.Release();
+            throw new InvalidOperationException($"Could not create or resolve projection store for {typeof(TState).Name}");
+        }
+
+        var registration = new ProjectionRegistration<TState>(definition, store, _eventStore);
+
+        // ConcurrentDictionary.TryAdd is thread-safe and atomic
+        if (!_projections.TryAdd(definition.ProjectionName, registration))
+        {
+            throw new InvalidOperationException($"Projection '{definition.ProjectionName}' is already registered");
         }
     }
 
@@ -85,9 +105,10 @@ internal sealed class ProjectionManager : IProjectionManager
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
 
-        await _lock.WaitAsync(cancellationToken);
-        try
+        // Acquire per-projection lock (fail-fast if already locked)
+        using (await AcquireProjectionLockAsync(projectionName, cancellationToken).ConfigureAwait(false))
         {
+            // Thread-safe dictionary lookup (no global lock needed)
             if (!_projections.TryGetValue(projectionName, out var registration))
             {
                 throw new InvalidOperationException($"Projection '{projectionName}' is not registered");
@@ -95,7 +116,7 @@ internal sealed class ProjectionManager : IProjectionManager
 
             // Read all events for this projection's event types
             var query = Query.FromEventTypes(registration.EventTypes);
-            var events = await _eventStore.ReadAsync(query, null);
+            var events = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
 
             // Clear existing projection data
             await registration.ClearAsync(cancellationToken).ConfigureAwait(false);
@@ -114,10 +135,7 @@ internal sealed class ProjectionManager : IProjectionManager
                 await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
             }
         }
-        finally
-        {
-            _lock.Release();
-        }
+        // Lock automatically released here
     }
 
     public async Task UpdateAsync(SequencedEvent[] events, CancellationToken cancellationToken = default)
@@ -141,14 +159,30 @@ internal sealed class ProjectionManager : IProjectionManager
                 continue;
             }
 
-            foreach (var evt in relevantEvents)
+            // Acquire per-projection lock to prevent concurrent updates/rebuilds
+            // Use try-catch to handle fail-fast scenario gracefully
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
-            }
+                using (await AcquireProjectionLockAsync(projectionName, cancellationToken).ConfigureAwait(false))
+                {
+                    foreach (var evt in relevantEvents)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
+                    }
 
-            var lastPosition = relevantEvents.Max(e => e.Position);
-            await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
+                    var lastPosition = relevantEvents.Max(e => e.Position);
+                    await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
+                }
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("already being rebuilt or updated"))
+            {
+                // Projection is being rebuilt - skip this update batch
+                // The rebuild will process these events anyway
+                _logger.LogDebug(
+                    "Skipping update for projection '{ProjectionName}' - currently being rebuilt",
+                    projectionName);
+            }
         }
     }
 
@@ -194,9 +228,282 @@ internal sealed class ProjectionManager : IProjectionManager
         return _projections.Keys.ToList();
     }
 
+    public async Task<ProjectionRebuildResult> RebuildAllAsync(
+        bool forceRebuild = false, 
+        CancellationToken cancellationToken = default)
+    {
+        var projections = GetRegisteredProjections();
+        var projectionsToRebuild = new List<string>();
+
+        // Determine which projections need rebuilding
+        foreach (var projectionName in projections)
+        {
+            var checkpoint = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
+
+            if (forceRebuild || checkpoint == 0)
+            {
+                projectionsToRebuild.Add(projectionName);
+            }
+        }
+
+        if (projectionsToRebuild.Count == 0)
+        {
+            _logger.LogInformation("All projections are up to date (no rebuilds needed)");
+
+            return new ProjectionRebuildResult
+            {
+                TotalRebuilt = 0,
+                Duration = TimeSpan.Zero,
+                Details = []
+            };
+        }
+
+        // Delegate to RebuildAsync(string[])
+        return await RebuildAsync([.. projectionsToRebuild], cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ProjectionRebuildResult> RebuildAsync(
+        string[] projectionNames, 
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(projectionNames);
+
+        if (projectionNames.Length == 0)
+        {
+            return new ProjectionRebuildResult
+            {
+                TotalRebuilt = 0,
+                Duration = TimeSpan.Zero,
+                Details = []
+            };
+        }
+
+        // Update rebuild status
+        UpdateRebuildStatus(isRebuilding: true, 
+            inProgress: [], 
+            queued: [.. projectionNames]);
+
+        var overallStopwatch = Stopwatch.StartNew();
+        var details = new ConcurrentBag<ProjectionRebuildDetail>();
+
+        try
+        {
+            var maxConcurrency = _projectionOptions.MaxConcurrentRebuilds;
+
+            _logger.LogInformation(
+                "Starting parallel rebuild of {Count} projections with max {MaxConcurrency} concurrent rebuilds",
+                projectionNames.Length,
+                maxConcurrency);
+
+            // Rebuild projections in parallel
+            await Parallel.ForEachAsync(
+                projectionNames,
+                new ParallelOptions
+                {
+                    MaxDegreeOfParallelism = maxConcurrency,
+                    CancellationToken = cancellationToken
+                },
+                async (projectionName, ct) =>
+                {
+                    // Update status: move from queued to in-progress
+                    MoveToInProgress(projectionName);
+
+                    var stopwatch = Stopwatch.StartNew();
+
+                    try
+                    {
+                        _logger.LogInformation("Rebuilding projection '{ProjectionName}'...", projectionName);
+
+                        // Call existing RebuildAsync(string) method
+                        await RebuildAsync(projectionName, ct).ConfigureAwait(false);
+
+                        stopwatch.Stop();
+
+                        var eventsProcessed = await GetCheckpointAsync(projectionName, ct).ConfigureAwait(false);
+
+                        details.Add(new ProjectionRebuildDetail
+                        {
+                            ProjectionName = projectionName,
+                            Success = true,
+                            Duration = stopwatch.Elapsed,
+                            EventsProcessed = (int)eventsProcessed,
+                            ErrorMessage = null
+                        });
+
+                        _logger.LogInformation(
+                            "Projection '{ProjectionName}' rebuilt successfully in {Duration}ms ({EventCount} events)",
+                            projectionName,
+                            stopwatch.ElapsedMilliseconds,
+                            eventsProcessed);
+                    }
+                    catch (Exception ex)
+                    {
+                        stopwatch.Stop();
+
+                        details.Add(new ProjectionRebuildDetail
+                        {
+                            ProjectionName = projectionName,
+                            Success = false,
+                            Duration = stopwatch.Elapsed,
+                            EventsProcessed = 0,
+                            ErrorMessage = ex.Message
+                        });
+
+                        _logger.LogError(ex, 
+                            "Failed to rebuild projection '{ProjectionName}'", 
+                            projectionName);
+                    }
+                    finally
+                    {
+                        // Update status: remove from in-progress
+                        RemoveFromInProgress(projectionName);
+                    }
+                }).ConfigureAwait(false);
+
+            overallStopwatch.Stop();
+
+            var result = new ProjectionRebuildResult
+            {
+                TotalRebuilt = details.Count(d => d.Success),
+                Duration = overallStopwatch.Elapsed,
+                Details = [.. details.OrderBy(d => d.ProjectionName)]
+            };
+
+            if (result.Success)
+            {
+                _logger.LogInformation(
+                    "All {Count} projections rebuilt successfully in {Duration}",
+                    result.TotalRebuilt,
+                    overallStopwatch.Elapsed);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Projection rebuild completed with errors. Success: {Success}/{Total}. Failed: {Failed}",
+                    result.TotalRebuilt,
+                    projectionNames.Length,
+                    string.Join(", ", result.FailedProjections));
+            }
+
+            return result;
+        }
+        finally
+        {
+            // Clear rebuild status
+            UpdateRebuildStatus(isRebuilding: false, inProgress: [], queued: []);
+        }
+    }
+
+    public Task<ProjectionRebuildStatus> GetRebuildStatusAsync()
+    {
+        lock (_rebuildLock)
+        {
+            return Task.FromResult(_currentRebuildStatus);
+        }
+    }
+
+    private void UpdateRebuildStatus(bool isRebuilding, List<string> inProgress, List<string> queued)
+    {
+        lock (_rebuildLock)
+        {
+            _currentRebuildStatus = new ProjectionRebuildStatus
+            {
+                IsRebuilding = isRebuilding,
+                InProgressProjections = inProgress,
+                QueuedProjections = queued,
+                StartedAt = isRebuilding ? DateTimeOffset.UtcNow : null,
+                EstimatedCompletionAt = null
+            };
+        }
+    }
+
+    private void MoveToInProgress(string projectionName)
+    {
+        lock (_rebuildLock)
+        {
+            var queued = _currentRebuildStatus.QueuedProjections.ToList();
+            queued.Remove(projectionName);
+
+            var inProgress = _currentRebuildStatus.InProgressProjections.ToList();
+            inProgress.Add(projectionName);
+
+            _currentRebuildStatus = _currentRebuildStatus with
+            {
+                QueuedProjections = queued,
+                InProgressProjections = inProgress
+            };
+        }
+    }
+
+    private void RemoveFromInProgress(string projectionName)
+    {
+        lock (_rebuildLock)
+        {
+            var inProgress = _currentRebuildStatus.InProgressProjections.ToList();
+            inProgress.Remove(projectionName);
+
+            _currentRebuildStatus = _currentRebuildStatus with
+            {
+                InProgressProjections = inProgress
+            };
+        }
+    }
+
     private string GetCheckpointFilePath(string projectionName)
     {
         return Path.Combine(_checkpointPath, $"{projectionName}.checkpoint");
+    }
+
+    /// <summary>
+    /// Acquires a per-projection lock to prevent concurrent operations on the same projection.
+    /// Uses fail-fast approach: throws if projection is already locked.
+    /// </summary>
+    /// <param name="projectionName">Name of the projection to lock</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Disposable that releases the lock when disposed</returns>
+    /// <exception cref="InvalidOperationException">If projection is already being rebuilt or updated</exception>
+    private async Task<IDisposable> AcquireProjectionLockAsync(
+        string projectionName, 
+        CancellationToken cancellationToken)
+    {
+        // Get or create a lock for this specific projection
+        var projectionLock = _projectionLocks.GetOrAdd(
+            projectionName, 
+            _ => new SemaphoreSlim(1, 1));
+
+        // Fail-fast: Don't wait if already locked
+        if (!await projectionLock.WaitAsync(TimeSpan.Zero, cancellationToken).ConfigureAwait(false))
+        {
+            throw new InvalidOperationException(
+                $"Projection '{projectionName}' is already being rebuilt or updated. " +
+                $"Please wait for the current operation to complete.");
+        }
+
+        return new ProjectionLockReleaser(projectionLock);
+    }
+
+    /// <summary>
+    /// RAII-style lock releaser for projection locks.
+    /// Automatically releases the semaphore when disposed.
+    /// </summary>
+    private sealed class ProjectionLockReleaser : IDisposable
+    {
+        private readonly SemaphoreSlim _semaphore;
+        private bool _disposed;
+
+        public ProjectionLockReleaser(SemaphoreSlim semaphore)
+        {
+            _semaphore = semaphore;
+        }
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _semaphore.Release();
+                _disposed = true;
+            }
+        }
     }
 
     /// <summary>
@@ -230,7 +537,7 @@ internal sealed class ProjectionManager : IProjectionManager
         public override async Task ApplyAsync(SequencedEvent evt, CancellationToken cancellationToken)
         {
             var key = _definition.KeySelector(evt);
-            var current = await _store.GetAsync(key, cancellationToken);
+            var current = await _store.GetAsync(key, cancellationToken).ConfigureAwait(false);
 
             TState? updated;
 
@@ -244,7 +551,7 @@ internal sealed class ProjectionManager : IProjectionManager
                 // Load related events if query is provided
                 if (relatedQuery != null && _eventStore != null)
                 {
-                    relatedEvents = await _eventStore.ReadAsync(relatedQuery, null);
+                    relatedEvents = await _eventStore.ReadAsync(relatedQuery, null).ConfigureAwait(false);
                 }
 
                 // Apply with related events
@@ -259,11 +566,11 @@ internal sealed class ProjectionManager : IProjectionManager
             if (updated == null)
             {
                 // Null means delete
-                await _store.DeleteAsync(key, cancellationToken);
+                await _store.DeleteAsync(key, cancellationToken).ConfigureAwait(false);
             }
             else
             {
-                await _store.SaveAsync(key, updated, cancellationToken);
+                await _store.SaveAsync(key, updated, cancellationToken).ConfigureAwait(false);
             }
         }
 

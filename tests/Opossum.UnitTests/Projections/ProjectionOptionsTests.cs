@@ -116,4 +116,45 @@ public class ProjectionOptionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => options.ScanAssembly(null!));
     }
+
+    [Fact]
+    public void MaxConcurrentRebuilds_DefaultValue_IsFour()
+    {
+        // Arrange & Act
+        var options = new ProjectionOptions();
+
+        // Assert
+        Assert.Equal(4, options.MaxConcurrentRebuilds);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(4)]
+    [InlineData(8)]
+    [InlineData(16)]
+    public void MaxConcurrentRebuilds_CanBeConfigured(int value)
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            MaxConcurrentRebuilds = value
+        };
+
+        // Assert
+        Assert.Equal(value, options.MaxConcurrentRebuilds);
+    }
+
+    [Fact]
+    public void MaxConcurrentRebuilds_CanBeSetToOne_ForSequentialRebuild()
+    {
+        // Arrange
+        var options = new ProjectionOptions();
+
+        // Act
+        options.MaxConcurrentRebuilds = 1;
+
+        // Assert
+        Assert.Equal(1, options.MaxConcurrentRebuilds);
+    }
 }
