@@ -32,23 +32,6 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 // ============================================================================
 builder.Services.AddOpossum(options =>
 {
-    // Read RootPath from configuration with cross-platform default
-    // Windows dev: Use appsettings.Development.json or environment variable
-    // Linux/Docker: Use environment variable OPOSSUM__ROOTPATH
-    var configuredPath = builder.Configuration["Opossum:RootPath"];
-
-    if (string.IsNullOrWhiteSpace(configuredPath))
-    {
-        // Default to platform-appropriate path
-        options.RootPath = OperatingSystem.IsWindows() 
-            ? Path.Combine("D:", "Database")  // Windows: D:\Database
-            : "/var/opossum/data";            // Linux: /var/opossum/data
-    }
-    else
-    {
-        options.RootPath = configuredPath;
-    }
-
     // Add contexts from configuration
     var contexts = builder.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
     if (contexts != null)
@@ -59,8 +42,26 @@ builder.Services.AddOpossum(options =>
         }
     }
 
-    // Bind other properties (FlushEventsImmediately, etc.)
+    // Bind all properties from configuration (RootPath, FlushEventsImmediately, etc.)
     builder.Configuration.GetSection("Opossum").Bind(options);
+
+    // AFTER binding, ensure RootPath is valid for the current platform
+    // This handles cases where config has Windows path (D:\Database) on Linux
+    if (string.IsNullOrWhiteSpace(options.RootPath))
+    {
+        // No path configured - use platform default
+        options.RootPath = OperatingSystem.IsWindows() 
+            ? Path.Combine("D:", "Database")  // Windows: D:\Database
+            : "/var/opossum/data";            // Linux: /var/opossum/data
+    }
+    else if (!Path.IsPathRooted(options.RootPath))
+    {
+        // Path is not rooted (e.g., Windows drive letter on Linux)
+        // Replace with platform default
+        options.RootPath = OperatingSystem.IsWindows() 
+            ? Path.Combine("D:", "Database")  // Windows: D:\Database
+            : "/var/opossum/data";            // Linux: /var/opossum/data
+    }
 });
 
 // ============================================================================
