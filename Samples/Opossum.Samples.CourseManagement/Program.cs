@@ -52,11 +52,6 @@ builder.Services.AddOpossum(options =>
 // ============================================================================
 // PROJECTION SYSTEM CONFIGURATION
 // ============================================================================
-// Configuration is loaded from appsettings.json (Projections section)
-// Tests can override via appsettings.Testing.json (e.g., EnableAutoRebuild=false)
-//
-// See appsettings.json for configuration values and documentation
-// ============================================================================
 builder.Services.AddProjections(options =>
 {
     // Bind from appsettings.json "Projections" section

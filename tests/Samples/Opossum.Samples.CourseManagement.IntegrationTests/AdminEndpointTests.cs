@@ -55,22 +55,34 @@ public class AdminEndpointTests
     [Fact]
     public async Task POST_RebuildAll_WithForceAllFalse_OnlyRebuildsProjectionsWithMissingCheckpoints()
     {
-        // Arrange - First rebuild to establish checkpoints
-        var firstResponse = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
-        firstResponse.EnsureSuccessStatusCode();
-        var firstResult = await firstResponse.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
+        // Arrange - Test database is already seeded with students and courses by fixture
+        // Use forceAll=true first to ensure we start from a known state (other tests may have already rebuilt)
+        var setupResponse = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
+        setupResponse.EnsureSuccessStatusCode();
+        var setupResult = await setupResponse.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Verify first rebuild succeeded
-        Assert.NotNull(firstResult);
-        Assert.True(firstResult.Success, "First rebuild should succeed");
-        Assert.True(firstResult.TotalRebuilt >= 4, $"First rebuild should rebuild at least 4 projections, got {firstResult.TotalRebuilt}");
+        Assert.NotNull(setupResult);
+        Assert.True(setupResult.Success);
+        Assert.Equal(4, setupResult.TotalRebuilt); // All 4 projections rebuilt
 
-        // Act - Second rebuild without force (should not rebuild anything since checkpoints exist)
+        // Verify all projections now have non-zero checkpoints (processed seeded events)
+        var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
+        checkpointsResponse.EnsureSuccessStatusCode();
+        var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
+        Assert.NotNull(checkpoints);
+        Assert.Equal(4, checkpoints.Count);
+        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint > 0, 
+            $"All checkpoints should be > 0 after processing seeded events"));
+
+        // Wait for checkpoint persistence
+        await Task.Delay(500);
+
+        // Act - Rebuild with forceAll=false (should not rebuild anything - all have checkpoints > 0)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - No projections should be rebuilt (all have checkpoints from first rebuild)
+        // Assert - No projections should be rebuilt (all have checkpoints > 0)
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.Equal(0, result.TotalRebuilt);
