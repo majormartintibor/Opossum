@@ -177,8 +177,8 @@ public sealed class OpossumOptionsValidationTests
             RootPath = GetValidAbsolutePath()
         };
 
-        // Manually add invalid context
-        options.Contexts.Add("Invalid|Context");  // | is invalid in directory names
+        // Manually add invalid context with null character (invalid on ALL platforms)
+        options.Contexts.Add("Invalid\0Context");  // \0 (null) is invalid on Windows AND Linux
 
         var validator = new OpossumOptionsValidator();
 

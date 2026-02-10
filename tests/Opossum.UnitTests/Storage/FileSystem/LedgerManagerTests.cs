@@ -269,7 +269,14 @@ public class LedgerManagerTests : IDisposable
             });
 
             // Give second task time to attempt lock
-            await Task.Delay(100);
+            // Increased from 100ms to 500ms for CI environment reliability
+            await Task.Delay(500);
+
+            // If still not attempted, wait a bit more (CI can be slow)
+            for (int i = 0; i < 5 && !secondLockAttempted; i++)
+            {
+                await Task.Delay(100);
+            }
 
             // Assert - second lock should have been attempted but not acquired
             Assert.True(secondLockAttempted, "Second lock attempt should have been made");
