@@ -9,13 +9,31 @@ namespace Opossum.UnitTests.Configuration;
 /// </summary>
 public sealed class OpossumOptionsValidationTests
 {
+    /// <summary>
+    /// Returns a platform-appropriate absolute path for testing.
+    /// Windows: C:\TestPath
+    /// Linux: /tmp/TestPath
+    /// </summary>
+    private static string GetValidAbsolutePath() =>
+        OperatingSystem.IsWindows() ? "C:\\TestPath" : "/tmp/TestPath";
+
+    /// <summary>
+    /// Returns a platform-appropriate absolute path with invalid characters.
+    /// Windows: C:\Invalid|Path (| is invalid)
+    /// Linux: /tmp/Invalid\0Path (\0 null character is invalid)
+    /// </summary>
+    private static string GetPathWithInvalidCharacters() =>
+        OperatingSystem.IsWindows() 
+            ? "C:\\Invalid|Path"  // | is invalid on Windows
+            : "/tmp/Invalid\0Path";  // \0 is invalid on Linux
+
     [Fact]
     public void Validate_ValidOptions_ReturnsSuccess()
     {
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\ValidPath"
+            RootPath = GetValidAbsolutePath()
         };
         options.AddContext("ValidContext");
 
@@ -94,7 +112,7 @@ public sealed class OpossumOptionsValidationTests
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\Invalid|Path"  // | is invalid in Windows paths
+            RootPath = GetPathWithInvalidCharacters()
         };
         options.AddContext("ValidContext");
 
@@ -114,7 +132,7 @@ public sealed class OpossumOptionsValidationTests
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\ValidPath"
+            RootPath = GetValidAbsolutePath()
         };
         // Don't add any contexts
 
@@ -134,9 +152,9 @@ public sealed class OpossumOptionsValidationTests
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\ValidPath"
+            RootPath = GetValidAbsolutePath()
         };
-        
+
         // Manually add invalid context (bypassing AddContext validation)
         options.Contexts.Add("");
 
@@ -156,9 +174,9 @@ public sealed class OpossumOptionsValidationTests
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\ValidPath"
+            RootPath = GetValidAbsolutePath()
         };
-        
+
         // Manually add invalid context
         options.Contexts.Add("Invalid|Context");  // | is invalid in directory names
 
@@ -178,9 +196,9 @@ public sealed class OpossumOptionsValidationTests
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\ValidPath"
+            RootPath = GetValidAbsolutePath()
         };
-        
+
         // Try to use Windows reserved name
         options.Contexts.Add("CON");  // Reserved Windows name
 
@@ -200,7 +218,7 @@ public sealed class OpossumOptionsValidationTests
         // Arrange
         var options = new OpossumOptions
         {
-            RootPath = "D:\\ValidPath"
+            RootPath = GetValidAbsolutePath()
         };
         options.AddContext("Context1");
         options.AddContext("Context2");
