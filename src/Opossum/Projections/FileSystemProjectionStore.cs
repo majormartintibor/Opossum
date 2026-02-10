@@ -49,6 +49,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
+        // Ensure directory exists (might not exist for new projection types)
+        if (!Directory.Exists(_projectionPath))
+        {
+            return null;
+        }
+
         var filePath = GetFilePath(key);
 
         if (!File.Exists(filePath))
@@ -73,6 +79,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
     public async Task<IReadOnlyList<TState>> GetAllAsync(CancellationToken cancellationToken = default)
     {
+        // Ensure directory exists (might not exist for new projection types during rebuild)
+        if (!Directory.Exists(_projectionPath))
+        {
+            return Array.Empty<TState>();
+        }
+
         var files = Directory.GetFiles(_projectionPath, "*.json");
 
         if (files.Length == 0)
@@ -266,6 +278,9 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(state);
 
+        // Ensure directory exists (create if first save after rebuild/initialization)
+        Directory.CreateDirectory(_projectionPath);
+
         var filePath = GetFilePath(key);
 
         // Extract tags if provider is configured
@@ -375,6 +390,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+        // If directory doesn't exist, nothing to delete
+        if (!Directory.Exists(_projectionPath))
+        {
+            return;
+        }
 
         var filePath = GetFilePath(key);
 

@@ -194,6 +194,155 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
             _store.GetAsync(""));
     }
 
+    // ========================================================================
+    // Missing Directory Tests (for new projection types / deleted folders)
+    // ========================================================================
+
+    [Fact]
+    public async Task GetAsync_WhenDirectoryMissing_ReturnsNull()
+    {
+        // Arrange - Create store with unique name, then delete its directory
+        var storeName = $"MissingDirStore_{Guid.NewGuid()}";
+        var store = new FileSystemProjectionStore<TestOrderState>(
+            _fixture.OpossumOptions,
+            storeName);
+
+        var projectionPath = Path.Combine(
+            _fixture.OpossumOptions.RootPath,
+            _fixture.OpossumOptions.Contexts[0],
+            "Projections",
+            storeName);
+
+        // Delete the directory to simulate missing projection folder
+        if (Directory.Exists(projectionPath))
+        {
+            Directory.Delete(projectionPath, recursive: true);
+        }
+
+        // Act
+        var result = await store.GetAsync("any-key");
+
+        // Assert
+        Assert.Null(result); // Should return null, not throw
+    }
+
+    [Fact]
+    public async Task GetAllAsync_WhenDirectoryMissing_ReturnsEmptyList()
+    {
+        // Arrange - Create store with unique name, then delete its directory
+        var storeName = $"MissingDirStore_{Guid.NewGuid()}";
+        var store = new FileSystemProjectionStore<TestOrderState>(
+            _fixture.OpossumOptions,
+            storeName);
+
+        var projectionPath = Path.Combine(
+            _fixture.OpossumOptions.RootPath,
+            _fixture.OpossumOptions.Contexts[0],
+            "Projections",
+            storeName);
+
+        // Delete the directory to simulate missing projection folder
+        if (Directory.Exists(projectionPath))
+        {
+            Directory.Delete(projectionPath, recursive: true);
+        }
+
+        // Act
+        var result = await store.GetAllAsync();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result); // Should return empty list, not throw
+    }
+
+    [Fact]
+    public async Task SaveAsync_WhenDirectoryMissing_CreatesDirectoryAndSaves()
+    {
+        // Arrange - Create store with unique name, then delete its directory
+        var storeName = $"MissingDirStore_{Guid.NewGuid()}";
+        var store = new FileSystemProjectionStore<TestOrderState>(
+            _fixture.OpossumOptions,
+            storeName);
+
+        var projectionPath = Path.Combine(
+            _fixture.OpossumOptions.RootPath,
+            _fixture.OpossumOptions.Contexts[0],
+            "Projections",
+            storeName);
+
+        // Delete the directory to simulate missing projection folder
+        if (Directory.Exists(projectionPath))
+        {
+            Directory.Delete(projectionPath, recursive: true);
+        }
+
+        var orderId = Guid.NewGuid();
+        var state = new TestOrderState(orderId, "Customer A", 100m);
+
+        // Act
+        await store.SaveAsync(orderId.ToString(), state);
+
+        // Assert
+        Assert.True(Directory.Exists(projectionPath), "Directory should be created");
+        var retrieved = await store.GetAsync(orderId.ToString());
+        Assert.NotNull(retrieved);
+        Assert.Equal(state.OrderId, retrieved.OrderId);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhenDirectoryMissing_DoesNotThrow()
+    {
+        // Arrange - Create store with unique name, then delete its directory
+        var storeName = $"MissingDirStore_{Guid.NewGuid()}";
+        var store = new FileSystemProjectionStore<TestOrderState>(
+            _fixture.OpossumOptions,
+            storeName);
+
+        var projectionPath = Path.Combine(
+            _fixture.OpossumOptions.RootPath,
+            _fixture.OpossumOptions.Contexts[0],
+            "Projections",
+            storeName);
+
+        // Delete the directory to simulate missing projection folder
+        if (Directory.Exists(projectionPath))
+        {
+            Directory.Delete(projectionPath, recursive: true);
+        }
+
+        // Act & Assert - Should not throw
+        await store.DeleteAsync("any-key");
+    }
+
+    [Fact]
+    public async Task QueryAsync_WhenDirectoryMissing_ReturnsEmptyList()
+    {
+        // Arrange - Create store with unique name, then delete its directory
+        var storeName = $"MissingDirStore_{Guid.NewGuid()}";
+        var store = new FileSystemProjectionStore<TestOrderState>(
+            _fixture.OpossumOptions,
+            storeName);
+
+        var projectionPath = Path.Combine(
+            _fixture.OpossumOptions.RootPath,
+            _fixture.OpossumOptions.Contexts[0],
+            "Projections",
+            storeName);
+
+        // Delete the directory to simulate missing projection folder
+        if (Directory.Exists(projectionPath))
+        {
+            Directory.Delete(projectionPath, recursive: true);
+        }
+
+        // Act
+        var result = await store.QueryAsync(o => o.TotalAmount > 100m);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result); // Should return empty list, not throw
+    }
+
     // Test state model
     private record TestOrderState(Guid OrderId, string CustomerName, decimal TotalAmount);
 }
