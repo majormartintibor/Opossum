@@ -51,16 +51,16 @@ builder.Services.AddOpossum(options =>
     {
         // No path configured - use platform default
         options.RootPath = OperatingSystem.IsWindows() 
-            ? Path.Combine("D:", "Database")  // Windows: D:\Database
-            : "/var/opossum/data";            // Linux: /var/opossum/data
+            ? Path.Combine("D:", "Database")              // Windows: D:\Database
+            : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
     }
     else if (!Path.IsPathRooted(options.RootPath))
     {
         // Path is not rooted (e.g., Windows drive letter on Linux)
         // Replace with platform default
         options.RootPath = OperatingSystem.IsWindows() 
-            ? Path.Combine("D:", "Database")  // Windows: D:\Database
-            : "/var/opossum/data";            // Linux: /var/opossum/data
+            ? Path.Combine("D:", "Database")              // Windows: D:\Database
+            : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
     }
 });
 

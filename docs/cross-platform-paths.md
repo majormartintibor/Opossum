@@ -47,8 +47,8 @@ if (string.IsNullOrWhiteSpace(configuredPath))
 {
     // Default to platform-appropriate path
     options.RootPath = OperatingSystem.IsWindows() 
-        ? Path.Combine("D:", "Database")  // Windows: D:\Database
-        : "/var/opossum/data";            // Linux: /var/opossum/data
+        ? Path.Combine("D:", "Database")                    // Windows: D:\Database
+        : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (user-accessible)
 }
 else
 {
@@ -56,7 +56,7 @@ else
 }
 ```
 
-**Why:** When no path is configured (Ubuntu CI), uses Linux-appropriate default.
+**Why:** When no path is configured, uses platform-appropriate default that doesn't require root permissions.
 
 ### 4. OpossumOptionsValidator.cs (Better Error Messages)
 
@@ -85,7 +85,7 @@ if (!Path.IsPathRooted(options.RootPath))
 
 1. Loads `appsettings.json` (RootPath = "")
 2. No Development.json
-3. Code detects Linux → Uses `/var/opossum/data` ✅
+3. Code detects Linux → Uses `/tmp/OpossumData` ✅
 4. Tests override with temp paths anyway ✅
 
 ### Tests (Both Platforms)
@@ -125,6 +125,8 @@ ENV OPOSSUM__ROOTPATH=/var/opossum/data
   }
 }
 ```
+
+**Note:** Requires proper permissions (run as service with appropriate user/group)
 
 ### Windows Server
 

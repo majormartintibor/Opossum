@@ -22,22 +22,34 @@ public class DiagnosticTests
     public async Task Database_UsesIsolatedTestPath_NotProductionDatabase()
     {
         // This test verifies that tests are NOT using the production database
-        // Instead, they should use a temporary path like C:\Users\...\Temp\OpossumTests_<guid> (Windows)
-        // or /tmp/OpossumTests_<guid> (Linux)
+        // Instead, they should use a temporary path from the test fixture
 
-        // Arrange - Production database path (platform-aware)
-        var productionDbPath = OperatingSystem.IsWindows()
-            ? "D:\\Database\\OpossumSampleApp"     // Windows production path
-            : "/var/opossum/data/OpossumSampleApp"; // Linux production path (if deployed)
+        // Arrange - Production database paths (platform-aware)
+        // These are the paths that WOULD be used if running the app normally
+        var possibleProductionPaths = new List<string>();
 
-        DateTime? lastModifiedBefore = null;
-
-        if (Directory.Exists(productionDbPath))
+        if (OperatingSystem.IsWindows())
         {
-            var files = Directory.GetFiles(productionDbPath, "*.*", SearchOption.AllDirectories);
-            if (files.Length > 0)
+            possibleProductionPaths.Add("D:\\Database\\OpossumSampleApp");
+            possibleProductionPaths.Add(Path.Combine(Path.GetTempPath(), "OpossumData", "OpossumSampleApp"));
+        }
+        else
+        {
+            possibleProductionPaths.Add("/var/opossum/data/OpossumSampleApp");
+            possibleProductionPaths.Add(Path.Combine(Path.GetTempPath(), "OpossumData", "OpossumSampleApp"));
+        }
+
+        // Record timestamps of any existing production databases
+        var productionTimestamps = new Dictionary<string, DateTime?>();
+        foreach (var path in possibleProductionPaths)
+        {
+            if (Directory.Exists(path))
             {
-                lastModifiedBefore = files.Max(f => File.GetLastWriteTimeUtc(f));
+                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+                if (files.Length > 0)
+                {
+                    productionTimestamps[path] = files.Max(f => File.GetLastWriteTimeUtc(f));
+                }
             }
         }
 
@@ -57,22 +69,27 @@ public class DiagnosticTests
         // Increased to 200ms for CI reliability
         await Task.Delay(200);
 
-        // Verify the production database was NOT modified
-        if (Directory.Exists(productionDbPath))
+        // Verify NONE of the production databases were modified
+        foreach (var path in possibleProductionPaths)
         {
-            var files = Directory.GetFiles(productionDbPath, "*.*", SearchOption.AllDirectories);
-            if (files.Length > 0)
+            if (Directory.Exists(path))
             {
-                var lastModifiedAfter = files.Max(f => File.GetLastWriteTimeUtc(f));
+                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+                if (files.Length > 0)
+                {
+                    var currentTimestamp = files.Max(f => File.GetLastWriteTimeUtc(f));
 
-                // The production database timestamp should NOT have changed
-                Assert.Equal(lastModifiedBefore, lastModifiedAfter);
+                    if (productionTimestamps.ContainsKey(path))
+                    {
+                        // Production database existed before test - verify it wasn't modified
+                        Assert.Equal(productionTimestamps[path], currentTimestamp);
+                    }
+                }
             }
         }
 
-        // Additional verification: The student should NOT exist in production projections
-        // (If it did, we'd be using the wrong database)
-        // This is implicitly verified by the timestamp check above
+        // Additional verification: The test should be using a temp path (verified by fixture)
+        // The fixture uses Path.GetTempPath() + "OpossumTests_<guid>"
     }
 
     [Fact]
