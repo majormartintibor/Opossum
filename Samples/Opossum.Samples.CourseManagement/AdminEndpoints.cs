@@ -53,14 +53,15 @@ public static class AdminEndpoints
         // Rebuild specific projection
         adminGroup.MapPost("/{projectionName}/rebuild", async (
             string projectionName,
-            IProjectionManager projectionManager) =>
+            IProjectionManager projectionManager,
+            ILogger<Program> logger) =>
         {
             try
             {
                 var stopwatch = Stopwatch.StartNew();
                 await projectionManager.RebuildAsync(projectionName);
                 stopwatch.Stop();
-                
+
                 return Results.Ok(new
                 {
                     ProjectionName = projectionName,
@@ -70,6 +71,7 @@ public static class AdminEndpoints
             }
             catch (InvalidOperationException ex)
             {
+                logger.LogWarning(ex, "Failed to rebuild projection '{ProjectionName}': {Error}", projectionName, ex.Message);
                 return Results.NotFound(new { Error = ex.Message });
             }
         })

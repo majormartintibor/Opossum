@@ -27,63 +27,43 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-// Add event sourcing framework
+// ============================================================================
+// EVENT SOURCING FRAMEWORK CONFIGURATION
+// ============================================================================
 builder.Services.AddOpossum(options =>
 {
-    options.RootPath = "D:\\Database";
-    options.AddContext("OpossumSampleApp");
-    //TODO: multiple context support
-    //options.AddContext("ExampleAdditionalContext");
+    // Read RootPath from configuration (allows test override via environment variable)
+    options.RootPath = builder.Configuration["Opossum:RootPath"] ?? "D:\\Database";
+
+    // Add contexts from configuration
+    var contexts = builder.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
+    if (contexts != null)
+    {
+        foreach (var context in contexts)
+        {
+            options.AddContext(context);
+        }
+    }
+
+    // Bind other properties (FlushEventsImmediately, etc.)
+    builder.Configuration.GetSection("Opossum").Bind(options);
 });
 
 // ============================================================================
 // PROJECTION SYSTEM CONFIGURATION
 // ============================================================================
-// Projections are read models derived from events in the event store.
-// They are automatically updated as new events are appended.
+// Configuration is loaded from appsettings.json (Projections section)
+// Tests can override via appsettings.Testing.json (e.g., EnableAutoRebuild=false)
 //
-// CONFIGURATION OPTIONS:
-//
-// 1. EnableAutoRebuild (default: true)
-//    - Development: Keep true for fast iteration
-//    - Production: Set to false, use admin API for controlled rebuilds
-//
-// 2. MaxConcurrentRebuilds (default: 4)
-//    - Controls how many projections rebuild simultaneously
-//    - Higher = faster rebuilds but more CPU/memory/disk I/O usage
-//    - Recommendations:
-//      * HDD: 2-4 (avoid disk thrashing)
-//      * SSD: 4-8 (good balance)
-//      * NVMe: 8-16 (fast parallel I/O)
-//
-// 3. PollingInterval (default: 5 seconds)
-//    - How often to check for new events
-//    - Lower = more real-time updates but higher CPU usage
-//
-// 4. BatchSize (default: 1000)
-//    - Number of events to process in each batch
-//    - Higher = better throughput but more memory usage
-//
+// See appsettings.json for configuration values and documentation
 // ============================================================================
 builder.Services.AddProjections(options =>
 {
-    // Scan this assembly for projection definitions
+    // Bind from appsettings.json "Projections" section
+    builder.Configuration.GetSection("Projections").Bind(options);
+
+    // Assembly scanning must be done in code (not possible via JSON)
     options.ScanAssembly(typeof(Program).Assembly);
-
-    // Auto-rebuild missing projections on startup
-    // Set to false in production and use POST /admin/projections/rebuild
-    options.EnableAutoRebuild = true;
-
-    // Rebuild up to 4 projections concurrently
-    // With 4 projections in this sample app, all rebuild simultaneously
-    // Expected rebuild time: ~30 seconds (vs. 120 seconds sequential)
-    options.MaxConcurrentRebuilds = 4;
-
-    // Poll for new events every 5 seconds
-    options.PollingInterval = TimeSpan.FromSeconds(5);
-
-    // Process up to 1000 events in each batch
-    options.BatchSize = 1000;
 });
 
 // Add mediator for command/query handling

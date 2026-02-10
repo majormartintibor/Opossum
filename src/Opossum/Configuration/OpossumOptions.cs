@@ -1,4 +1,6 @@
-﻿namespace Opossum.Configuration;
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Opossum.Configuration;
 
 /// <summary>
 /// Configuration options for the Opossum event store
@@ -7,8 +9,11 @@ public sealed class OpossumOptions
 {
     /// <summary>
     /// Root directory path for storing events and indices.
+    /// Must be a valid, accessible directory path.
     /// Default: "OpossumStore"
     /// </summary>
+    [Required(ErrorMessage = "RootPath is required")]
+    [MinLength(1, ErrorMessage = "RootPath cannot be empty")]
     public string RootPath { get; set; } = "OpossumStore";
 
     /// <summary>

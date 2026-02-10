@@ -1,4 +1,5 @@
-﻿using Opossum.Configuration;
+﻿using Microsoft.Extensions.Options;
+using Opossum.Configuration;
 using Opossum.Storage.FileSystem;
 
 namespace Opossum.DependencyInjection;
@@ -25,6 +26,9 @@ public static class ServiceCollectionExtensions
             throw new ArgumentNullException(nameof(services));
         }
 
+        // Register options validator
+        services.AddSingleton<IValidateOptions<OpossumOptions>, OpossumOptionsValidator>();
+
         // Create and configure options
         var options = new OpossumOptions();
         configure?.Invoke(options);
@@ -35,6 +39,17 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException(
                 "At least one context must be configured. " +
                 "Use options.AddContext(\"ContextName\") in the configuration action.");
+        }
+
+        // Manually validate options immediately (fail fast)
+        var validator = new OpossumOptionsValidator();
+        var validationResult = validator.Validate(null, options);
+        if (validationResult.Failed)
+        {
+            throw new OptionsValidationException(
+                nameof(OpossumOptions),
+                typeof(OpossumOptions),
+                validationResult.Failures);
         }
 
         // Register options as singleton

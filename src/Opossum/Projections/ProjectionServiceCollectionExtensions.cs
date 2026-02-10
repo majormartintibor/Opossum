@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Opossum.Configuration;
 
 namespace Opossum.Projections;
@@ -19,9 +20,23 @@ public static class ProjectionServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Register options validator
+        services.AddSingleton<IValidateOptions<ProjectionOptions>, ProjectionOptionsValidator>();
+
         // Create and configure options
         var options = new ProjectionOptions();
         configure?.Invoke(options);
+
+        // Manually validate options immediately (fail fast)
+        var validator = new ProjectionOptionsValidator();
+        var validationResult = validator.Validate(null, options);
+        if (validationResult.Failed)
+        {
+            throw new OptionsValidationException(
+                nameof(ProjectionOptions),
+                typeof(ProjectionOptions),
+                validationResult.Failures);
+        }
 
         // Register options as singleton
         services.AddSingleton(options);

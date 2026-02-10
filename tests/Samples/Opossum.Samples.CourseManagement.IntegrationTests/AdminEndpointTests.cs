@@ -7,8 +7,9 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// <summary>
 /// Integration tests for admin projection management endpoints.
 /// Tests the actual HTTP endpoints exposed by the sample application.
+/// Uses dedicated collection to avoid sharing state with other test classes.
 /// </summary>
-[Collection("Integration Tests")]
+[Collection("Admin Tests")]
 public class AdminEndpointTests
 {
     private readonly HttpClient _client;
@@ -39,35 +40,37 @@ public class AdminEndpointTests
     [Fact]
     public async Task POST_RebuildAll_WithForceAll_RebuildsAllProjections()
     {
-        // Act - First rebuild (will rebuild missing projections)
-        var firstResponse = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
-        firstResponse.EnsureSuccessStatusCode();
-        var firstResult = await firstResponse.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
+        // Act - Rebuild with forceAll=true (should rebuild ALL projections regardless of checkpoints)
+        var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Act - Second rebuild with forceAll=true (should rebuild even with checkpoints)
-        var secondResponse = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
-        secondResponse.EnsureSuccessStatusCode();
-        var secondResult = await secondResponse.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
-
-        // Assert - Second rebuild should rebuild all projections
-        Assert.NotNull(secondResult);
-        Assert.True(secondResult.Success);
-        // All 4 sample app projections should be rebuilt
-        Assert.True(secondResult.TotalRebuilt >= 4, $"Expected at least 4 projections, got {secondResult.TotalRebuilt}");
+        // Assert - All 4 sample app projections should be rebuilt
+        Assert.NotNull(result);
+        Assert.True(result.Success);
+        Assert.Equal(4, result.TotalRebuilt);
+        Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
     [Fact]
     public async Task POST_RebuildAll_WithForceAllFalse_OnlyRebuildsProjectionsWithMissingCheckpoints()
     {
         // Arrange - First rebuild to establish checkpoints
-        await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
+        var firstResponse = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
+        firstResponse.EnsureSuccessStatusCode();
+        var firstResult = await firstResponse.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Act - Second rebuild without force (should not rebuild anything)
+        // Verify first rebuild succeeded
+        Assert.NotNull(firstResult);
+        Assert.True(firstResult.Success, "First rebuild should succeed");
+        Assert.True(firstResult.TotalRebuilt >= 4, $"First rebuild should rebuild at least 4 projections, got {firstResult.TotalRebuilt}");
+
+        // Act - Second rebuild without force (should not rebuild anything since checkpoints exist)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - No projections should be rebuilt (all have checkpoints)
+        // Assert - No projections should be rebuilt (all have checkpoints from first rebuild)
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.Equal(0, result.TotalRebuilt);
@@ -205,7 +208,7 @@ public class AdminEndpointTests
         // Assert - Checkpoints should match initial (or be greater if events were added)
         Assert.NotNull(updatedCheckpoints);
         Assert.Equal(initialCheckpoints.Count, updatedCheckpoints.Count);
-        
+
         foreach (var projection in initialCheckpoints.Keys)
         {
             Assert.True(updatedCheckpoints.ContainsKey(projection), 
@@ -216,40 +219,20 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task RebuildResult_ContainsDetailedInformation()
+    public async Task RebuildResult_HasBasicStructure()
     {
+        // This is a lightweight test - detailed structure validation is in AdminEndpointResultStructureTests
+        // which uses minimal data for fast execution
+
         // Act
-        var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
+        var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - Verify result structure
+        // Assert - Basic structure only
         Assert.NotNull(result);
         Assert.NotNull(result.Details);
-        Assert.True(result.Details.Count > 0, "Should have at least one projection detail");
-        
-        // Verify each detail has required information
-        foreach (var detail in result.Details)
-        {
-            Assert.NotNull(detail.ProjectionName);
-            Assert.NotEmpty(detail.ProjectionName);
-            Assert.True(detail.Duration >= TimeSpan.Zero, "Duration should be non-negative");
-            Assert.True(detail.EventsProcessed >= 0, "EventsProcessed should be non-negative");
-            
-            if (detail.Success)
-            {
-                Assert.Null(detail.ErrorMessage);
-            }
-            else
-            {
-                Assert.NotNull(detail.ErrorMessage);
-            }
-        }
-
-        // Verify overall result properties
-        Assert.True(result.Duration > TimeSpan.Zero, "Overall duration should be positive");
-        Assert.Equal(result.Details.Count(d => d.Success), result.TotalRebuilt);
     }
 
     [Fact]
@@ -273,39 +256,19 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task RebuildAll_WithMultipleProjections_ExecutesInParallel()
+    public async Task RebuildAll_ReturnsSuccessfully()
     {
-        // This test verifies that parallel execution provides performance benefits
-        // by comparing the total duration to the sum of individual durations
+        // Lightweight smoke test - detailed parallelism verification is in AdminEndpointResultStructureTests
+        // which uses minimal data for fast execution
 
         // Act
-        var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
+        var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert
+        // Assert - Basic success check only
         Assert.NotNull(result);
-        Assert.True(result.Details.Count > 1, "Need multiple projections to test parallelism");
-
-        // Calculate sum of individual durations
-        var sumOfIndividualDurations = TimeSpan.Zero;
-        foreach (var detail in result.Details)
-        {
-            sumOfIndividualDurations += detail.Duration;
-        }
-
-        // With parallel execution, total duration should be less than sum of individual durations
-        // (unless there's only 1 projection or they're very fast)
-        // We allow for some overhead, so we check it's at most 80% of sequential time
-        var maxExpectedDuration = sumOfIndividualDurations * 0.8;
-        
-        // Note: This assertion might be flaky on very fast systems or with very few events
-        // It's more of a smoke test to ensure parallelism is happening
-        if (result.Details.Count >= 2 && sumOfIndividualDurations.TotalMilliseconds > 100)
-        {
-            Assert.True(result.Duration <= sumOfIndividualDurations, 
-                $"Parallel execution ({result.Duration}) should be faster than sequential ({sumOfIndividualDurations})");
-        }
+        Assert.True(result.Success);
     }
 }
