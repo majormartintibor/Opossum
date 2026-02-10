@@ -1,10 +1,6 @@
-using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Opossum.Configuration;
-using Opossum.Projections;
 
-namespace Opossum.DependencyInjection;
+namespace Opossum.Projections;
 
 /// <summary>
 /// Extension methods for configuring projection services

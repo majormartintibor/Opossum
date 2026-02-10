@@ -68,25 +68,36 @@ internal sealed class ProjectionDaemon : BackgroundService
 
     private async Task RebuildMissingProjectionsAsync(CancellationToken cancellationToken)
     {
-        var projections = _projectionManager.GetRegisteredProjections();
+        _logger.LogInformation("Checking for projections that need rebuilding...");
 
-        foreach (var projectionName in projections)
+        // Use the new RebuildAllAsync method (only rebuilds missing projections)
+        var result = await _projectionManager.RebuildAllAsync(
+            forceRebuild: false, 
+            cancellationToken).ConfigureAwait(false);
+
+        if (result.TotalRebuilt == 0)
         {
-            try
-            {
-                var checkpoint = await _projectionManager.GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
+            _logger.LogInformation("All projections are up to date (no rebuilds needed)");
+            return;
+        }
 
-                if (checkpoint == 0)
-                {
-                    _logger.LogInformation("Rebuilding projection '{ProjectionName}' (no checkpoint found)", projectionName);
-                    await _projectionManager.RebuildAsync(projectionName, cancellationToken).ConfigureAwait(false);
-                    _logger.LogInformation("Projection '{ProjectionName}' rebuilt successfully", projectionName);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to rebuild projection '{ProjectionName}'", projectionName);
-            }
+        if (result.Success)
+        {
+            _logger.LogInformation(
+                "Successfully rebuilt {Count} projections in {Duration}. Details: {@Details}",
+                result.TotalRebuilt,
+                result.Duration,
+                result.Details);
+        }
+        else
+        {
+            _logger.LogWarning(
+                "Projection rebuild completed with {SuccessCount} successes and {FailureCount} failures. " +
+                "Failed projections: {FailedProjections}. Details: {@Details}",
+                result.TotalRebuilt,
+                result.Details.Count - result.TotalRebuilt,
+                string.Join(", ", result.FailedProjections),
+                result.Details);
         }
     }
 

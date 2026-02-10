@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Opossum.Core;
 
 namespace Opossum.Storage.FileSystem;
@@ -133,7 +131,7 @@ internal sealed class JsonEventSerializer
             foreach (var assembly in loadedAssemblies)
             {
                 // Only check assemblies that match the original assembly name
-                if (!assembly.FullName.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase))
+                if (assembly.FullName == null || !assembly.FullName.StartsWith(assemblyName, StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 var types = assembly.GetTypes();

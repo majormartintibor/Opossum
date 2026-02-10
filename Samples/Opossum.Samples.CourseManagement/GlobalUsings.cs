@@ -4,3 +4,4 @@
 global using Microsoft.AspNetCore.Mvc;
 global using Scalar.AspNetCore;
 global using System.Text.Json.Serialization;
+global using Microsoft.AspNetCore.Diagnostics;

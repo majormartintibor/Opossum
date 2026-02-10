@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Opossum.Projections;
 
 /// <summary>
@@ -24,6 +22,24 @@ public sealed class ProjectionOptions
     /// Default: true
     /// </summary>
     public bool EnableAutoRebuild { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of projections to rebuild concurrently.
+    /// 
+    /// DISK TYPE RECOMMENDATIONS:
+    /// - HDD (single disk): 2-4
+    /// - SSD: 4-8
+    /// - NVMe SSD: 8-16
+    /// - RAID array: 16-32
+    /// 
+    /// IMPORTANT: Higher values improve rebuild speed but increase:
+    /// - CPU usage (may slow HTTP requests)
+    /// - Memory usage (all events loaded in parallel)
+    /// - Disk I/O contention
+    /// 
+    /// Default: 4 (balanced for most scenarios)
+    /// </summary>
+    public int MaxConcurrentRebuilds { get; set; } = 4;
 
     /// <summary>
     /// Assemblies to scan for projection definitions

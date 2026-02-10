@@ -1,7 +1,7 @@
-using Microsoft.AspNetCore.Diagnostics;
 using Opossum.DependencyInjection;
 using Opossum.Exceptions;
 using Opossum.Mediator;
+using Opossum.Projections;
 using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.CourseDetails;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
@@ -36,13 +36,54 @@ builder.Services.AddOpossum(options =>
     //options.AddContext("ExampleAdditionalContext");
 });
 
-// Add projection system
+// ============================================================================
+// PROJECTION SYSTEM CONFIGURATION
+// ============================================================================
+// Projections are read models derived from events in the event store.
+// They are automatically updated as new events are appended.
+//
+// CONFIGURATION OPTIONS:
+//
+// 1. EnableAutoRebuild (default: true)
+//    - Development: Keep true for fast iteration
+//    - Production: Set to false, use admin API for controlled rebuilds
+//
+// 2. MaxConcurrentRebuilds (default: 4)
+//    - Controls how many projections rebuild simultaneously
+//    - Higher = faster rebuilds but more CPU/memory/disk I/O usage
+//    - Recommendations:
+//      * HDD: 2-4 (avoid disk thrashing)
+//      * SSD: 4-8 (good balance)
+//      * NVMe: 8-16 (fast parallel I/O)
+//
+// 3. PollingInterval (default: 5 seconds)
+//    - How often to check for new events
+//    - Lower = more real-time updates but higher CPU usage
+//
+// 4. BatchSize (default: 1000)
+//    - Number of events to process in each batch
+//    - Higher = better throughput but more memory usage
+//
+// ============================================================================
 builder.Services.AddProjections(options =>
 {
+    // Scan this assembly for projection definitions
     options.ScanAssembly(typeof(Program).Assembly);
-    options.PollingInterval = TimeSpan.FromSeconds(5);
-    options.BatchSize = 1000;
+
+    // Auto-rebuild missing projections on startup
+    // Set to false in production and use POST /admin/projections/rebuild
     options.EnableAutoRebuild = true;
+
+    // Rebuild up to 4 projections concurrently
+    // With 4 projections in this sample app, all rebuild simultaneously
+    // Expected rebuild time: ~30 seconds (vs. 120 seconds sequential)
+    options.MaxConcurrentRebuilds = 4;
+
+    // Poll for new events every 5 seconds
+    options.PollingInterval = TimeSpan.FromSeconds(5);
+
+    // Process up to 1000 events in each batch
+    options.BatchSize = 1000;
 });
 
 // Add mediator for command/query handling
@@ -141,6 +182,34 @@ app.MapGetCoursesShortInfoEndpoint();
 app.MapGetCourseDetailsEndpoint();
 app.MapModifyCourseStudentLimitEndpoint();
 app.MapEnrollStudentToCourseEndpoint();
+
+// ============================================================================
+// ADMIN ENDPOINTS - Projection Management
+// ============================================================================
+// These endpoints allow administrators to manually rebuild projections.
+//
+// DEVELOPMENT USAGE:
+// - After database resets/reseeds
+// - Testing projection changes
+// - Debugging projection issues
+//
+// PRODUCTION USAGE:
+// - After deploying new projection types
+// - Fixing buggy projection logic (deploy fix, then rebuild)
+// - Disaster recovery (lost projection files)
+//
+// SECURITY WARNING:
+// - In production, add proper authentication/authorization
+// - These endpoints can trigger expensive operations
+// - Consider rate limiting to prevent abuse
+//
+// Example: Add authorization requirement
+// if (app.Environment.IsProduction())
+// {
+//     app.MapGroup("/admin").RequireAuthorization("AdminOnly");
+// }
+// ============================================================================
+Opossum.Samples.CourseManagement.AdminEndpoints.MapProjectionAdminEndpoints(app);
 
 app.Run();
 
