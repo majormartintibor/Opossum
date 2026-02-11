@@ -70,11 +70,14 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         }
 
         // 2. Get context path (use first context, or throw if none configured)
+        // MVP LIMITATION: Only Contexts[0] is used. Multi-context support planned for future release.
+        // See docs/limitations/mvp-single-context.md for details.
         if (_options.Contexts.Count == 0)
         {
             throw new InvalidOperationException("No contexts configured. Add at least one context using OpossumOptions.AddContext()");
         }
 
+        // TODO: Multi-context support - accept context parameter and route to correct storage
         var contextPath = GetContextPath(_options.Contexts[0]);
 
         // 3. Use semaphore for atomic operation (one append at a time)
@@ -130,11 +133,14 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         ArgumentNullException.ThrowIfNull(query);
 
         // 2. Get context path (use first context, or throw if none configured)
+        // MVP LIMITATION: Only Contexts[0] is used. Multi-context support planned for future release.
+        // See docs/limitations/mvp-single-context.md for details.
         if (_options.Contexts.Count == 0)
         {
             throw new InvalidOperationException("No contexts configured. Add at least one context using OpossumOptions.AddContext()");
         }
 
+        // TODO: Multi-context support - accept context parameter and route to correct storage
         var contextPath = GetContextPath(_options.Contexts[0]);
 
         // 3. Get positions matching query

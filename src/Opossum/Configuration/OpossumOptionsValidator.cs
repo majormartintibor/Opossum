@@ -38,10 +38,19 @@ public sealed class OpossumOptionsValidator : IValidateOptions<OpossumOptions>
         }
 
         // Validate Contexts
+        // MVP LIMITATION: Only one context is currently supported
+        // See docs/limitations/mvp-single-context.md
         if (options.Contexts.Count == 0)
         {
             failures.Add("At least one context must be configured. Use AddContext() to add contexts.");
         }
+
+        // TODO: Add validation to enforce single context in MVP
+        // if (options.Contexts.Count > 1)
+        // {
+        //     failures.Add("MVP currently supports only ONE context. " +
+        //                  "See docs/limitations/mvp-single-context.md for details.");
+        // }
 
         foreach (var context in options.Contexts)
         {

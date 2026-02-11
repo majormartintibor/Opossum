@@ -29,6 +29,9 @@ internal sealed class StorageInitializer
     ///     /Indices
     ///       /EventType
     ///       /Tags
+    /// 
+    /// ⚠️ MVP LIMITATION: While this method initializes ALL contexts, only the first context
+    /// is actually used by FileSystemEventStore. See docs/limitations/mvp-single-context.md
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown when no contexts are configured</exception>
     /// <exception cref="IOException">Thrown when directory creation fails</exception>
@@ -45,6 +48,7 @@ internal sealed class StorageInitializer
         EnsureDirectoryExists(_options.RootPath);
 
         // Initialize each context
+        // TODO: Multi-context support - currently only Contexts[0] is used
         foreach (var contextName in _options.Contexts)
         {
             InitializeContext(contextName);

@@ -75,9 +75,9 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
+    <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Packages.props" />
     <File Path="LICENSE" />
-    <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Specification/">

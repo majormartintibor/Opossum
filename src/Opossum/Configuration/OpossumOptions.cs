@@ -19,8 +19,18 @@ public sealed class OpossumOptions
     /// <summary>
     /// List of configured bounded contexts.
     /// Each context gets its own isolated event store directory.
+    /// 
+    /// ⚠️ MVP LIMITATION: Only the FIRST context is currently used.
+    /// While you can add multiple contexts, only Contexts[0] will be used for storage.
+    /// See docs/limitations/mvp-single-context.md for details.
+    /// 
+    /// Configure exactly ONE context in MVP:
+    /// <code>
+    /// options.AddContext("CourseManagement"); // ✅ This will be used
+    /// // Don't add more contexts - they will be ignored in MVP
+    /// </code>
     /// </summary>
-    public List<string> Contexts { get; } = new();
+    public List<string> Contexts { get; } = [];
 
     /// <summary>
     /// When true, forces events to be physically written to disk (flushed) before append completes.
