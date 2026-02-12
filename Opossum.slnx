@@ -8,8 +8,32 @@
     <File Path=".github/workflows/samples-ci.yml" />
   </Folder>
     <Folder Name="/docs/">
+      <File Path="docs/bind-order-fix.md" />
+      <File Path="docs/configuration-guide.md" />
+      <File Path="docs/configuration-validation.md" />
+      <File Path="docs/cross-platform-paths.md" />
+      <File Path="docs/database-path-configuration.md" />
+      <File Path="docs/final-cross-platform-fixes.md" />
       <File Path="docs/implementation-summary-parallel-projection-rebuilding.md" />
+      <File Path="docs/linux-permission-fix.md" />
+      <File Path="docs/projection-directory-missing-fix.md" />
     <File Path="docs/README.md" />
+      <File Path="docs/sample-tests-cross-platform-audit.md" />
+      <File Path="docs/test-cleanup-and-seeding-review.md" />
+      <File Path="docs/testing-configuration-override-fix.md" />
+      <File Path="docs/ubuntu-test-failures-analysis.md" />
+  </Folder>
+  <Folder Name="/docs/architecture/" />
+  <Folder Name="/docs/benchmarking/" />
+  <Folder Name="/docs/benchmarking/results/" />
+  <Folder Name="/docs/benchmarking/results/20260212/">
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Core.AppendBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Core.BatchedFlushBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Core.DescendingOrderIsolatedBenchmark-report-github.md" />
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Core.QueryBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Core.ReadBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260212/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
   </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
@@ -55,6 +79,9 @@
   <Folder Name="/docs/lessons-learned/">
     <File Path="docs/lessons-learned/batched-flush-failure.md" />
   </Folder>
+  <Folder Name="/docs/limitations/">
+    <File Path="docs/limitations/mvp-single-context.md" />
+  </Folder>
   <Folder Name="/docs/performance/">
     <File Path="docs/performance/PERFORMANCE-BASELINE.md" />
   </Folder>
@@ -75,10 +102,12 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
-    <File Path="CONTRIBUTING.md" />
+    <File Path="CHANGELOG.md" />`r`n    <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Packages.props" />
     <File Path="LICENSE" />
-    <File Path="README.md" />
+    <File Path="README.md" />`r`n    <File Path="RELEASE-CHECKLIST.md" />
+    <File Path="RELEASE-READY.md" />
+    <File Path="Solution Items/opossum.png" />
   </Folder>
   <Folder Name="/Specification/">
     <File Path="Specification/DCB-Specification.md" />

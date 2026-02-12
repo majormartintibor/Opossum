@@ -4,11 +4,54 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!-- Package Information -->
+    <PackageId>Opossum</PackageId>
+    <Version>0.1.0-preview.1</Version>
+    <Authors>Martin Tibor Major</Authors>
+    <Company>Martin Tibor Major</Company>
+    <Product>Opossum</Product>
+    <Description>A file system-based event store for .NET that implements the DCB (Dynamic Consistency Boundaries) specification. Perfect for offline-first applications, on-premises deployments, and scenarios where simplicity matters more than cloud-scale distribution.</Description>
+    <PackageTags>event-sourcing;eventsourcing;event-store;eventstore;dcb;cqrs;domain-driven-design;ddd;filesystem;offline-first;projections</PackageTags>
+    <PackageProjectUrl>https://github.com/majormartintibor/Opossum</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/majormartintibor/Opossum</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>opossum.png</PackageIcon>
+    <PackageReleaseNotes>First preview release of Opossum event store. See CHANGELOG.md for details.</PackageReleaseNotes>
+
+    <!-- Assembly Versioning -->
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <InformationalVersion>0.1.0-preview.1</InformationalVersion>
+
+    <!-- Documentation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Opossum.xml</DocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn><!-- Suppress missing XML comment warnings -->
+
+    <!-- Build Settings -->
+    <Deterministic>true</Deterministic>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
+
+    <!-- NuGet Package Settings -->
+    <IsPackable>true</IsPackable>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Opossum.UnitTests" />
     <InternalsVisibleTo Include="Opossum.IntegrationTests" />
+  </ItemGroup>
+
+  <!-- Include README and Icon in package -->
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\Solution Items\opossum.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

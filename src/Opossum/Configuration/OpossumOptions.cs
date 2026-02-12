@@ -34,7 +34,11 @@ public sealed class OpossumOptions
 
     /// <summary>
     /// When true, forces events to be physically written to disk (flushed) before append completes.
-    /// This guarantees durability at the cost of performance (~1-5ms per event on modern SSDs).
+    /// This guarantees durability at the cost of performance.
+    /// 
+    /// Benchmarked Performance (SSD, Windows 11, .NET 10):
+    /// - TRUE (flush enabled): ~10ms per event, ~100 events/sec throughput
+    /// - FALSE (no flush): ~4.5ms per event, ~220 events/sec throughput
     /// 
     /// Why this matters:
     /// - TRUE (default): Events are guaranteed on disk before AppendAsync returns. 
@@ -42,8 +46,10 @@ public sealed class OpossumOptions
     /// - FALSE: Events may only be in OS page cache. Faster but risky. 
     ///   Only use for testing or when you accept potential data loss.
     /// 
+    /// Note: FlushEventsImmediately = false provides ~2.2x speedup but risks data loss.
+    /// See docs/benchmarking/results/20260212/ANALYSIS.md for detailed benchmarks.
+    /// 
     /// Default: true (recommended for production)
-    /// Performance impact: ~1-5ms per event on SSD
     /// </summary>
     public bool FlushEventsImmediately { get; set; } = true;
 
