@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Opossum.DependencyInjection;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.CourseEnrollment; // For command handler discovery
@@ -7,10 +8,17 @@ using Opossum.Samples.DataSeeder;
 Console.WriteLine("🌱 Opossum Baseline Data Seeder");
 Console.WriteLine("================================\n");
 
+// Load configuration from CourseManagement sample app (single source of truth)
+var courseManagementPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "Opossum.Samples.CourseManagement");
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(courseManagementPath)
+    .AddJsonFile("appsettings.Development.json", optional: false)
+    .Build();
+
 // Parse command line arguments
 var config = ParseArguments(args);
 
-DisplayConfiguration(config);
+DisplayConfiguration(config, configuration);
 
 if (!ConfirmSeeding(config))
 {
@@ -19,15 +27,20 @@ if (!ConfirmSeeding(config))
 }
 
 // Initialize Opossum Event Store
-var serviceProvider = ConfigureServices(config);
+var serviceProvider = ConfigureServices(configuration);
+
+// Get Opossum configuration values
+var rootPath = configuration["Opossum:RootPath"] ?? throw new InvalidOperationException("Opossum:RootPath not found in configuration");
+var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>() ?? throw new InvalidOperationException("Opossum:Contexts not found in configuration");
+var contextName = contexts.FirstOrDefault() ?? throw new InvalidOperationException("No context configured in Opossum:Contexts");
 
 // Run seeding
-var seeder = new DataSeeder(serviceProvider, config);
+var seeder = new DataSeeder(serviceProvider, config, rootPath, contextName);
 await seeder.SeedAsync();
 
 Console.WriteLine("\n✅ Seeding complete!");
 Console.WriteLine($"   Total events created: {seeder.TotalEventsCreated}");
-Console.WriteLine($"   Database location: {config.RootPath}");
+Console.WriteLine($"   Database location: {configuration["Opossum:RootPath"]}");
 Console.WriteLine($"\n💡 You can now run the sample application or integration tests.");
 
 return;
@@ -79,10 +92,15 @@ static SeedingConfiguration ParseArguments(string[] args)
     return config;
 }
 
-static void DisplayConfiguration(SeedingConfiguration config)
+static void DisplayConfiguration(SeedingConfiguration config, IConfiguration configuration)
 {
+    var rootPath = configuration["Opossum:RootPath"];
+    var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>();
+    var contextName = contexts?.FirstOrDefault() ?? "N/A";
+
     Console.WriteLine("Configuration:");
-    Console.WriteLine($"  Database Path: {config.RootPath}");
+    Console.WriteLine($"  Database Path: {rootPath}");
+    Console.WriteLine($"  Context:       {contextName}");
     Console.WriteLine($"  Students:      {config.StudentCount}");
     Console.WriteLine($"  Courses:       {config.CourseCount}");
     Console.WriteLine($"  Est. Events:   ~{config.EstimatedEventCount}");
@@ -109,14 +127,24 @@ static bool ConfirmSeeding(SeedingConfiguration config)
     return response == "y" || response == "yes";
 }
 
-static IServiceProvider ConfigureServices(SeedingConfiguration config)
+static IServiceProvider ConfigureServices(IConfiguration configuration)
 {
-    var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+    var services = new ServiceCollection();
 
     services.AddOpossum(options =>
     {
-        options.RootPath = config.RootPath;
-        options.AddContext("OpossumSampleApp");
+        // Add contexts from configuration
+        var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>();
+        if (contexts != null)
+        {
+            foreach (var context in contexts)
+            {
+                options.AddContext(context);
+            }
+        }
+
+        // Bind all properties from configuration (RootPath, FlushEventsImmediately, etc.)
+        configuration.GetSection("Opossum").Bind(options);
     });
 
     // Add mediator for command handling (DataSeeder now uses commands instead of direct event append)

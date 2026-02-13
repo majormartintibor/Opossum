@@ -2,12 +2,9 @@ namespace Opossum.Samples.DataSeeder;
 
 public class SeedingConfiguration
 {
-    public string RootPath { get; set; } = "D:\\Database";
-    public string ContextName { get; set; } = "OpossumSampleAppBig";
-    
     public int StudentCount { get; set; } = 350;
     public int CourseCount { get; set; } = 75;
-    
+
     public bool ResetDatabase { get; set; } = false;
     public bool RequireConfirmation { get; set; } = true;
 
