@@ -269,7 +269,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     {
         // Arrange
         var index = new TagIndex();
-        var tag = new Tag { Key = "optionalField", Value = null };
+        var tag = new Tag { Key = "optionalField", Value = null! };
         var positionCount = 50;
 
         // Act - Add positions concurrently with null tag value

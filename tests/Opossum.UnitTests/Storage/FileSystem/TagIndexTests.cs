@@ -180,7 +180,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithNullTagValue_WorksCorrectly()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = null };
+        var tag = new Tag { Key = "Status", Value = null! };
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);

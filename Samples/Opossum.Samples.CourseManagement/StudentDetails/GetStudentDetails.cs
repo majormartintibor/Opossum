@@ -27,12 +27,8 @@ public static class Endpoint
         })
         .WithName("GetStudentDetails")
         .WithTags("Queries")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get detailed student information including enrolled courses";
-            operation.Description = "Returns comprehensive student details with the list of courses they are enrolled in.";
-            return operation;
-        });
+        .WithSummary("Get detailed student information including enrolled courses")
+        .WithDescription("Returns comprehensive student details with the list of courses they are enrolled in.");
     }
 }
 

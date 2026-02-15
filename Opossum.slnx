@@ -51,7 +51,10 @@
   <Folder Name="/docs/guides/">
     <File Path="docs/guides/configureawait-guide.md" />
     <File Path="docs/guides/durability-quick-reference.md" />
+    <File Path="docs/guides/nuget-release-process.md" />
     <File Path="docs/guides/projection-tags-quick-start.md" />
+    <File Path="docs/guides/RELEASE-QUICK-REFERENCE.md" />
+    <File Path="docs/guides/release-status.md" />
     <File Path="docs/guides/understanding-slnx-files.md" />
     <File Path="docs/guides/use-cases.md" />
   </Folder>

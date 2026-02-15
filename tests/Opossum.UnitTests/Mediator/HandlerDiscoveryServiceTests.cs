@@ -43,7 +43,7 @@ public class HandlerDiscoveryServiceTests
         // Assert
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(DiscoveryTestHandler));
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]
@@ -59,7 +59,7 @@ public class HandlerDiscoveryServiceTests
         // Assert
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(NonConventionalHandlerName));
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]
@@ -76,7 +76,7 @@ public class HandlerDiscoveryServiceTests
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(HandleMethodHandler) && 
             h.Method.Name == "Handle");
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]
@@ -93,7 +93,7 @@ public class HandlerDiscoveryServiceTests
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(HandleAsyncMethodHandler) && 
             h.Method.Name == "HandleAsync");
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]
@@ -110,7 +110,7 @@ public class HandlerDiscoveryServiceTests
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(ConsumeMethodHandler) && 
             h.Method.Name == "Consume");
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]
@@ -127,7 +127,7 @@ public class HandlerDiscoveryServiceTests
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(ConsumeAsyncMethodHandler) && 
             h.Method.Name == "ConsumeAsync");
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]
@@ -183,7 +183,7 @@ public class HandlerDiscoveryServiceTests
         // But static handlers should still be found (they are abstract AND sealed)
         var staticHandler = handlers.FirstOrDefault(h =>
             h.HandlerType == typeof(StaticMethodHandler));
-        Assert.NotNull(staticHandler);
+        Assert.NotEqual(default, staticHandler);
     }
     
     [Fact]
@@ -200,7 +200,7 @@ public class HandlerDiscoveryServiceTests
         var handler = handlers.FirstOrDefault(h => 
             h.HandlerType == typeof(StaticMethodHandler) && 
             h.Method.IsStatic);
-        Assert.NotNull(handler);
+        Assert.NotEqual(default, handler);
     }
     
     [Fact]

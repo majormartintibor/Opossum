@@ -170,7 +170,6 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
         var index = new EventTypeIndex();
         var eventType = "StressTestEvent";
         var totalPositions = 1000;
-        var concurrencyLevel = 100;
 
         // Act - Add positions with high concurrency
         var tasks = Enumerable.Range(1, totalPositions)

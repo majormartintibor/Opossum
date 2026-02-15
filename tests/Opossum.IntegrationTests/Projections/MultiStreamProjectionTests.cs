@@ -353,7 +353,7 @@ public class PostWithAuthorProjection : IMultiStreamProjectionDefinition<PostWit
         return evt switch
         {
             PostCreatedEvent pce => ApplyPostCreated(pce, relatedEvents),
-            PostTitleChangedEvent ptce => current with { Title = ptce.NewTitle },
+            PostTitleChangedEvent ptce => current! with { Title = ptce.NewTitle },
             _ => current
         };
     }
