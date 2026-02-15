@@ -24,6 +24,7 @@ public class EventStoreExtensionsTests
         await stub.AppendAsync(sequencedEvent);
 
         // Assert
+        Assert.NotNull(stub.LastAppendedEvents);
         Assert.Single(stub.LastAppendedEvents);
         Assert.Same(sequencedEvent, stub.LastAppendedEvents[0]);
     }

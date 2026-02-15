@@ -138,7 +138,7 @@ public class CommandResultTests
         // Assert
         Assert.True(result.Success);
         Assert.Same(testObject, result.Value);
-        Assert.Equal(42, result.Value.Id);
+        Assert.Equal(42, result.Value!.Id);
         Assert.Equal("Test", result.Value.Name);
     }
 

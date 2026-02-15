@@ -265,6 +265,53 @@ If you see warning **VSTHRD111**, add `.ConfigureAwait(false)` to the await stat
 ## Compiler
 All code you submit must compile without errors.
 
+## Code Quality Standards
+
+### Zero Warnings Policy
+
+**All code changes MUST result in 0 compiler warnings before committing.**
+
+#### Rules
+
+1. **Before claiming code is complete:**
+   - ✅ Run `dotnet build` and verify `0 Warning(s)` in output
+   - ✅ Fix ALL warnings, including:
+     - Nullable reference warnings (CS8600-CS8625)
+     - Deprecated API warnings (ASPDEPR*)
+     - Analyzer warnings (xUnit*, VSTHRD*, etc.)
+     - Unused variable warnings (CS0219)
+
+2. **Acceptable warning fixes:**
+   - ✅ Add null checks or null-forgiving operators (`!`) where appropriate
+   - ✅ Replace deprecated APIs with modern alternatives
+   - ✅ Remove unused variables
+   - ✅ Fix xUnit assertions on value types (use `Assert.NotEqual(default, value)`)
+   - ✅ Add `ConfigureAwait(false)` for library code
+
+3. **Warning verification command:**
+   ```bash
+   dotnet clean
+   dotnet build 2>&1 | Select-String -Pattern "Warning\(s\)|warning"
+   ```
+
+   Expected output: `0 Warning(s)`
+
+4. **Common warning fixes:**
+   - **xUnit2002**: Don't use `Assert.NotNull()` on value types → Use `Assert.NotEqual(default, value)`
+   - **ASPDEPR002**: Don't use deprecated `WithOpenApi` → Use `WithSummary()` and `WithDescription()`
+   - **CS8602/CS8604**: Possible null reference → Add null check or `!` operator
+   - **VSTHRD111**: Missing ConfigureAwait → Add `.ConfigureAwait(false)` in library code
+
+#### Benefits
+
+- ✅ Higher code quality
+- ✅ Prevents warnings from accumulating
+- ✅ Catches potential bugs early
+- ✅ Professional codebase standards
+- ✅ Easier to spot new issues
+
+**NEVER commit code with warnings. If you cannot fix a warning, ask for guidance.**
+
 ## Testing
 
 ### Framework
@@ -307,7 +354,7 @@ A feature or task is ONLY considered complete when ALL of the following criteria
 
 ### 1. Code Quality
 - ✅ All code compiles successfully (`dotnet build`)
-- ✅ No compiler warnings introduced
+- ✅ **Zero compiler warnings** (`0 Warning(s)` in build output)
 - ✅ Follows all copilot-instructions rules (namespaces, usings, etc.)
 - ✅ Code is properly documented with XML comments where appropriate
 
@@ -336,6 +383,7 @@ Before claiming "Implementation Complete", you MUST explicitly confirm:
 ## Pre-Completion Verification
 
 - [ ] ✅ Build successful: `dotnet build`
+- [ ] ✅ Zero warnings: `0 Warning(s)` in build output
 - [ ] ✅ Unit tests passing: `dotnet test tests/Opossum.UnitTests/`
 - [ ] ✅ Integration tests passing: `dotnet test tests/Opossum.IntegrationTests/`
 - [ ] ✅ Sample app runs without errors (if applicable)

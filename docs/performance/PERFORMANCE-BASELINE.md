@@ -1,18 +1,23 @@
 # Opossum Performance Baseline & Benchmark Results
 
-## Date: 2025-01-28
-## Status: ✅ Complete - Production Baseline Established
-## Version: 1.0.0
+## Latest Benchmark: 2026-02-12
+## Status: ✅ Complete - Production Baseline Validated & Updated
+## Version: 1.1.0
+
+**Latest comprehensive analysis:** See `docs/benchmarking/results/20260212/ANALYSIS.md`
 
 ---
 
-## 📊 Executive Summary
+## 📊 Executive Summary (Updated 2026-02-12)
 
 **Opossum's file-based event store delivers excellent performance for event sourcing workloads:**
 
-- **Write:** 94 events/sec with full durability (fsync)
-- **Read:** Sub-linear scaling (10x events = 2-3x time)
-- **Projections:** Linear rebuild, 500x faster incremental updates
+- **Write:** ~100 events/sec with full durability (fsync) on SSD
+- **Read (tag-based, high selectivity):** ~500μs for targeted queries  
+- **Read (tag-based, 1K events):** ~10ms (sub-linear scaling)
+- **Projections:** 15K events/sec rebuild, 9-10μs incremental updates (611x faster)
+- **Parallel rebuilding:** 2x speedup with 4 CPU cores
+- **Descending queries:** Zero overhead (optimized in-place)
 
 **All core operations perform within acceptable ranges for production use.**
 
@@ -383,7 +388,16 @@ builder.Services.AddOpossum(options =>
 
 ## 📚 Related Documentation
 
-### Benchmark Documentation
+### Latest Benchmark Results (2026-02-12)
+- **`docs/benchmarking/results/20260212/ANALYSIS.md`** - Comprehensive benchmark analysis
+  - Append performance: ~100 events/sec with flush
+  - Tag query (high selectivity): ~500μs
+  - Projection rebuild: ~15K events/sec
+  - Parallel rebuilding: 2x speedup with 4 cores
+  - Descending order: Zero overhead (optimized!)
+  - DCB append: Actually faster than regular append
+
+### Historical Benchmarks
 - `docs/lessons-learned/batched-flush-failure.md` - What we tried and why it failed
 - `docs/future-plans/batched-flush-redesign-plan.md` - How to implement batching properly
 

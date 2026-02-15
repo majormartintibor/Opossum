@@ -13,6 +13,8 @@ public class DataSeeder
     private readonly IEventStore _eventStore;
     private readonly IMediator _mediator;
     private readonly SeedingConfiguration _config;
+    private readonly string _rootPath;
+    private readonly string _contextName;
     private readonly Random _random = new(42); // Fixed seed for reproducibility
 
     private readonly List<(Guid StudentId, Tier Tier, int MaxCourses)> _students = [];
@@ -20,11 +22,13 @@ public class DataSeeder
 
     public int TotalEventsCreated { get; private set; }
 
-    public DataSeeder(IServiceProvider serviceProvider, SeedingConfiguration config)
+    public DataSeeder(IServiceProvider serviceProvider, SeedingConfiguration config, string rootPath, string contextName)
     {
         _eventStore = serviceProvider.GetRequiredService<IEventStore>();
         _mediator = serviceProvider.GetRequiredService<IMediator>();
         _config = config;
+        _rootPath = rootPath;
+        _contextName = contextName;
     }
 
     public async Task SeedAsync()
@@ -52,8 +56,8 @@ public class DataSeeder
 
     private void ResetDatabase()
     {
-        var dbPath = Path.Combine(_config.RootPath, _config.ContextName);
-        
+        var dbPath = Path.Combine(_rootPath, _contextName);
+
         if (Directory.Exists(dbPath))
         {
             Console.WriteLine($"🗑️  Deleting: {dbPath}");

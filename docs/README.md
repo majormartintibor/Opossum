@@ -77,6 +77,13 @@ This folder contains comprehensive documentation for the Opossum event store lib
 
 ---
 
+## ⚠️ Limitations
+
+### MVP Restrictions
+- **[Single Context Only](limitations/mvp-single-context.md)** - Multi-context support planned for future release
+
+---
+
 ## 📁 Folder Structure
 
 ```
@@ -87,6 +94,7 @@ docs/
 ├── guides/                            # How-to guides & tutorials
 ├── specifications/                    # Formal specs & standards
 ├── implementation/                    # Implementation details & summaries
+├── limitations/                       # Current MVP limitations
 └── decisions/                         # Architecture Decision Records (ADRs)
 ```
 
@@ -101,6 +109,7 @@ docs/
 | **Guides** | Step-by-step instructions, tutorials, quick starts | Getting started, how-to guides |
 | **Specifications** | External specs, formal standards compliance | DCB spec, event format spec |
 | **Implementation** | Technical details, algorithms, performance, bug fixes | Durability implementation, performance fixes |
+| **Limitations** | Current MVP restrictions and workarounds | Single-context limitation |
 | **Decisions** | Architecture Decision Records for significant choices | ConfigureAwait adoption, CPM adoption |
 
 ---
