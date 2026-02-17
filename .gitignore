@@ -21,6 +21,8 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# BUT keep docs/releases/ folder (documentation, not build output)
+!docs/releases/
 x64/
 x86/
 [Ww][Ii][Nn]32/

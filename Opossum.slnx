@@ -88,6 +88,9 @@
   <Folder Name="/docs/performance/">
     <File Path="docs/performance/PERFORMANCE-BASELINE.md" />
   </Folder>
+  <Folder Name="/docs/releases/">
+    <File Path="docs/releases/automated-release-guide.md" />
+  </Folder>
   <Folder Name="/docs/specifications/">
     <File Path="docs/specifications/README.md" />
     <File Path="docs/specifications/spec-001-projection-metadata.md" />

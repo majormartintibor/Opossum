@@ -348,6 +348,72 @@ Never use "D:\\Database" directly in tests.
 When adding new features make sure to add sufficient unit and integration tests to cover the new functionality.
 All tests must pass before committing new code.
 
+## CHANGELOG Maintenance
+
+**MANDATORY: CHANGELOG.md MUST be updated for every code change.**
+
+### When to Update CHANGELOG.md
+
+Update `CHANGELOG.md` for:
+- ✅ **New features** - Any new public API, functionality, or capability
+- ✅ **Bug fixes** - Any bug fix, even minor ones
+- ✅ **Breaking changes** - Changes that break backward compatibility
+- ✅ **Performance improvements** - Significant performance optimizations
+- ✅ **Documentation updates** - Major documentation additions (not typo fixes)
+- ✅ **Deprecations** - Marking APIs or features as deprecated
+- ⚠️ **Internal refactoring** - Only if it affects users or performance
+
+### CHANGELOG Format
+
+Follow [Keep a Changelog](https://keepachangelog.com/) format:
+
+```markdown
+## [Unreleased]
+
+### Added
+- New `IEventStore.QueryAsync()` method for complex queries
+- Support for multiple contexts in event store
+
+### Changed
+- Improved performance of projection rebuilds by 50%
+
+### Fixed
+- Fixed race condition in concurrent event appends
+- Corrected event ordering in cross-stream queries
+
+### Deprecated
+- `IEventStore.Read()` is deprecated, use `IEventStore.ReadAsync()` instead
+
+### Removed
+- Removed obsolete `EventStoreOptions.UseLegacyFormat` option
+
+### Security
+- Fixed potential file path traversal vulnerability
+```
+
+### Example Workflow
+
+When adding a new feature:
+
+1. Write code
+2. Write tests
+3. **Update CHANGELOG.md** under `## [Unreleased]` section:
+   ```markdown
+   ### Added
+   - Multi-context support for isolating event streams (#42)
+   ```
+4. Commit with message: `feat: Add multi-context support`
+
+### Why This Matters
+
+- ✅ **Release preparation** - CHANGELOG becomes release notes
+- ✅ **User communication** - Users know what changed
+- ✅ **Version planning** - Helps decide MAJOR/MINOR/PATCH versions
+- ✅ **History tracking** - Easy to see what changed when
+- ✅ **NuGet releases** - CHANGELOG content goes to GitHub releases
+
+**NEVER claim a feature is complete without updating CHANGELOG.md!**
+
 ## Definition of Done
 
 A feature or task is ONLY considered complete when ALL of the following criteria are met:
@@ -374,6 +440,7 @@ A feature or task is ONLY considered complete when ALL of the following criteria
 - ✅ Feature documentation written (if applicable)
 - ✅ Code comments updated (if needed)
 - ✅ README updated (if needed)
+- ✅ **CHANGELOG.md updated** (MANDATORY for all new features, bug fixes, and breaking changes)
 
 ### 4. Verification Checklist
 
@@ -389,6 +456,7 @@ Before claiming "Implementation Complete", you MUST explicitly confirm:
 - [ ] ✅ Sample app runs without errors (if applicable)
 - [ ] ✅ No breaking changes to existing APIs
 - [ ] ✅ All documentation updated
+- [ ] ✅ CHANGELOG.md updated with changes
 - [ ] ✅ Copilot-instructions followed
 ```
 
