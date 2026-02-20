@@ -23,6 +23,9 @@
       <File Path="docs/testing-configuration-override-fix.md" />
       <File Path="docs/ubuntu-test-failures-analysis.md" />
   </Folder>
+  <Folder Name="/docs/analysis/">
+    <File Path="docs/analysis/dcb-compliance-analysis.md" />
+  </Folder>
   <Folder Name="/docs/architecture/" />
   <Folder Name="/docs/benchmarking/" />
   <Folder Name="/docs/benchmarking/results/" />
@@ -63,6 +66,7 @@
     <File Path="docs/implementation/bugfix-enrollment-tier-limit.md" />
     <File Path="docs/implementation/configureawait-summary.md" />
     <File Path="docs/implementation/dataseeder-command-handler-fix.md" />
+    <File Path="docs/implementation/decision-model-projections-plan.md" />
     <File Path="docs/implementation/dataseeder-fix-complete.md" />
     <File Path="docs/implementation/dataseeder-optimization.md" />
     <File Path="docs/implementation/durability-guarantees.md" />
@@ -92,6 +96,9 @@
     <File Path="docs/releases/automated-release-guide.md" />
   </Folder>
   <Folder Name="/docs/specifications/">
+    <File Path="docs/specifications/dcb-projections.md" />
+    <File Path="docs/specifications/DCB-Specification.md" />
+    <File Path="docs/specifications/Projections - Dynamic Consistency Boundary.html" />
     <File Path="docs/specifications/README.md" />
     <File Path="docs/specifications/spec-001-projection-metadata.md" />
     <File Path="docs/specifications/spec-002-cache-warming.md" />
@@ -114,9 +121,6 @@
     <File Path="README.md" />`r`n    <File Path="RELEASE-CHECKLIST.md" />
     <File Path="RELEASE-READY.md" />
     <File Path="Solution Items/opossum.png" />
-  </Folder>
-  <Folder Name="/Specification/">
-    <File Path="Specification/DCB-Specification.md" />
   </Folder>
   <Folder Name="/src/">
     <Project Path="src/Opossum/Opossum.csproj" />
