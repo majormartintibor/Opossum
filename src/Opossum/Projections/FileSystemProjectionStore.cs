@@ -360,19 +360,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
                 Metadata = metadata
             };
 
-            // Serialize and save
+            // Serialize once and save
             var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
-
-            // Update metadata with actual size
-            metadata = metadata with { SizeInBytes = json.Length };
-            wrapper = wrapper with { Metadata = metadata };
-
-            // Re-serialize with updated size
-            json = JsonSerializer.Serialize(wrapper, _jsonOptions);
             await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
 
-            // Save metadata to index
-            await _metadataIndex.SaveAsync(_projectionPath, key, metadata).ConfigureAwait(false);
+            // Save metadata to index with actual file size (single serialization pass)
+            await _metadataIndex.SaveAsync(_projectionPath, key, metadata with { SizeInBytes = json.Length }).ConfigureAwait(false);
 
             // Update tag indices if tags are configured
             if (newTags != null)
@@ -458,7 +451,15 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         _tagIndex.DeleteAllIndices(_projectionPath);
         await _metadataIndex.ClearAsync(_projectionPath).ConfigureAwait(false);
-        _projectionTags.Clear();
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            _projectionTags.Clear();
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     private string GetFilePath(string key)

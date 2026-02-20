@@ -121,8 +121,8 @@ internal sealed class ProjectionManager : IProjectionManager
             // Clear existing projection data
             await registration.ClearAsync(cancellationToken).ConfigureAwait(false);
 
-            // Rebuild from events
-            foreach (var evt in events.OrderBy(e => e.Position))
+            // Rebuild from events (ReadAsync already returns events in ascending position order)
+            foreach (var evt in events)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
@@ -149,9 +149,9 @@ internal sealed class ProjectionManager : IProjectionManager
 
         foreach (var (projectionName, registration) in _projections)
         {
+            // ReadAsync already returns events in ascending position order
             var relevantEvents = events
                 .Where(e => registration.EventTypes.Contains(e.Event.EventType))
-                .OrderBy(e => e.Position)
                 .ToArray();
 
             if (relevantEvents.Length == 0)
@@ -220,7 +220,18 @@ internal sealed class ProjectionManager : IProjectionManager
         var filePath = GetCheckpointFilePath(projectionName);
         var json = JsonSerializer.Serialize(checkpoint, _jsonOptions);
 
-        await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
+        // Write atomically: temp file + rename prevents corrupt checkpoints on crash
+        var tempPath = filePath + $".tmp.{Guid.NewGuid():N}";
+        try
+        {
+            await File.WriteAllTextAsync(tempPath, json, cancellationToken).ConfigureAwait(false);
+            File.Move(tempPath, filePath, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(tempPath)) { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
+            throw;
+        }
     }
 
     public IReadOnlyList<string> GetRegisteredProjections()

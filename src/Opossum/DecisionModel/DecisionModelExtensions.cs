@@ -74,8 +74,8 @@ public static class DecisionModelExtensions
         var events = await eventStore.ReadAsync(projection.Query, null)
             .ConfigureAwait(false);
 
+        // ReadAsync returns events in ascending position order — no sort needed
         var state = events
-            .OrderBy(e => e.Position)
             .Aggregate(projection.InitialState, projection.Apply);
 
         var appendCondition = new AppendCondition
@@ -259,10 +259,10 @@ public static class DecisionModelExtensions
     }
 
     // Folds only the events that match the projection's own query (for composed overloads).
+    // ReadAsync returns events in ascending position order — no sort needed; Where preserves order.
     private static TState FoldEvents<TState>(IDecisionProjection<TState> projection, SequencedEvent[] events) =>
         events
             .Where(e => projection.Query.Matches(e))
-            .OrderBy(e => e.Position)
             .Aggregate(projection.InitialState, projection.Apply);
 
     // Builds the union of multiple queries (OR of all QueryItems).

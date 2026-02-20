@@ -196,7 +196,19 @@ internal sealed class ProjectionMetadataIndex
         Directory.CreateDirectory(indexDirectory);
 
         var json = JsonSerializer.Serialize(_cache.ToDictionary(kvp => kvp.Key, kvp => kvp.Value), _jsonOptions);
-        await File.WriteAllTextAsync(indexFilePath, json).ConfigureAwait(false);
+
+        // Write atomically: temp file + rename prevents corrupt index on crash
+        var tempPath = indexFilePath + $".tmp.{Guid.NewGuid():N}";
+        try
+        {
+            await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
+            File.Move(tempPath, indexFilePath, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(tempPath)) { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
+            throw;
+        }
     }
 
     /// <summary>

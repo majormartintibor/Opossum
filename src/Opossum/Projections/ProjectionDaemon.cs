@@ -130,9 +130,9 @@ internal sealed class ProjectionDaemon : BackgroundService
         var allEvents = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
 
         // Filter to events after the minimum checkpoint
+        // ReadAsync already returns events in ascending position order — Where preserves that order
         var newEvents = allEvents
             .Where(e => e.Position > minCheckpoint)
-            .OrderBy(e => e.Position)
             .ToArray();
 
         if (newEvents.Length == 0)
@@ -148,7 +148,8 @@ internal sealed class ProjectionDaemon : BackgroundService
 
         foreach (var batch in batches)
         {
-            await _projectionManager.UpdateAsync(batch.ToArray(), cancellationToken).ConfigureAwait(false);
+            // Chunk returns T[] segments — no need to call ToArray() again
+            await _projectionManager.UpdateAsync(batch, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogDebug("Processed {EventCount} events successfully", newEvents.Length);

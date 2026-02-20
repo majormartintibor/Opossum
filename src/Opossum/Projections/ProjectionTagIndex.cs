@@ -54,9 +54,19 @@ internal sealed class ProjectionTagIndex
             // Add new key (HashSet ensures no duplicates)
             keys.Add(projectionKey);
 
-            // Write back
+            // Write atomically: temp file + rename ensures readers always see a complete file
             var updatedJson = JsonSerializer.Serialize(keys, _jsonOptions);
-            await File.WriteAllTextAsync(indexFile, updatedJson).ConfigureAwait(false);
+            var tempFile = $"{indexFile}.tmp.{Guid.NewGuid():N}";
+            try
+            {
+                await File.WriteAllTextAsync(tempFile, updatedJson).ConfigureAwait(false);
+                File.Move(tempFile, indexFile, overwrite: true);
+            }
+            catch
+            {
+                if (File.Exists(tempFile)) { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
+                throw;
+            }
         }
         finally
         {
@@ -98,9 +108,19 @@ internal sealed class ProjectionTagIndex
             {
                 if (keys.Count > 0)
                 {
-                    // Update index file
+                    // Write atomically: temp file + rename ensures readers always see a complete file
                     var updatedJson = JsonSerializer.Serialize(keys, _jsonOptions);
-                    await File.WriteAllTextAsync(indexFile, updatedJson).ConfigureAwait(false);
+                    var tempFile = $"{indexFile}.tmp.{Guid.NewGuid():N}";
+                    try
+                    {
+                        await File.WriteAllTextAsync(tempFile, updatedJson).ConfigureAwait(false);
+                        File.Move(tempFile, indexFile, overwrite: true);
+                    }
+                    catch
+                    {
+                        if (File.Exists(tempFile)) { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
+                        throw;
+                    }
                 }
                 else
                 {
@@ -135,19 +155,18 @@ internal sealed class ProjectionTagIndex
             return Array.Empty<string>();
         }
 
-        var tagLockKey = GetTagLockKey(projectionPath, tag);
-        var semaphore = _tagLocks.GetOrAdd(tagLockKey, _ => new SemaphoreSlim(1, 1));
-
-        await semaphore.WaitAsync().ConfigureAwait(false);
+        // No lock needed for reads: writes use atomic file moves (temp+rename), so readers
+        // always see either the old or new complete file, never a partial write.
         try
         {
             var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
-            var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? new HashSet<string>();
+            var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? [];
             return keys.ToArray();
         }
-        finally
+        catch (JsonException)
         {
-            semaphore.Release();
+            // Corrupted index file — treat as empty; will be corrected on next write
+            return Array.Empty<string>();
         }
     }
 

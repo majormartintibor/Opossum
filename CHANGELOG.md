@@ -7,9 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- **`IEventStore.ExecuteDecisionAsync<TResult>()`** — New extension method in `DecisionModelExtensions`
+- **Thread safety: `FileSystemProjectionStore.DeleteAllIndicesAsync`** — `_projectionTags.Clear()`
+  was called without holding `_lock`, creating a data race with any concurrent `SaveAsync` or
+  `DeleteAsync`. Now acquires `_lock` for the clear operation.
+
+- **Durability: atomic writes for projection metadata files** — `ProjectionTagIndex`,
+  `ProjectionMetadataIndex.PersistIndexAsync`, and `ProjectionManager.SaveCheckpointAsync` all
+  used `File.WriteAllTextAsync` (in-place overwrite) which can leave a partial file on crash.
+  All three now use the same temp-file + `File.Move(overwrite: true)` atomic-rename pattern
+  already used by the event store, ledger, and event-type/tag indices.
+
+- **Thread safety: `ProjectionTagIndex` read path no longer serialised** — After making writes
+  atomic (temp+rename), a concurrent reader always sees either the old or the new complete file
+  and never a partial one. The exclusive semaphore previously held for every
+  `GetProjectionKeysByTagAsync` call has been removed from the read path; write operations still
+  hold it to prevent lost-update races.
+
+- **Memory: eliminated redundant `OrderBy` on pre-sorted event arrays** — `ReadAsync` returns
+  events in ascending position order (positions are sorted by `Array.Sort` inside
+  `GetPositionsForQueryAsync`). Redundant `.OrderBy(e => e.Position)` calls in
+  `DecisionModelExtensions.BuildDecisionModelAsync` (all overloads), `FoldEvents`,
+  `ProjectionManager.RebuildAsync`, `ProjectionManager.UpdateAsync`, and
+  `ProjectionDaemon.ProcessNewEventsAsync` have been removed.
+
+- **Memory: `FileSystemProjectionStore.SaveAsync` — single serialisation pass** — The projection
+  wrapper was previously serialised twice: once to measure the JSON length for `SizeInBytes`,
+  then again with the measured value embedded. The second pass served no observable purpose
+  because `SizeInBytes` in the file body is never read back (metadata is always accessed through
+  the metadata index). A single serialisation now writes the file; the correct byte count is
+  passed to `_metadataIndex.SaveAsync`.
+
+- **Memory: `JsonEventSerializer.PolymorphicEventConverter.Write` — avoid intermediate string** —
+  The write path previously serialised `IEvent` to a `string`, then parsed that string back into a
+  `JsonDocument` to copy its properties. A `MemoryStream`-backed approach now serialises directly
+  to bytes and parses via `Utf8JsonReader`, eliminating the intermediate string allocation on every
+  event write.
+
+- **Memory: `EventFileManager.GetEventFilePath` — eliminate dynamic format string** —
+  `$"D{PositionPadding}"` allocated a new format-string object on every call because
+  `PositionPadding` is read at runtime. Replaced with the compile-time literal `$"{position:D10}.json"`.
+
+- **Memory: `ProjectionDaemon` — remove redundant `batch.ToArray()`** — `Enumerable.Chunk`
+  already yields `T[]` segments; calling `.ToArray()` on each batch created a needless copy.
+
+- **Code clarity: `Mediator._handlers`** — The backing field is typed as
+  `IReadOnlyDictionary<Type, IMessageHandler>` to make the read-only contract explicit.
+
+
   that wraps the full DCB read → decide → append cycle with automatic exponential-backoff retry.
   Callers pass their decision logic as a delegate; the library handles retrying on
   `AppendConditionFailedException` and `ConcurrencyException` so consumers no longer need to write
