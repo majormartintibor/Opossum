@@ -155,13 +155,13 @@ public class EnrollStudentToCourseCommandHandler
                 await eventStore.AppendAsync([sequencedEvent], appendCondition);
                 return new CommandResult(Success: true);
             }
-            catch (Exceptions.ConcurrencyException) when (attempt < maxRetries - 1)
+            catch (Exceptions.AppendConditionFailedException) when (attempt < maxRetries - 1)
             {
                 // Decision model was stale - retry with fresh read
                 await Task.Delay(10 * (attempt + 1)); // Small exponential backoff
                 continue; // Retry
             }
-            catch (Exceptions.ConcurrencyException)
+            catch (Exceptions.AppendConditionFailedException)
             {
                 // Max retries exceeded
                 return new CommandResult(Success: false, ErrorMessage: "Concurrency conflict detected");

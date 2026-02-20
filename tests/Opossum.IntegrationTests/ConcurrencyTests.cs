@@ -107,7 +107,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
                     return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, student10Id));
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     return new CommandResult(false, "Concurrency conflict detected");
                 }
@@ -119,7 +119,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
                     return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, student11Id));
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     return new CommandResult(false, "Concurrency conflict detected");
                 }
@@ -264,7 +264,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
                     return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, studentId));
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     return new CommandResult(false, "Concurrency conflict");
                 }
@@ -395,7 +395,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        // Assert - Should throw ConcurrencyException
+        // Assert - Should throw ConcurrencyException (subclass of AppendConditionFailedException)
         await Assert.ThrowsAsync<ConcurrencyException>(async () =>
             await eventStore.AppendAsync([newEvent], appendCondition));
     }
@@ -467,7 +467,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        // Assert - Should throw ConcurrencyException
+        // Assert - Should throw ConcurrencyException (subclass of AppendConditionFailedException)
         await Assert.ThrowsAsync<ConcurrencyException>(async () =>
             await eventStore.AppendAsync([newEvent], appendCondition));
     }

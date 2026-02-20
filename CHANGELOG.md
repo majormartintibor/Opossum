@@ -70,6 +70,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   projection to fetch related events from the store (via a secondary `Query`) when building its
   state. All usages in sample projections and tests have been updated accordingly.
 
+- **`ConcurrencyException` is now a subclass of `AppendConditionFailedException`** —
+  The DCB specification defines exactly one failure mode for an append: *the append condition was
+  violated*. Both types previously represented this same condition as independent siblings under
+  `EventStoreException`, forcing every caller to write two catch blocks. `ConcurrencyException`
+  (thrown by the file-system layer for internal ledger-level races) is now a subclass of
+  `AppendConditionFailedException` so a single `catch (AppendConditionFailedException)` covers
+  both. Catching `ConcurrencyException` specifically still works for diagnostic access to
+  `ExpectedSequence` / `ActualSequence`.
+
+- **`ExecuteDecisionAsync` retry loop** — collapsed from two separate catch clauses
+  (`AppendConditionFailedException` and `ConcurrencyException`) down to one
+  `catch (AppendConditionFailedException)` which covers both via the new hierarchy.
+
+- **Sample app `EnrollStudentToCourseCommandHandler`** — unified from two catch blocks to a
+  single `catch (AppendConditionFailedException)`.
+
+- **Sample app global exception handler (`Program.cs`)** — unified from two separate
+  `ConcurrencyException` / `AppendConditionFailedException` → HTTP 409 handlers to a single
+  `AppendConditionFailedException` handler.
+
 ### 🐛 Fixed
 
 - **`ProjectionTagIndex.GetProjectionKeysByTagsAsync`** — Multi-tag AND queries were broken when

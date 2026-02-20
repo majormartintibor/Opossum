@@ -19,11 +19,6 @@ public sealed class EnrollStudentToCourseCommandHandler()
             return await eventStore.ExecuteDecisionAsync(
                 (store, ct) => TryEnrollStudentAsync(command, store));
         }
-        catch (ConcurrencyException)
-        {
-            return CommandResult.Fail(
-                "Failed to enroll student due to concurrent updates. Please try again.");
-        }
         catch (AppendConditionFailedException)
         {
             return CommandResult.Fail(

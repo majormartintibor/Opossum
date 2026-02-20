@@ -111,35 +111,16 @@ app.UseExceptionHandler(exceptionHandlerApp =>
         var exceptionHandlerFeature = context.Features.Get<IExceptionHandlerFeature>();
         var exception = exceptionHandlerFeature?.Error;
 
-        // Map ConcurrencyException to HTTP 409 Conflict
-        // This occurs when DCB detects a stale decision model (optimistic concurrency control)
-        if (exception is ConcurrencyException concurrencyEx)
+        // Map AppendConditionFailedException (and its subclass ConcurrencyException) to HTTP 409 Conflict.
+        // This is the single DCB failure mode: the append condition was violated by a concurrent write.
+        if (exception is AppendConditionFailedException)
         {
             context.Response.StatusCode = StatusCodes.Status409Conflict;
             await context.Response.WriteAsJsonAsync(new ProblemDetails
             {
                 Status = StatusCodes.Status409Conflict,
-                Title = "Concurrency Conflict",
+                Title = "Conflict",
                 Detail = "The operation failed because the resource was modified by another request. " +
-                         "This typically means an email address was already taken or a course reached capacity. " +
-                         "Please refresh and try again.",
-                Instance = context.Request.Path,
-                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
-            });
-            return;
-        }
-
-        // Map AppendConditionFailedException to HTTP 409 Conflict
-        // Similar to ConcurrencyException - DCB append condition failed
-        if (exception is AppendConditionFailedException appendEx)
-        {
-            context.Response.StatusCode = StatusCodes.Status409Conflict;
-            await context.Response.WriteAsJsonAsync(new ProblemDetails
-            {
-                Status = StatusCodes.Status409Conflict,
-                Title = "Append Condition Failed",
-                Detail = "The operation failed because an append condition was not met. " +
-                         "This typically indicates a constraint violation (e.g., duplicate email, course full). " +
                          "Please refresh and try again.",
                 Instance = context.Request.Path,
                 Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"

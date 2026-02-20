@@ -91,8 +91,8 @@ public sealed class RegisterStudentCommandHandler()
         // The FailIfEventsMatch condition acts as an optimistic lock, ensuring the consistency
         // boundary (unique emails) is maintained without requiring distributed transactions.
         // 
-        // If a ConcurrencyException is thrown, the global exception handler will map it to
-        // HTTP 409 Conflict with a Problem Details response (see Program.cs).
+        // If an AppendConditionFailedException (or its ConcurrencyException subclass) is thrown,
+        // the global exception handler maps it to HTTP 409 Conflict (see Program.cs).
         await eventStore.AppendAsync(
             sequencedEvent,
             condition: new AppendCondition() { FailIfEventsMatch = validateEmailNotTakenQuery });

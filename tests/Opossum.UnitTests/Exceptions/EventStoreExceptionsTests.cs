@@ -356,6 +356,26 @@ public class EventStoreExceptionsTests
         Assert.NotNull(exception2.ActualSequence);
     }
 
+    [Fact]
+    public void ConcurrencyException_IsSubclassOf_AppendConditionFailedException()
+    {
+        var exception = new ConcurrencyException("Conflict");
+
+        Assert.IsAssignableFrom<AppendConditionFailedException>(exception);
+    }
+
+    [Fact]
+    public void ConcurrencyException_CanBeCaughtAs_AppendConditionFailedException()
+    {
+        AppendConditionFailedException? caught = null;
+
+        try { throw new ConcurrencyException("Conflict"); }
+        catch (AppendConditionFailedException ex) { caught = ex; }
+
+        Assert.NotNull(caught);
+        Assert.IsType<ConcurrencyException>(caught);
+    }
+
     #endregion
 
     #region EventNotFoundException Tests
@@ -464,6 +484,15 @@ public class EventStoreExceptionsTests
 
         // Assert
         Assert.All(exceptions, ex => Assert.IsAssignableFrom<EventStoreException>(ex));
+    }
+
+    [Fact]
+    public void ConcurrencyException_InheritsFrom_AppendConditionFailedException_InHierarchy()
+    {
+        // ConcurrencyException → AppendConditionFailedException → EventStoreException → Exception
+        Assert.True(typeof(AppendConditionFailedException).IsAssignableFrom(typeof(ConcurrencyException)));
+        Assert.True(typeof(EventStoreException).IsAssignableFrom(typeof(AppendConditionFailedException)));
+        Assert.True(typeof(EventStoreException).IsAssignableFrom(typeof(ConcurrencyException)));
     }
 
     [Fact]

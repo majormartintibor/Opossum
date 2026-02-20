@@ -186,9 +186,10 @@ public static class DecisionModelExtensions
     /// <remarks>
     /// <para>
     /// The <paramref name="operation"/> delegate is retried whenever an
-    /// <see cref="AppendConditionFailedException"/> or <see cref="ConcurrencyException"/> is
-    /// thrown — both indicate that another writer modified the relevant event stream between
-    /// the read and the append. Retries use exponential back-off.
+    /// <see cref="AppendConditionFailedException"/> is thrown (which includes
+    /// <see cref="ConcurrencyException"/>, its subclass) — both indicate that another
+    /// writer modified the relevant event stream between the read and the append.
+    /// Retries use exponential back-off.
     /// </para>
     /// <code>
     /// return await eventStore.ExecuteDecisionAsync(async (store, ct) =>
@@ -222,10 +223,8 @@ public static class DecisionModelExtensions
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>The result produced by <paramref name="operation"/>.</returns>
     /// <exception cref="AppendConditionFailedException">
-    /// Re-thrown when max retries are exhausted due to append-condition failures.
-    /// </exception>
-    /// <exception cref="ConcurrencyException">
-    /// Re-thrown when max retries are exhausted due to concurrency conflicts.
+    /// Re-thrown when max retries are exhausted due to append-condition failures
+    /// (including <see cref="ConcurrencyException"/> subclass instances).
     /// </exception>
     public static async Task<TResult> ExecuteDecisionAsync<TResult>(
         this IEventStore eventStore,
@@ -246,11 +245,6 @@ public static class DecisionModelExtensions
                 return await operation(eventStore, cancellationToken).ConfigureAwait(false);
             }
             catch (AppendConditionFailedException) when (attempt < maxRetries - 1)
-            {
-                await Task.Delay(initialDelayMs * (int)Math.Pow(2, attempt), cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            catch (ConcurrencyException) when (attempt < maxRetries - 1)
             {
                 await Task.Delay(initialDelayMs * (int)Math.Pow(2, attempt), cancellationToken)
                     .ConfigureAwait(false);

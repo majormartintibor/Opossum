@@ -32,7 +32,13 @@ public class EventStoreException : Exception
 
 /// <summary>
 /// Exception thrown when an append condition fails during event appending.
-/// This indicates an optimistic concurrency conflict based on the DCB specification.
+/// This is the single exception type that represents an optimistic concurrency conflict
+/// as defined by the DCB specification.
+/// <para>
+/// <see cref="ConcurrencyException"/> is a subclass of this exception and is thrown by
+/// the file-system layer for internal ledger-level races. Callers should always catch
+/// <see cref="AppendConditionFailedException"/> — this covers both cases.
+/// </para>
 /// </summary>
 public class AppendConditionFailedException : EventStoreException
 {
@@ -148,10 +154,16 @@ public class InvalidQueryException : EventStoreException
 }
 
 /// <summary>
-/// Exception thrown when a concurrency conflict occurs during event store operations.
-/// This typically indicates file system race conditions or ledger sequence conflicts.
+/// Exception thrown by the file-system event store for internal ledger-level concurrency
+/// conflicts (e.g. a stale <see cref="AppendCondition.AfterSequencePosition"/> check).
+/// <para>
+/// This is a subclass of <see cref="AppendConditionFailedException"/>. Callers should
+/// catch <see cref="AppendConditionFailedException"/> rather than this type directly, 
+/// unless they need to inspect the <see cref="ExpectedSequence"/> / <see cref="ActualSequence"/>
+/// properties for diagnostic purposes.
+/// </para>
 /// </summary>
-public class ConcurrencyException : EventStoreException
+public class ConcurrencyException : AppendConditionFailedException
 {
     /// <summary>
     /// Gets the expected sequence position
