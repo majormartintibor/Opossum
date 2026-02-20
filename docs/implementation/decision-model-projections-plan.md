@@ -207,7 +207,7 @@ Internal composition logic:
 
 ---
 
-### Step 6 — Sample app refactor + README + CHANGELOG ⬜
+### Step 6 — Sample app refactor + README + CHANGELOG ✅ Done
 
 **Files changed:**
 - `Samples/Opossum.Samples.CourseManagement/CourseEnrollment/EnrollStudentToCourseCommand.cs` — use new API
@@ -234,7 +234,7 @@ var (courseCapacity, studentLimit, duplicateCheck, appendCondition) =
         EnrollmentProjections.DuplicateCheck(command.CourseId, command.StudentId));
 ```
 
-**Status:** ⬜ Not started
+**Status:** ✅ Done
 
 ---
 
@@ -246,7 +246,7 @@ var (courseCapacity, studentLimit, duplicateCheck, appendCondition) =
 | 2 | `IDecisionProjection<T>` + `DecisionProjection<T>` | ✅ Done | — |
 | 3+4 | `DecisionModel<T>` + `BuildDecisionModelAsync()` | ✅ Done | — |
 | 5 | `ComposeProjections()` / tuple overloads | ✅ Done | — |
-| 6 | Sample app refactor + README + CHANGELOG | ⬜ Not started | — |
+| 6 | Sample app refactor + README + CHANGELOG | ✅ Done | — |
 
 ---
 

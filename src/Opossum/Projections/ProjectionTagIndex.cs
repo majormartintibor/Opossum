@@ -189,8 +189,9 @@ internal sealed class ProjectionTagIndex
 
         // Find intersection (AND logic)
         // Start with smallest set for efficiency
-        var result = keySets.OrderBy(s => s.Count).First();
-        foreach (var set in keySets.Skip(1))
+        var sortedSets = keySets.OrderBy(s => s.Count).ToList();
+        var result = sortedSets[0];
+        foreach (var set in sortedSets.Skip(1))
         {
             result.IntersectWith(set);
             if (result.Count == 0)

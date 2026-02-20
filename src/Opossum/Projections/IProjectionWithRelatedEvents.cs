@@ -3,12 +3,12 @@ using Opossum.Core;
 namespace Opossum.Projections;
 
 /// <summary>
-/// Defines a projection that needs to query related events from other streams
+/// Defines a projection that fetches related events from the event store
 /// to build its state. The framework will automatically load related events
 /// before calling Apply.
 /// </summary>
 /// <typeparam name="TState">The projection state type</typeparam>
-public interface IMultiStreamProjectionDefinition<TState> : IProjectionDefinition<TState> 
+public interface IProjectionWithRelatedEvents<TState> : IProjectionDefinition<TState> 
     where TState : class
 {
     /// <summary>
@@ -29,9 +29,9 @@ public interface IMultiStreamProjectionDefinition<TState> : IProjectionDefinitio
     /// <returns>Updated state, or null to delete the projection instance</returns>
     TState? Apply(TState? current, IEvent evt, SequencedEvent[] relatedEvents);
 
-    // Hide the base Apply method - multi-stream projections must use the overload
+    // Hide the base Apply method - projections with related events must use the overload
     TState? IProjectionDefinition<TState>.Apply(TState? current, IEvent evt) =>
         throw new NotImplementedException(
-            $"Multi-stream projection {ProjectionName} must implement Apply with relatedEvents parameter. " +
-            "The framework should call the multi-stream Apply overload.");
+            $"Projection {ProjectionName} must implement Apply with relatedEvents parameter. " +
+            "The framework should call the related-events Apply overload.");
 }

@@ -541,8 +541,8 @@ internal sealed class ProjectionManager : IProjectionManager
 
             TState? updated;
 
-            // Check if this is a multi-stream projection
-            if (_definition is IMultiStreamProjectionDefinition<TState> multiStreamProjection)
+            // Check if this projection needs related events
+            if (_definition is IProjectionWithRelatedEvents<TState> multiStreamProjection)
             {
                 // Get related events query
                 var relatedQuery = multiStreamProjection.GetRelatedEventsQuery(evt.Event.Event);

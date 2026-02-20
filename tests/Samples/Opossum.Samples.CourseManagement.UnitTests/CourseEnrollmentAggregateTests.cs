@@ -1,202 +1,220 @@
+using Opossum.Core;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.Events;
 using Tier = Opossum.Samples.CourseManagement.EnrollmentTier.EnrollmentTier;
 
 namespace Opossum.Samples.CourseManagement.UnitTests;
 
-public class CourseEnrollmentAggregateTests
+public class CourseEnrollmentProjectionTests
 {
     private readonly Guid _courseId = Guid.NewGuid();
     private readonly Guid _studentId = Guid.NewGuid();
 
+    private static SequencedEvent MakeEvent(IEvent payload, long position = 1, params (string Key, string Value)[] tags) =>
+        new()
+        {
+            Position = position,
+            Event = new DomainEvent
+            {
+                EventType = payload.GetType().Name,
+                Event = payload,
+                Tags = tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+            }
+        };
+
     [Fact]
-    public void Apply_CourseCreatedEvent_SetsCourseMaxCapacity()
+    public void CourseCapacity_InitialState_IsNull()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
-        var @event = new CourseCreatedEvent(_courseId, "Math 101", "Basic Math", MaxStudentCount: 30);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
 
-        // Act
-        var result = aggregate.Apply(@event);
-
-        // Assert
-        Assert.Equal(30, result.CourseMaxCapacity);
-        Assert.Equal(_courseId, result.CourseId);
+        Assert.Null(projection.InitialState);
     }
 
     [Fact]
-    public void Apply_CourseCreatedEvent_ForDifferentCourse_DoesNotUpdateAggregate()
+    public void CourseCapacity_Query_ContainsCourseIdTag()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
-        var differentCourseId = Guid.NewGuid();
-        var @event = new CourseCreatedEvent(differentCourseId, "Physics 101", "Basic Physics", MaxStudentCount: 25);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
 
-        // Act
-        var result = aggregate.Apply(@event);
+        var tag = projection.Query.QueryItems
+            .SelectMany(qi => qi.Tags)
+            .First(t => t.Key == "courseId");
 
-        // Assert
-        Assert.Equal(0, result.CourseMaxCapacity); // Should remain default
-        Assert.Same(aggregate, result); // Should return unchanged instance
+        Assert.Equal(_courseId.ToString(), tag.Value);
     }
 
     [Fact]
-    public void Apply_CourseStudentLimitModifiedEvent_UpdatesCourseMaxCapacity()
+    public void CourseCapacity_Apply_CourseCreatedEvent_SetsMaxCapacityAndZeroCount()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId)
-            .Apply(new CourseCreatedEvent(_courseId, "Test", "Test", MaxStudentCount: 30));
-        var @event = new CourseStudentLimitModifiedEvent(_courseId, NewMaxStudentCount: 50);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
+        var evt = MakeEvent(new CourseCreatedEvent(_courseId, "Math 101", "Basic Math", 30));
 
-        // Act
-        var result = aggregate.Apply(@event);
+        var state = projection.Apply(projection.InitialState, evt);
 
-        // Assert
-        Assert.Equal(50, result.CourseMaxCapacity);
+        Assert.NotNull(state);
+        Assert.Equal(30, state.MaxCapacity);
+        Assert.Equal(0, state.CurrentEnrollmentCount);
     }
 
     [Fact]
-    public void Apply_StudentRegisteredEvent_SetsBasicTier()
+    public void CourseCapacity_Apply_CourseStudentLimitModifiedEvent_UpdatesMaxCapacity()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
-        var @event = new StudentRegisteredEvent(_studentId, "John", "Doe", "john@example.com");
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
+        var created = projection.Apply(projection.InitialState,
+            MakeEvent(new CourseCreatedEvent(_courseId, "Math 101", "Basic Math", 30)));
 
-        // Act
-        var result = aggregate.Apply(@event);
+        var state = projection.Apply(created,
+            MakeEvent(new CourseStudentLimitModifiedEvent(_courseId, 50), position: 2));
 
-        // Assert
-        Assert.Equal(Tier.Basic, result.StudentEnrollmentTier);
-        Assert.Equal(2, result.StudentMaxCourseEnrollmentLimit); // Basic tier allows 2 courses
+        Assert.NotNull(state);
+        Assert.Equal(50, state!.MaxCapacity);
+        Assert.Equal(0, state.CurrentEnrollmentCount);
     }
 
     [Fact]
-    public void Apply_StudentSubscriptionUpdatedEvent_UpdatesStudentTier()
+    public void CourseCapacity_Apply_CourseStudentLimitModifiedEvent_WhenStateNull_ReturnsNull()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId)
-            .Apply(new StudentRegisteredEvent(_studentId, "Test", "User", "test@example.com"));
-        var @event = new StudentSubscriptionUpdatedEvent(_studentId, Tier.Professional);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
 
-        // Act
-        var result = aggregate.Apply(@event);
+        var state = projection.Apply(null, MakeEvent(new CourseStudentLimitModifiedEvent(_courseId, 50)));
 
-        // Assert
-        Assert.Equal(Tier.Professional, result.StudentEnrollmentTier);
-        Assert.Equal(10, result.StudentMaxCourseEnrollmentLimit); // Professional tier allows 10 courses
+        Assert.Null(state);
     }
 
     [Fact]
-    public void Apply_StudentEnrolledToCourseEvent_SameStudentAndCourse_SetsIsAlreadyEnrolled()
+    public void CourseCapacity_Apply_StudentEnrolledToCourseEvent_IncrementsCount()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
-        var @event = new StudentEnrolledToCourseEvent(_courseId, _studentId);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
+        var created = projection.Apply(projection.InitialState,
+            MakeEvent(new CourseCreatedEvent(_courseId, "Math 101", "Basic Math", 30)));
 
-        // Act
-        var result = aggregate.Apply(@event);
+        var state = projection.Apply(created,
+            MakeEvent(new StudentEnrolledToCourseEvent(_courseId, _studentId), position: 2));
 
-        // Assert
-        Assert.True(result.IsStudentAlreadyEnrolledInThisCourse);
+        Assert.NotNull(state);
+        Assert.Equal(1, state!.CurrentEnrollmentCount);
     }
 
     [Fact]
-    public void Apply_StudentEnrolledToCourseEvent_SameCourse_IncrementsCourseEnrollmentCount()
+    public void CourseCapacity_Apply_StudentEnrolledToCourseEvent_WhenStateNull_ReturnsNull()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
-        var differentStudentId = Guid.NewGuid();
-        var @event = new StudentEnrolledToCourseEvent(_courseId, differentStudentId);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
 
-        // Act
-        var result = aggregate.Apply(@event);
+        var state = projection.Apply(null, MakeEvent(new StudentEnrolledToCourseEvent(_courseId, _studentId)));
 
-        // Assert
-        Assert.Equal(1, result.CourseCurrentEnrollmentCount);
-        Assert.False(result.IsStudentAlreadyEnrolledInThisCourse); // Different student
+        Assert.Null(state);
     }
 
     [Fact]
-    public void Apply_StudentEnrolledToCourseEvent_SameStudent_IncrementsStudentEnrollmentCount()
+    public void CourseCapacity_Apply_MultipleEnrollments_AccumulatesCount()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
-        var differentCourseId = Guid.NewGuid();
-        var @event = new StudentEnrolledToCourseEvent(differentCourseId, _studentId);
+        var projection = CourseEnrollmentProjections.CourseCapacity(_courseId);
+        var state = projection.Apply(projection.InitialState,
+            MakeEvent(new CourseCreatedEvent(_courseId, "Math 101", "Basic Math", 5)));
 
-        // Act
-        var result = aggregate.Apply(@event);
+        for (var i = 0; i < 3; i++)
+            state = projection.Apply(state, MakeEvent(new StudentEnrolledToCourseEvent(_courseId, Guid.NewGuid()), i + 2));
 
-        // Assert
-        Assert.Equal(1, result.StudentCurrentCourseEnrollmentCount);
-        Assert.False(result.IsStudentAlreadyEnrolledInThisCourse); // Different course
+        Assert.NotNull(state);
+        Assert.Equal(3, state!.CurrentEnrollmentCount);
     }
 
     [Fact]
-    public void Apply_MultipleEnrollmentEvents_CorrectlyAccumulatesCounts()
+    public void CourseCapacity_IsFull_WhenCurrentEqualsMax_ReturnsTrue()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
+        var state = new CourseCapacityState(MaxCapacity: 2, CurrentEnrollmentCount: 2);
 
-        var student2 = Guid.NewGuid();
-        var student3 = Guid.NewGuid();
-        var course2 = Guid.NewGuid();
-
-        // Act - Enroll 3 students to same course, and enroll our student to another course
-        var result = aggregate
-            .Apply(new StudentEnrolledToCourseEvent(_courseId, student2))  // Different student, same course
-            .Apply(new StudentEnrolledToCourseEvent(_courseId, student3))  // Different student, same course
-            .Apply(new StudentEnrolledToCourseEvent(course2, _studentId)); // Same student, different course
-
-        // Assert
-        Assert.Equal(2, result.CourseCurrentEnrollmentCount); // 2 other students enrolled in this course
-        Assert.Equal(1, result.StudentCurrentCourseEnrollmentCount); // This student enrolled in 1 other course
-        Assert.False(result.IsStudentAlreadyEnrolledInThisCourse); // This student not yet enrolled in this course
+        Assert.True(state.IsFull);
     }
 
     [Fact]
-    public void Apply_ComplexScenario_AllEventTypes()
+    public void CourseCapacity_IsFull_WhenCurrentLessThanMax_ReturnsFalse()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId);
+        var state = new CourseCapacityState(MaxCapacity: 10, CurrentEnrollmentCount: 5);
 
-        // Act - Apply a realistic sequence of events
-        var result = aggregate
-            .Apply(new StudentRegisteredEvent(_studentId, "Jane", "Smith", "jane@example.com"))
-            .Apply(new CourseCreatedEvent(_courseId, "Chemistry 101", "Intro to Chemistry", MaxStudentCount: 25))
-            .Apply(new StudentSubscriptionUpdatedEvent(_studentId, Tier.Standard))
-            .Apply(new CourseStudentLimitModifiedEvent(_courseId, NewMaxStudentCount: 30))
-            .Apply(new StudentEnrolledToCourseEvent(_courseId, _studentId));
-
-        // Assert
-        Assert.Equal(Tier.Standard, result.StudentEnrollmentTier);
-        Assert.Equal(5, result.StudentMaxCourseEnrollmentLimit); // Standard tier
-        Assert.Equal(30, result.CourseMaxCapacity);
-        Assert.Equal(0, result.CourseCurrentEnrollmentCount); // This specific enrollment doesn't count itself
-        Assert.Equal(0, result.StudentCurrentCourseEnrollmentCount); // This specific enrollment doesn't count itself
-        Assert.True(result.IsStudentAlreadyEnrolledInThisCourse);
+        Assert.False(state.IsFull);
     }
 
     [Fact]
-    public void Apply_UnrelatedEvent_ReturnsUnchangedAggregate()
+    public void StudentEnrollmentLimit_InitialState_IsNull()
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId)
-            .Apply(new CourseCreatedEvent(_courseId, "Test", "Test", MaxStudentCount: 30))
-            .Apply(new StudentRegisteredEvent(_studentId, "Test", "User", "test@example.com"))
-            .Apply(new StudentSubscriptionUpdatedEvent(_studentId, Tier.Standard));
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
 
-        var otherCourse = Guid.NewGuid();
-        var otherStudent = Guid.NewGuid();
-        var @event = new StudentEnrolledToCourseEvent(otherCourse, otherStudent);
+        Assert.Null(projection.InitialState);
+    }
 
-        // Act
-        var result = aggregate.Apply(@event);
+    [Fact]
+    public void StudentEnrollmentLimit_Query_ContainsStudentIdTag()
+    {
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
 
-        // Assert
-        Assert.Same(aggregate, result); // Should return same instance unchanged
-        Assert.Equal(30, result.CourseMaxCapacity);
-        Assert.Equal(Tier.Standard, result.StudentEnrollmentTier);
+        var tag = projection.Query.QueryItems
+            .SelectMany(qi => qi.Tags)
+            .First(t => t.Key == "studentId");
+
+        Assert.Equal(_studentId.ToString(), tag.Value);
+    }
+
+    [Fact]
+    public void StudentEnrollmentLimit_Apply_StudentRegisteredEvent_InitializesWithBasicTier()
+    {
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
+        var evt = MakeEvent(new StudentRegisteredEvent(_studentId, "Jane", "Doe", "jane@example.com"));
+
+        var state = projection.Apply(projection.InitialState, evt);
+
+        Assert.NotNull(state);
+        Assert.Equal(Tier.Basic, state!.Tier);
+        Assert.Equal(0, state.CurrentCourseCount);
+    }
+
+    [Fact]
+    public void StudentEnrollmentLimit_Apply_StudentSubscriptionUpdatedEvent_UpdatesTier()
+    {
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
+        var registered = projection.Apply(projection.InitialState,
+            MakeEvent(new StudentRegisteredEvent(_studentId, "Jane", "Doe", "jane@example.com")));
+
+        var state = projection.Apply(registered,
+            MakeEvent(new StudentSubscriptionUpdatedEvent(_studentId, Tier.Professional), position: 2));
+
+        Assert.NotNull(state);
+        Assert.Equal(Tier.Professional, state!.Tier);
+    }
+
+    [Fact]
+    public void StudentEnrollmentLimit_Apply_StudentSubscriptionUpdatedEvent_WhenStateNull_ReturnsNull()
+    {
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
+
+        var state = projection.Apply(null,
+            MakeEvent(new StudentSubscriptionUpdatedEvent(_studentId, Tier.Professional)));
+
+        Assert.Null(state);
+    }
+
+    [Fact]
+    public void StudentEnrollmentLimit_Apply_StudentEnrolledToCourseEvent_IncrementsCount()
+    {
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
+        var registered = projection.Apply(projection.InitialState,
+            MakeEvent(new StudentRegisteredEvent(_studentId, "Jane", "Doe", "jane@example.com")));
+
+        var state = projection.Apply(registered,
+            MakeEvent(new StudentEnrolledToCourseEvent(Guid.NewGuid(), _studentId), position: 2));
+
+        Assert.NotNull(state);
+        Assert.Equal(1, state!.CurrentCourseCount);
+    }
+
+    [Fact]
+    public void StudentEnrollmentLimit_Apply_StudentEnrolledToCourseEvent_WhenStateNull_ReturnsNull()
+    {
+        var projection = CourseEnrollmentProjections.StudentEnrollmentLimit(_studentId);
+
+        var state = projection.Apply(null,
+            MakeEvent(new StudentEnrolledToCourseEvent(Guid.NewGuid(), _studentId)));
+
+        Assert.Null(state);
     }
 
     [Theory]
@@ -204,17 +222,55 @@ public class CourseEnrollmentAggregateTests
     [InlineData(Tier.Standard, 5)]
     [InlineData(Tier.Professional, 10)]
     [InlineData(Tier.Master, 25)]
-    public void StudentMaxCourseEnrollmentLimit_ReturnsCorrectLimitForTier(Tier tier, int expectedLimit)
+    public void StudentEnrollmentLimit_MaxAllowed_ReturnsCorrectLimitForTier(Tier tier, int expected)
     {
-        // Arrange
-        var aggregate = new CourseEnrollmentAggregate(_courseId, _studentId)
-            .Apply(new StudentRegisteredEvent(_studentId, "Test", "User", "test@example.com"))
-            .Apply(new StudentSubscriptionUpdatedEvent(_studentId, tier));
+        var state = new StudentEnrollmentLimitState(tier, 0);
 
-        // Act
-        var limit = aggregate.StudentMaxCourseEnrollmentLimit;
+        Assert.Equal(expected, state.MaxAllowed);
+    }
 
-        // Assert
-        Assert.Equal(expectedLimit, limit);
+    [Fact]
+    public void StudentEnrollmentLimit_IsAtLimit_WhenCurrentEqualsMax_ReturnsTrue()
+    {
+        var state = new StudentEnrollmentLimitState(Tier.Basic, 2);
+
+        Assert.True(state.IsAtLimit);
+    }
+
+    [Fact]
+    public void StudentEnrollmentLimit_IsAtLimit_WhenCurrentLessThanMax_ReturnsFalse()
+    {
+        var state = new StudentEnrollmentLimitState(Tier.Standard, 3);
+
+        Assert.False(state.IsAtLimit);
+    }
+
+    [Fact]
+    public void AlreadyEnrolled_InitialState_IsFalse()
+    {
+        var projection = CourseEnrollmentProjections.AlreadyEnrolled(_courseId, _studentId);
+
+        Assert.False(projection.InitialState);
+    }
+
+    [Fact]
+    public void AlreadyEnrolled_Query_ContainsBothCourseIdAndStudentIdTags()
+    {
+        var projection = CourseEnrollmentProjections.AlreadyEnrolled(_courseId, _studentId);
+        var tags = projection.Query.QueryItems.SelectMany(qi => qi.Tags).ToList();
+
+        Assert.Contains(tags, t => t.Key == "courseId" && t.Value == _courseId.ToString());
+        Assert.Contains(tags, t => t.Key == "studentId" && t.Value == _studentId.ToString());
+    }
+
+    [Fact]
+    public void AlreadyEnrolled_Apply_StudentEnrolledToCourseEvent_ReturnsTrue()
+    {
+        var projection = CourseEnrollmentProjections.AlreadyEnrolled(_courseId, _studentId);
+        var evt = MakeEvent(new StudentEnrolledToCourseEvent(_courseId, _studentId));
+
+        var state = projection.Apply(false, evt);
+
+        Assert.True(state);
     }
 }

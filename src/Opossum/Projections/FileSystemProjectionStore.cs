@@ -304,6 +304,27 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // If _projectionTags has no entry for this key (e.g. after an application restart)
+            // but the projection file already exists on disk, reconstruct old tags from the
+            // persisted state so UpdateProjectionTagsAsync can correctly remove stale index entries.
+            // This MUST happen before File.WriteAllTextAsync overwrites the file.
+            if (newTags != null && !_projectionTags.ContainsKey(key) && File.Exists(filePath))
+            {
+                try
+                {
+                    var existingJson = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+                    var existingWrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(existingJson, _jsonOptions);
+                    if (existingWrapper?.Data != null)
+                    {
+                        _projectionTags[key] = _tagProvider!.GetTags(existingWrapper.Data).ToList();
+                    }
+                }
+                catch
+                {
+                    // Recovery failed; old tag entries may linger until next rebuild
+                }
+            }
+
             // Get existing metadata or create new
             var existingMetadata = await _metadataIndex.GetAsync(_projectionPath, key).ConfigureAwait(false);
             var now = DateTimeOffset.UtcNow;

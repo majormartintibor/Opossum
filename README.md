@@ -350,6 +350,60 @@ public class CourseEnrollmentProjection : IProjectionDefinition<CourseEnrollment
 }
 ```
 
+### Decision Model Projections
+
+**Write-side, ephemeral projections** used in the DCB read → decide → append pattern. Each projection is a typed in-memory fold that yields state _and_ a pre-built `AppendCondition` — no persistence, no background services.
+
+Unlike read-side projections, Decision Model projections are:
+- **In-memory only** — run once per command, result is never stored
+- **Strongly typed** — each projection owns a single business concern
+- **Composable** — two or three projections share a single `ReadAsync` call and produce a single `AppendCondition` that spans all their queries
+
+```csharp
+// 1. Define one projection factory per business concern
+public static class CourseEnrollmentProjections
+{
+    public static IDecisionProjection<CourseCapacityState?> CourseCapacity(Guid courseId) =>
+        new DecisionProjection<CourseCapacityState?>(
+            initialState: null,
+            query: Query.FromItems(new QueryItem
+            {
+                EventTypes = [nameof(CourseCreatedEvent), nameof(StudentEnrolledToCourseEvent)],
+                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+            }),
+            apply: (state, evt) => evt.Event.Event switch
+            {
+                CourseCreatedEvent created => new CourseCapacityState(created.MaxStudentCount, 0),
+                StudentEnrolledToCourseEvent when state is not null =>
+                    state with { CurrentCount = state.CurrentCount + 1 },
+                _ => state
+            });
+}
+
+// 2. Compose up to three projections in the command handler — one read, one condition
+var (courseCapacity, studentLimit, alreadyEnrolled, appendCondition) =
+    await eventStore.BuildDecisionModelAsync(
+        CourseEnrollmentProjections.CourseCapacity(command.CourseId),
+        CourseEnrollmentProjections.StudentEnrollmentLimit(command.StudentId),
+        CourseEnrollmentProjections.AlreadyEnrolled(command.CourseId, command.StudentId));
+
+// 3. Check invariants using the strongly-typed states
+if (courseCapacity is null)      return Fail("Course does not exist.");
+if (studentLimit is null)        return Fail("Student is not registered.");
+if (alreadyEnrolled)             return Fail("Student is already enrolled.");
+if (courseCapacity.IsFull)       return Fail("Course is at maximum capacity.");
+if (studentLimit.IsAtLimit)      return Fail("Student has reached their enrollment limit.");
+
+// 4. Append — the AppendCondition was built automatically and spans all three queries.
+//    If any concurrent write matching any of the three queries has happened since the read,
+//    AppendConditionFailedException is thrown and the handler retries.
+await eventStore.AppendAsync(newEvent, appendCondition);
+```
+
+Three overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), and three-projection (`(T1, T2, T3, AppendCondition)`).
+
+See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) for a complete real-world example.
+
 ### Dynamic Consistency Boundaries (DCB)
 
 Enforce **optimistic concurrency** using append conditions:
