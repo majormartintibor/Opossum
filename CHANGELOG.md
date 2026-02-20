@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`IEventStore.ExecuteDecisionAsync<TResult>()`** — New extension method in `DecisionModelExtensions`
+  that wraps the full DCB read → decide → append cycle with automatic exponential-backoff retry.
+  Callers pass their decision logic as a delegate; the library handles retrying on
+  `AppendConditionFailedException` and `ConcurrencyException` so consumers no longer need to write
+  this boilerplate. After exhausting `maxRetries` attempts the last exception is re-thrown.
+
 ### Changed
 
 - **`IMultiStreamProjectionDefinition<TState>` renamed to `IProjectionWithRelatedEvents<TState>`** —

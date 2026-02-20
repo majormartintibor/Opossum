@@ -285,9 +285,9 @@ When appended, events receive a **sequence position** (monotonic increasing numb
 ```csharp
 public class SequencedEvent
 {
-    public long Position { get; set; }        // Global sequence number
-    public Event Event { get; set; }          // Your domain event
-    public EventMetadata Metadata { get; set; } // Timestamp, tags, etc.
+    public long Position { get; set; }      // Global sequence number
+    public DomainEvent Event { get; set; }  // Wrapper containing your domain event + tags
+    public Metadata Metadata { get; set; }  // Timestamp, correlation/causation IDs
 }
 ```
 
@@ -380,27 +380,35 @@ public static class CourseEnrollmentProjections
             });
 }
 
-// 2. Compose up to three projections in the command handler — one read, one condition
-var (courseCapacity, studentLimit, alreadyEnrolled, appendCondition) =
-    await eventStore.BuildDecisionModelAsync(
-        CourseEnrollmentProjections.CourseCapacity(command.CourseId),
-        CourseEnrollmentProjections.StudentEnrollmentLimit(command.StudentId),
-        CourseEnrollmentProjections.AlreadyEnrolled(command.CourseId, command.StudentId));
+// 2. Wrap the read → decide → append cycle with ExecuteDecisionAsync.
+//    On AppendConditionFailedException or ConcurrencyException it re-reads and retries automatically.
+return await eventStore.ExecuteDecisionAsync(async (store, ct) =>
+{
+    var (courseCapacity, studentLimit, alreadyEnrolled, appendCondition) =
+        await store.BuildDecisionModelAsync(
+            CourseEnrollmentProjections.CourseCapacity(command.CourseId),
+            CourseEnrollmentProjections.StudentEnrollmentLimit(command.StudentId),
+            CourseEnrollmentProjections.AlreadyEnrolled(command.CourseId, command.StudentId), ct);
 
-// 3. Check invariants using the strongly-typed states
-if (courseCapacity is null)      return Fail("Course does not exist.");
-if (studentLimit is null)        return Fail("Student is not registered.");
-if (alreadyEnrolled)             return Fail("Student is already enrolled.");
-if (courseCapacity.IsFull)       return Fail("Course is at maximum capacity.");
-if (studentLimit.IsAtLimit)      return Fail("Student has reached their enrollment limit.");
+    // 3. Check invariants using the strongly-typed states
+    if (courseCapacity is null)      return Fail("Course does not exist.");
+    if (studentLimit is null)        return Fail("Student is not registered.");
+    if (alreadyEnrolled)             return Fail("Student is already enrolled.");
+    if (courseCapacity.IsFull)       return Fail("Course is at maximum capacity.");
+    if (studentLimit.IsAtLimit)      return Fail("Student has reached their enrollment limit.");
 
-// 4. Append — the AppendCondition was built automatically and spans all three queries.
-//    If any concurrent write matching any of the three queries has happened since the read,
-//    AppendConditionFailedException is thrown and the handler retries.
-await eventStore.AppendAsync(newEvent, appendCondition);
+    // 4. Append — the AppendCondition spans all three queries automatically.
+    //    If a concurrent write matched any query between the read and this append,
+    //    AppendConditionFailedException is thrown and ExecuteDecisionAsync retries from step 2.
+    await store.AppendAsync(newEvent, appendCondition);
+    return Ok();
+});
+
+// If all retries are exhausted, ExecuteDecisionAsync re-throws so the caller can decide:
+// catch (AppendConditionFailedException) { return Fail("Concurrent update — please retry."); }
 ```
 
-Three overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), and three-projection (`(T1, T2, T3, AppendCondition)`).
+Three `BuildDecisionModelAsync` overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), and three-projection (`(T1, T2, T3, AppendCondition)`). Use `ExecuteDecisionAsync` to wrap the entire cycle with automatic exponential-backoff retry.
 
 See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) for a complete real-world example.
 
@@ -591,15 +599,27 @@ public interface IEventStore
 ### Extension Methods
 
 ```csharp
-// Convert domain event to SequencedEvent
-IEvent.ToDomainEvent()
+// Convert a domain event (IEvent) to a fluent DomainEventBuilder, then to SequencedEvent:
+SequencedEvent evt = new MyEvent(...)
+    .ToDomainEvent()                          // IEvent → DomainEventBuilder
+    .WithTag("key", "value")                  // add a single tag
+    .WithTags(tag1, tag2)                     // add multiple tags
+    .WithTimestamp(DateTimeOffset.UtcNow);    // set timestamp
+                                              // implicit conversion → SequencedEvent
 
-// Add tags
-SequencedEvent.WithTag(string key, string value)
-SequencedEvent.WithTags(IEnumerable<Tag> tags)
+// Decision model — read + fold + condition in one call:
+DecisionModel<TState> model = await eventStore.BuildDecisionModelAsync(projection);
 
-// Set timestamp
-SequencedEvent.WithTimestamp(DateTimeOffset timestamp)
+// Compose up to three projections (single ReadAsync, one AppendCondition spanning all):
+var (t1, t2, t3, condition) = await eventStore.BuildDecisionModelAsync(p1, p2, p3);
+
+// Execute the full read → decide → append cycle with automatic retry on concurrency conflicts:
+TResult result = await eventStore.ExecuteDecisionAsync(async (store, ct) =>
+{
+    var model = await store.BuildDecisionModelAsync(projection, ct);
+    // ... decide, append ...
+    return result;
+});
 ```
 
 ### Query Building
@@ -628,7 +648,7 @@ new AppendCondition
     FailIfEventsMatch = query,
 
     // Only check events AFTER this position (optional)
-    After = 42
+    AfterSequencePosition = 42
 }
 ```
 
@@ -656,60 +676,65 @@ public interface IProjectionStore
 
 ## ?? Full Example
 
-Here's a complete example showing student registration with email uniqueness validation:
+Here's a complete example showing student registration with email-uniqueness enforcement using the DCB Decision Model pattern:
 
 ```csharp
-// 1. Define Events
+// 1. Define the event
 public record StudentRegisteredEvent(
     Guid StudentId,
     string FirstName,
     string LastName,
     string Email) : IEvent;
 
-// 2. Command Handler
+// 2. Decision projection — in-memory fold that yields state + AppendCondition
+public static IDecisionProjection<bool> EmailTaken(string email) =>
+    new DecisionProjection<bool>(
+        initialState: false,
+        query: Query.FromItems(new QueryItem
+        {
+            Tags = [new Tag { Key = "studentEmail", Value = email }]
+        }),
+        apply: (_, _) => true);  // any matching event means the email is already taken
+
+// 3. Command handler
 public class RegisterStudentHandler
 {
     private readonly IEventStore _eventStore;
 
-    public async Task<Result> RegisterAsync(string firstName, string lastName, string email)
+    public async Task<CommandResult<Guid>> RegisterAsync(
+        string firstName, string lastName, string email)
     {
-        // Validate email is unique
-        var emailQuery = Query.FromItems(new QueryItem
-        {
-            Tags = [new Tag { Key = "studentEmail", Value = email }]
-        });
-
-        var existing = await _eventStore.ReadAsync(emailQuery, ReadOption.None);
-        if (existing.Length > 0)
-        {
-            return Result.Fail("Email already registered");
-        }
-
-        // Create event
-        var studentId = Guid.NewGuid();
-        var evt = new StudentRegisteredEvent(studentId, firstName, lastName, email)
-            .ToDomainEvent()
-            .WithTag("studentId", studentId.ToString())
-            .WithTag("studentEmail", email)
-            .WithTimestamp(DateTimeOffset.UtcNow);
-
-        // Append with DCB to prevent race conditions
         try
         {
-            await _eventStore.AppendAsync(
-                evt,
-                condition: new AppendCondition { FailIfEventsMatch = emailQuery });
+            return await _eventStore.ExecuteDecisionAsync(async (store, ct) =>
+            {
+                // Read + fold — yields state and the AppendCondition in one call
+                var emailCheck = await store.BuildDecisionModelAsync(EmailTaken(email), ct);
 
-            return Result.Success(studentId);
+                if (emailCheck.State)
+                    return CommandResult<Guid>.Fail("Email already registered");
+
+                var studentId = Guid.NewGuid();
+                var evt = new StudentRegisteredEvent(studentId, firstName, lastName, email)
+                    .ToDomainEvent()
+                    .WithTag("studentId", studentId.ToString())
+                    .WithTag("studentEmail", email)
+                    .WithTimestamp(DateTimeOffset.UtcNow);
+
+                // AppendCondition ensures no concurrent registration slips through
+                await store.AppendAsync(evt, emailCheck.AppendCondition);
+                return CommandResult<Guid>.Ok(studentId);
+            });
         }
-        catch (ConcurrencyException)
+        catch (AppendConditionFailedException)
         {
-            return Result.Fail("Email was just registered by another request");
+            // Exhausted retries — a concurrent request claimed the email
+            return CommandResult<Guid>.Fail("Email was just registered by another request");
         }
     }
 }
 
-// 3. Projection
+// 4. Projection (read model)
 public record StudentListItem(Guid StudentId, string FullName, string Email);
 
 [ProjectionDefinition("StudentList")]
@@ -734,17 +759,15 @@ public class StudentListProjection : IProjectionDefinition<StudentListItem>
     }
 }
 
-// 4. Query Projection
+// 5. Query the projection
 public class StudentController
 {
     private readonly IProjectionStore _projectionStore;
 
-    public async Task<StudentListItem?> GetStudentAsync(Guid studentId)
-    {
-        return await _projectionStore.GetAsync<StudentListItem>(
+    public async Task<StudentListItem?> GetStudentAsync(Guid studentId) =>
+        await _projectionStore.GetAsync<StudentListItem>(
             "StudentList",
             studentId.ToString());
-    }
 }
 ```
 

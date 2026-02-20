@@ -10,53 +10,25 @@ public sealed record EnrollStudentToCourseCommand(Guid CourseId, Guid StudentId)
 
 public sealed class EnrollStudentToCourseCommandHandler()
 {
-    private const int MaxRetryAttempts = 3;
-    private const int InitialRetryDelayMs = 50;
-
     public async Task<CommandResult> HandleAsync(
         EnrollStudentToCourseCommand command,
         IEventStore eventStore)
     {
-        int attempt = 0;
-
-        while (attempt < MaxRetryAttempts)
+        try
         {
-            try
-            {
-                return await TryEnrollStudentAsync(command, eventStore);
-            }
-            catch (ConcurrencyException) when (attempt < MaxRetryAttempts - 1)
-            {
-                // Decision model was stale - retry with fresh read
-                attempt++;
-                var delayMs = InitialRetryDelayMs * (int)Math.Pow(2, attempt - 1);
-                await Task.Delay(delayMs);
-                // Loop continues to retry
-            }
-            catch (AppendConditionFailedException) when (attempt < MaxRetryAttempts - 1)
-            {
-                // Append condition failed - retry with fresh read
-                attempt++;
-                var delayMs = InitialRetryDelayMs * (int)Math.Pow(2, attempt - 1);
-                await Task.Delay(delayMs);
-                // Loop continues to retry
-            }
-            catch (ConcurrencyException)
-            {
-                // Max retries exhausted with concurrency conflict
-                return CommandResult.Fail(
-                    $"Failed to enroll student after {MaxRetryAttempts} attempts due to concurrent updates. Please try again.");
-            }
-            catch (AppendConditionFailedException)
-            {
-                // Max retries exhausted with append condition failure
-                return CommandResult.Fail(
-                    $"Failed to enroll student after {MaxRetryAttempts} attempts due to concurrent updates. Please try again.");
-            }
+            return await eventStore.ExecuteDecisionAsync(
+                (store, ct) => TryEnrollStudentAsync(command, store));
         }
-
-        // Should never reach here, but just in case
-        return CommandResult.Fail("Unexpected error during enrollment.");
+        catch (ConcurrencyException)
+        {
+            return CommandResult.Fail(
+                "Failed to enroll student due to concurrent updates. Please try again.");
+        }
+        catch (AppendConditionFailedException)
+        {
+            return CommandResult.Fail(
+                "Failed to enroll student due to concurrent updates. Please try again.");
+        }
     }
 
     private static async Task<CommandResult> TryEnrollStudentAsync(

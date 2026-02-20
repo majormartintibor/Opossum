@@ -1,4 +1,5 @@
 using Opossum.Core;
+using Opossum.Exceptions;
 
 namespace Opossum.DecisionModel;
 
@@ -176,6 +177,85 @@ public static class DecisionModelExtensions
         };
 
         return (FoldEvents(first, events), FoldEvents(second, events), FoldEvents(third, events), appendCondition);
+    }
+
+    /// <summary>
+    /// Executes the complete DCB read → decide → append cycle with automatic retry on
+    /// optimistic concurrency failures.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The <paramref name="operation"/> delegate is retried whenever an
+    /// <see cref="AppendConditionFailedException"/> or <see cref="ConcurrencyException"/> is
+    /// thrown — both indicate that another writer modified the relevant event stream between
+    /// the read and the append. Retries use exponential back-off.
+    /// </para>
+    /// <code>
+    /// return await eventStore.ExecuteDecisionAsync(async (store, ct) =>
+    /// {
+    ///     var (capacity, condition) = await store.BuildDecisionModelAsync(
+    ///         CourseProjections.Capacity(command.CourseId), ct);
+    ///
+    ///     if (capacity.IsFull)
+    ///         return CommandResult.Fail("Course is full.");
+    ///
+    ///     await store.AppendAsync(enrollmentEvent, condition);
+    ///     return CommandResult.Ok();
+    /// });
+    /// </code>
+    /// <para>
+    /// If all <paramref name="maxRetries"/> attempts fail, the last exception is re-thrown
+    /// so the caller can decide how to handle an exhausted retry budget.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="TResult">The return type of the operation.</typeparam>
+    /// <param name="eventStore">The event store to pass into the operation.</param>
+    /// <param name="operation">
+    /// The delegate that performs the read → decide → append cycle. Receives the event store
+    /// and a <see cref="CancellationToken"/>.
+    /// </param>
+    /// <param name="maxRetries">Total number of attempts. Defaults to <c>3</c>.</param>
+    /// <param name="initialDelayMs">
+    /// Initial delay in milliseconds for the exponential back-off. Defaults to <c>50</c>.
+    /// Delay after attempt <c>n</c> is <c>initialDelayMs × 2^n</c>.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The result produced by <paramref name="operation"/>.</returns>
+    /// <exception cref="AppendConditionFailedException">
+    /// Re-thrown when max retries are exhausted due to append-condition failures.
+    /// </exception>
+    /// <exception cref="ConcurrencyException">
+    /// Re-thrown when max retries are exhausted due to concurrency conflicts.
+    /// </exception>
+    public static async Task<TResult> ExecuteDecisionAsync<TResult>(
+        this IEventStore eventStore,
+        Func<IEventStore, CancellationToken, Task<TResult>> operation,
+        int maxRetries = 3,
+        int initialDelayMs = 50,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(operation);
+
+        for (int attempt = 0; ; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                return await operation(eventStore, cancellationToken).ConfigureAwait(false);
+            }
+            catch (AppendConditionFailedException) when (attempt < maxRetries - 1)
+            {
+                await Task.Delay(initialDelayMs * (int)Math.Pow(2, attempt), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (ConcurrencyException) when (attempt < maxRetries - 1)
+            {
+                await Task.Delay(initialDelayMs * (int)Math.Pow(2, attempt), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+        }
     }
 
     // Folds only the events that match the projection's own query (for composed overloads).
