@@ -155,7 +155,7 @@ public class InvalidQueryException : EventStoreException
 
 /// <summary>
 /// Exception thrown by the file-system event store for internal ledger-level concurrency
-/// conflicts (e.g. a stale <see cref="AppendCondition.AfterSequencePosition"/> check).
+/// conflicts (e.g. a stale <see cref="Opossum.Core.AppendCondition.AfterSequencePosition"/> check).
 /// <para>
 /// This is a subclass of <see cref="AppendConditionFailedException"/>. Callers should
 /// catch <see cref="AppendConditionFailedException"/> rather than this type directly, 
