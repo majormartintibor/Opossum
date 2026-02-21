@@ -6,22 +6,22 @@ using Opossum.Projections;
 namespace Opossum.IntegrationTests.Projections;
 
 /// <summary>
-/// Integration tests for IMultiStreamProjectionDefinition feature.
-/// Tests the ability of projections to query and use related events from other streams.
+/// Integration tests for IProjectionWithRelatedEvents feature.
+/// Tests the ability of projections to query and use related events when building state.
 /// </summary>
 [Collection(nameof(IntegrationTestCollection))]
-public class MultiStreamProjectionTests : IDisposable
+public class ProjectionWithRelatedEventsTests : IDisposable
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
 
-    public MultiStreamProjectionTests()
+    public ProjectionWithRelatedEventsTests()
     {
         _testStoragePath = Path.Combine(
             Path.GetTempPath(),
-            "OpossumMultiStreamTests",
+            "OpossumRelatedEventsTests",
             Guid.NewGuid().ToString());
 
         var services = new ServiceCollection();
@@ -29,12 +29,12 @@ public class MultiStreamProjectionTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("MultiStreamContext");
+            options.AddContext("RelatedEventsContext");
         });
 
         services.AddProjections(options =>
         {
-            options.ScanAssembly(typeof(MultiStreamProjectionTests).Assembly);
+            options.ScanAssembly(typeof(ProjectionWithRelatedEventsTests).Assembly);
         });
 
         _serviceProvider = services.BuildServiceProvider();
@@ -43,7 +43,7 @@ public class MultiStreamProjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MultiStreamProjection_WithRelatedEvents_BuildsCorrectState()
+    public async Task ProjectionWithRelatedEvents_WithRelatedEvents_BuildsCorrectState()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -86,7 +86,7 @@ public class MultiStreamProjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MultiStreamProjection_WithMissingRelatedEvents_ThrowsException()
+    public async Task ProjectionWithRelatedEvents_WithMissingRelatedEvents_ThrowsException()
     {
         // Arrange
         var postId = Guid.NewGuid();
@@ -110,7 +110,7 @@ public class MultiStreamProjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MultiStreamProjection_WithMultipleRelatedEvents_UsesLatest()
+    public async Task ProjectionWithRelatedEvents_WithMultipleRelatedEvents_UsesLatest()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -156,7 +156,7 @@ public class MultiStreamProjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MultiStreamProjection_WithNoRelatedEventsNeeded_WorksCorrectly()
+    public async Task ProjectionWithRelatedEvents_WithNoRelatedEventsNeeded_WorksCorrectly()
     {
         // Arrange
         var postId = Guid.NewGuid();
@@ -188,7 +188,7 @@ public class MultiStreamProjectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MultiStreamProjection_WithComplexRelationships_BuildsCorrectly()
+    public async Task ProjectionWithRelatedEvents_WithComplexRelationships_BuildsCorrectly()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -254,7 +254,7 @@ public class MultiStreamProjectionTests : IDisposable
         Assert.Equal("Jane Doe", order.CustomerName);
         Assert.Equal("VIP", order.CustomerTier);
         Assert.Equal(2, order.Items.Count);
-        
+
         var laptopItem = order.Items.FirstOrDefault(i => i.ProductId == product1Id);
         Assert.NotNull(laptopItem);
         Assert.Equal("Laptop", laptopItem.ProductName);
@@ -316,7 +316,7 @@ public record PostWithAuthorState
 }
 
 [ProjectionDefinition("PostsWithAuthorProjection")]
-public class PostWithAuthorProjection : IMultiStreamProjectionDefinition<PostWithAuthorState>
+public class PostWithAuthorProjection : IProjectionWithRelatedEvents<PostWithAuthorState>
 {
     public string ProjectionName => "PostsWithAuthor";
 
@@ -415,7 +415,7 @@ public record OrderSummaryState
 }
 
 [ProjectionDefinition("OrderSummaryProjection")]
-public class OrderSummaryProjection : IMultiStreamProjectionDefinition<OrderSummaryState>
+public class OrderSummaryProjection : IProjectionWithRelatedEvents<OrderSummaryState>
 {
     public string ProjectionName => "OrderSummary";
 

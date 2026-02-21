@@ -17,6 +17,11 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     private readonly IProjectionTagProvider<TState>? _tagProvider;
     private readonly Dictionary<string, List<Tag>> _projectionTags = new();
 
+    // Rebuild mode: state changes are buffered in memory; disk writes are deferred to CommitRebuildAsync.
+    // Guarded by the per-projection lock held in ProjectionManager.RebuildAsync — not a concurrent field.
+    private bool _rebuildMode;
+    private readonly Dictionary<string, TState?> _rebuildStateBuffer = new();
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = false, // Minified for performance (40% smaller files, faster I/O)
@@ -48,6 +53,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     public async Task<TState?> GetAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+        // During rebuild disk was cleared — serve reads from the in-memory buffer.
+        if (_rebuildMode)
+        {
+            return _rebuildStateBuffer.TryGetValue(key, out var buffered) ? buffered : null;
+        }
 
         // Ensure directory exists (might not exist for new projection types)
         if (!Directory.Exists(_projectionPath))
@@ -278,6 +289,14 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(state);
 
+        // During rebuild, buffer the state in memory.
+        // All disk writes are deferred to CommitRebuildAsync, reducing I/O from O(events) to O(unique keys).
+        if (_rebuildMode)
+        {
+            _rebuildStateBuffer[key] = state;
+            return;
+        }
+
         // Ensure directory exists (create if first save after rebuild/initialization)
         Directory.CreateDirectory(_projectionPath);
 
@@ -304,6 +323,27 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // If _projectionTags has no entry for this key (e.g. after an application restart)
+            // but the projection file already exists on disk, reconstruct old tags from the
+            // persisted state so UpdateProjectionTagsAsync can correctly remove stale index entries.
+            // This MUST happen before File.WriteAllTextAsync overwrites the file.
+            if (newTags != null && !_projectionTags.ContainsKey(key) && File.Exists(filePath))
+            {
+                try
+                {
+                    var existingJson = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
+                    var existingWrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(existingJson, _jsonOptions);
+                    if (existingWrapper?.Data != null)
+                    {
+                        _projectionTags[key] = _tagProvider!.GetTags(existingWrapper.Data).ToList();
+                    }
+                }
+                catch
+                {
+                    // Recovery failed; old tag entries may linger until next rebuild
+                }
+            }
+
             // Get existing metadata or create new
             var existingMetadata = await _metadataIndex.GetAsync(_projectionPath, key).ConfigureAwait(false);
             var now = DateTimeOffset.UtcNow;
@@ -339,19 +379,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
                 Metadata = metadata
             };
 
-            // Serialize and save
+            // Serialize once and save
             var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
-
-            // Update metadata with actual size
-            metadata = metadata with { SizeInBytes = json.Length };
-            wrapper = wrapper with { Metadata = metadata };
-
-            // Re-serialize with updated size
-            json = JsonSerializer.Serialize(wrapper, _jsonOptions);
             await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
 
-            // Save metadata to index
-            await _metadataIndex.SaveAsync(_projectionPath, key, metadata).ConfigureAwait(false);
+            // Save metadata to index with actual file size (single serialization pass)
+            await _metadataIndex.SaveAsync(_projectionPath, key, metadata with { SizeInBytes = json.Length }).ConfigureAwait(false);
 
             // Update tag indices if tags are configured
             if (newTags != null)
@@ -390,6 +423,13 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+        // During rebuild disk was already cleared — just remove the key from the buffer.
+        if (_rebuildMode)
+        {
+            _rebuildStateBuffer.Remove(key);
+            return;
+        }
 
         // If directory doesn't exist, nothing to delete
         if (!Directory.Exists(_projectionPath))
@@ -433,11 +473,89 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     /// Internal method to delete all indices for this projection.
     /// Used during rebuild to ensure clean state.
     /// </summary>
+    /// <summary>
+    /// Switches the store into rebuild mode.
+    /// All subsequent <see cref="SaveAsync"/> and <see cref="DeleteAsync"/> calls will update an
+    /// in-memory buffer instead of touching the file system.
+    /// Must be followed by <see cref="CommitRebuildAsync"/> to flush the buffer to disk.
+    /// </summary>
+    internal void BeginRebuild()
+    {
+        _rebuildStateBuffer.Clear();
+        _rebuildMode = true;
+    }
+
+    /// <summary>
+    /// Flushes the in-memory rebuild buffer to disk in a single pass and exits rebuild mode.
+    /// Writes each unique projection key exactly once, and persists the metadata index in one
+    /// atomic write — regardless of how many events were applied during the rebuild loop.
+    /// </summary>
+    internal async Task CommitRebuildAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            if (_rebuildStateBuffer.Count == 0)
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(_projectionPath);
+
+            var now = DateTimeOffset.UtcNow;
+            var metadataEntries = new Dictionary<string, ProjectionMetadata>(_rebuildStateBuffer.Count);
+
+            foreach (var (key, state) in _rebuildStateBuffer)
+            {
+                var metadata = new ProjectionMetadata
+                {
+                    CreatedAt = now,
+                    LastUpdatedAt = now,
+                    Version = 1,
+                    SizeInBytes = 0
+                };
+
+                var wrapper = new ProjectionWithMetadata<TState> { Data = state!, Metadata = metadata };
+                var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
+                var filePath = GetFilePath(key);
+
+                await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
+
+                metadataEntries[key] = metadata with { SizeInBytes = json.Length };
+
+                if (_tagProvider != null)
+                {
+                    var tags = _tagProvider.GetTags(state!).ToList();
+                    foreach (var tag in tags)
+                    {
+                        await _tagIndex.AddProjectionAsync(_projectionPath, tag, key).ConfigureAwait(false);
+                    }
+                    _projectionTags[key] = tags;
+                }
+            }
+
+            // Write all metadata in one atomic pass instead of once per event
+            await _metadataIndex.BatchSaveAsync(_projectionPath, metadataEntries).ConfigureAwait(false);
+        }
+        finally
+        {
+            _rebuildMode = false;
+            _rebuildStateBuffer.Clear();
+        }
+    }
+
     internal async Task DeleteAllIndicesAsync()
     {
         _tagIndex.DeleteAllIndices(_projectionPath);
         await _metadataIndex.ClearAsync(_projectionPath).ConfigureAwait(false);
-        _projectionTags.Clear();
+        await _lock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            _projectionTags.Clear();
+        }
+        finally
+        {
+            _lock.Release();
+        }
     }
 
     private string GetFilePath(string key)

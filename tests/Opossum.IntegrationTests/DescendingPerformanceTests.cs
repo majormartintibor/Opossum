@@ -42,12 +42,11 @@ public class DescendingPerformanceTests : IDisposable
     public async Task Descending_Order_Should_Be_Fast_With_Many_Events()
     {
         // Arrange - Create 500 events
-        var events = new SequencedEvent[500];
+        var events = new NewEvent[500];
         for (int i = 0; i < 500; i++)
         {
-            events[i] = new SequencedEvent
+            events[i] = new NewEvent
             {
-                Position = 0,
                 Event = new DomainEvent
                 {
                     EventType = "TestEvent",

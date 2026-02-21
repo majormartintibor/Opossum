@@ -14,10 +14,9 @@ public class CreateCourseCommandHandler
         // Create the CourseCreated event
         var @event = new CourseCreated(command.CourseId, command.MaxCapacity);
 
-        // Build the SequencedEvent with proper tags
-        var sequencedEvent = new SequencedEvent
+        // Build the NewEvent with proper tags
+        var newEvent = new NewEvent
         {
-            Position = 0, // Will be assigned by AppendAsync
             Event = new DomainEvent
             {
                 EventType = nameof(CourseCreated),
@@ -35,7 +34,7 @@ public class CreateCourseCommandHandler
         };
 
         // Append to event store
-        await eventStore.AppendAsync([sequencedEvent], condition: null);
+        await eventStore.AppendAsync([newEvent], condition: null);
 
         return new CommandResult(Success: true);
     }
@@ -118,9 +117,8 @@ public class EnrollStudentToCourseCommandHandler
             // Step 3: Create and append event
             var @event = new StudentEnrolledToCourseEvent(command.CourseId, command.StudentId);
 
-            var sequencedEvent = new SequencedEvent
+            var newEvent = new NewEvent
             {
-                Position = 0, // Will be assigned by AppendAsync
                 Event = new DomainEvent
                 {
                     EventType = nameof(StudentEnrolledToCourseEvent),
@@ -152,16 +150,16 @@ public class EnrollStudentToCourseCommandHandler
             // Step 5: Append the event with optimistic concurrency control
             try
             {
-                await eventStore.AppendAsync([sequencedEvent], appendCondition);
+                await eventStore.AppendAsync([newEvent], appendCondition);
                 return new CommandResult(Success: true);
             }
-            catch (Exceptions.ConcurrencyException) when (attempt < maxRetries - 1)
+            catch (Exceptions.AppendConditionFailedException) when (attempt < maxRetries - 1)
             {
                 // Decision model was stale - retry with fresh read
                 await Task.Delay(10 * (attempt + 1)); // Small exponential backoff
                 continue; // Retry
             }
-            catch (Exceptions.ConcurrencyException)
+            catch (Exceptions.AppendConditionFailedException)
             {
                 // Max retries exceeded
                 return new CommandResult(Success: false, ErrorMessage: "Concurrency conflict detected");
@@ -217,10 +215,9 @@ public class RegisterStudentCommandHandler
         // Create the StudentRegistered event
         var @event = new StudentRegisteredEvent(command.StudentId, command.Name);
 
-        // Build the SequencedEvent with proper tags
-        var sequencedEvent = new SequencedEvent
+        // Build the NewEvent with proper tags
+        var newEvent = new NewEvent
         {
-            Position = 0, // Will be assigned by AppendAsync
             Event = new DomainEvent
             {
                 EventType = nameof(StudentRegisteredEvent),
@@ -238,7 +235,7 @@ public class RegisterStudentCommandHandler
         };
 
         // Append to event store
-        await eventStore.AppendAsync([sequencedEvent], condition: null);
+        await eventStore.AppendAsync([newEvent], condition: null);
 
         return new CommandResult(Success: true);
     }

@@ -13,23 +13,22 @@ public static class BenchmarkDataGenerator
     /// <param name="count">Number of events to generate</param>
     /// <param name="tagCount">Number of tags per event (0-10)</param>
     /// <param name="eventTypes">Event types to cycle through (null = use default)</param>
-    public static List<SequencedEvent> GenerateEvents(
+    public static List<NewEvent> GenerateEvents(
         int count,
         int tagCount = 2,
         string[]? eventTypes = null)
     {
         eventTypes ??= ["OrderCreated", "OrderShipped", "OrderDelivered", "OrderCancelled"];
-        
-        var events = new List<SequencedEvent>(count);
-        
+
+        var events = new List<NewEvent>(count);
+
         for (int i = 0; i < count; i++)
         {
             var eventType = eventTypes[i % eventTypes.Length];
             var tags = GenerateTags(tagCount);
-            
-            events.Add(new SequencedEvent
+
+            events.Add(new NewEvent
             {
-                Position = 0, // Will be assigned by AppendAsync
                 Event = new DomainEvent
                 {
                     EventType = eventType,
@@ -47,7 +46,7 @@ public static class BenchmarkDataGenerator
                 }
             });
         }
-        
+
         return events;
     }
 

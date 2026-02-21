@@ -56,14 +56,14 @@ public sealed class ModifyCourseStudentLimitCommandHandler()
             return CommandResult.Fail("Maximum student count must be greater than zero.");
         }
 
-        SequencedEvent sequencedEvent = new CourseStudentLimitModifiedEvent(
+        NewEvent newEvent = new CourseStudentLimitModifiedEvent(
             CourseId: command.CourseId,
             NewMaxStudentCount: command.NewMaxStudentCount)
             .ToDomainEvent()
             .WithTag("courseId", command.CourseId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        await eventStore.AppendAsync(sequencedEvent);
+        await eventStore.AppendAsync(newEvent);
 
         return CommandResult.Ok();
     }

@@ -215,7 +215,7 @@ internal sealed class EventFileManager
             throw new ArgumentException("Position must be greater than 0", nameof(position));
         }
 
-        var fileName = $"{position.ToString($"D{PositionPadding}")}.json";
+        var fileName = $"{position:D10}.json";
         return Path.Combine(eventsPath, fileName);
     }
 

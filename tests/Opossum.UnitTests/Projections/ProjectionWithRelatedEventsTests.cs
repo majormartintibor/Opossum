@@ -1,20 +1,19 @@
 using Opossum.Core;
-using Opossum.Extensions;
 using Opossum.Projections;
 
 namespace Opossum.UnitTests.Projections;
 
 /// <summary>
-/// Unit tests for IMultiStreamProjectionDefinition behavior and framework integration.
+/// Unit tests for IProjectionWithRelatedEvents behavior and framework integration.
 /// Tests the projection manager's handling of related event queries.
 /// </summary>
-public class MultiStreamProjectionDefinitionTests
+public class ProjectionWithRelatedEventsTests
 {
     [Fact]
-    public void MultiStreamProjection_BaseApplyMethod_ThrowsNotImplementedException()
+    public void ProjectionWithRelatedEvents_BaseApplyMethod_ThrowsNotImplementedException()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var evt = new TestEvent("test");
 
         // Act & Assert
@@ -23,10 +22,10 @@ public class MultiStreamProjectionDefinitionTests
     }
 
     [Fact]
-    public void MultiStreamProjection_GetRelatedEventsQuery_ReturnsCorrectQuery()
+    public void ProjectionWithRelatedEvents_GetRelatedEventsQuery_ReturnsCorrectQuery()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var evt = new TestEventWithRelation("test", Guid.NewGuid());
 
         // Act
@@ -39,10 +38,10 @@ public class MultiStreamProjectionDefinitionTests
     }
 
     [Fact]
-    public void MultiStreamProjection_GetRelatedEventsQuery_WithNoRelationship_ReturnsNull()
+    public void ProjectionWithRelatedEvents_GetRelatedEventsQuery_WithNoRelationship_ReturnsNull()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var evt = new TestEvent("test");
 
         // Act
@@ -53,16 +52,24 @@ public class MultiStreamProjectionDefinitionTests
     }
 
     [Fact]
-    public void MultiStreamProjection_Apply_WithRelatedEvents_UsesRelatedData()
+    public void ProjectionWithRelatedEvents_Apply_WithRelatedEvents_UsesRelatedData()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var relatedId = Guid.NewGuid();
         var evt = new TestEventWithRelation("main", relatedId);
 
-        var relatedEvent = new RelatedEvent(relatedId, "Related Data")
-            .ToDomainEvent()
-            .Build();
+        var relatedEvent = new SequencedEvent
+        {
+            Position = 1,
+            Event = new DomainEvent
+            {
+                EventType = nameof(RelatedEvent),
+                Event = new RelatedEvent(relatedId, "Related Data"),
+                Tags = []
+            },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
         var relatedEvents = new[] { relatedEvent };
 
@@ -76,10 +83,10 @@ public class MultiStreamProjectionDefinitionTests
     }
 
     [Fact]
-    public void MultiStreamProjection_Apply_WithoutRequiredRelatedEvents_ThrowsException()
+    public void ProjectionWithRelatedEvents_Apply_WithoutRequiredRelatedEvents_ThrowsException()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var evt = new TestEventWithRelation("main", Guid.NewGuid());
         var emptyRelatedEvents = Array.Empty<SequencedEvent>();
 
@@ -91,10 +98,10 @@ public class MultiStreamProjectionDefinitionTests
     }
 
     [Fact]
-    public void MultiStreamProjection_Apply_UpdatesExistingState()
+    public void ProjectionWithRelatedEvents_Apply_UpdatesExistingState()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var existingState = new TestState
         {
             MainData = "old",
@@ -115,21 +122,33 @@ public class MultiStreamProjectionDefinitionTests
     }
 
     [Fact]
-    public void MultiStreamProjection_Apply_WithMultipleRelatedEvents_UsesLatest()
+    public void ProjectionWithRelatedEvents_Apply_WithMultipleRelatedEvents_UsesLatest()
     {
         // Arrange
-        var projection = new TestMultiStreamProjection();
+        var projection = new TestProjectionWithRelatedEvents();
         var relatedId = Guid.NewGuid();
         var evt = new TestEventWithRelation("main", relatedId);
 
-        var evt1 = new RelatedEvent(relatedId, "First").ToDomainEvent().Build();
-        evt1.Position = 1;
+        var evt1 = new SequencedEvent
+        {
+            Position = 1,
+            Event = new DomainEvent { EventType = nameof(RelatedEvent), Event = new RelatedEvent(relatedId, "First"), Tags = [] },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
-        var evt2 = new RelatedEvent(relatedId, "Second").ToDomainEvent().Build();
-        evt2.Position = 2;
+        var evt2 = new SequencedEvent
+        {
+            Position = 2,
+            Event = new DomainEvent { EventType = nameof(RelatedEvent), Event = new RelatedEvent(relatedId, "Second"), Tags = [] },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
-        var evt3 = new RelatedEvent(relatedId, "Latest").ToDomainEvent().Build();
-        evt3.Position = 3;
+        var evt3 = new SequencedEvent
+        {
+            Position = 3,
+            Event = new DomainEvent { EventType = nameof(RelatedEvent), Event = new RelatedEvent(relatedId, "Latest"), Tags = [] },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
         var relatedEvents = new[] { evt1, evt2, evt3 };
 
@@ -157,10 +176,10 @@ public record TestEvent(string Data) : IEvent;
 public record TestEventWithRelation(string Data, Guid RelatedId) : IEvent;
 public record RelatedEvent(Guid Id, string Data) : IEvent;
 
-[ProjectionDefinition("TestMultiStream")]
-public class TestMultiStreamProjection : IMultiStreamProjectionDefinition<TestState>
+[ProjectionDefinition("TestProjectionWithRelatedEvents")]
+public class TestProjectionWithRelatedEvents : IProjectionWithRelatedEvents<TestState>
 {
-    public string ProjectionName => "TestMultiStream";
+    public string ProjectionName => "TestProjectionWithRelatedEvents";
 
     public string[] EventTypes => [
         nameof(TestEvent),

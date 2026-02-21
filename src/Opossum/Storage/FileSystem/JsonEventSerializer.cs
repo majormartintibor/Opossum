@@ -159,9 +159,12 @@ internal sealed class JsonEventSerializer
             // Write type metadata
             writer.WriteString("$type", actualType.AssemblyQualifiedName);
 
-            // Write all properties of the actual type
-            var json = JsonSerializer.Serialize(value, actualType, options);
-            using var doc = JsonDocument.Parse(json);
+            // Serialize to MemoryStream to avoid the intermediate string allocation,
+            // then parse as bytes and copy each property into the outer writer.
+            using var ms = new MemoryStream(256);
+            JsonSerializer.Serialize(ms, value, actualType, options);
+            var reader = new Utf8JsonReader(ms.GetBuffer().AsSpan(0, (int)ms.Length));
+            using var doc = JsonDocument.ParseValue(ref reader);
 
             foreach (var property in doc.RootElement.EnumerateObject())
             {

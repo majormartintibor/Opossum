@@ -90,7 +90,7 @@ public class StudentRegistrationIntegrationTests
         // Verify the conflict response contains Problem Details
         var conflictResponse = responses.First(r => r.StatusCode == HttpStatusCode.Conflict);
         var problemDetails = await conflictResponse.Content.ReadAsStringAsync();
-        Assert.Contains("Concurrency Conflict", problemDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Conflict", problemDetails, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

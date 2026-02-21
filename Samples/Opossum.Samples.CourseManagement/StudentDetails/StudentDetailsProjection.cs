@@ -30,7 +30,7 @@ public sealed record StudentDetails(
 }
 
 [ProjectionDefinition("StudentDetails")]
-public sealed class StudentDetailsProjection : IMultiStreamProjectionDefinition<StudentDetails>
+public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<StudentDetails>
 {
     public string ProjectionName => "StudentDetails";
 

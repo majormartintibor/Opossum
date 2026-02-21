@@ -115,11 +115,10 @@ public class ParallelRebuildBenchmarks : IDisposable
         await pm.RebuildAllAsync(forceRebuild: true);
     }
 
-    private SequencedEvent CreateEvent<T>() where T : IEvent, new()
+    private NewEvent CreateEvent<T>() where T : IEvent, new()
     {
-        return new SequencedEvent
+        return new NewEvent
         {
-            Position = 0,
             Event = new DomainEvent
             {
                 EventType = typeof(T).Name,

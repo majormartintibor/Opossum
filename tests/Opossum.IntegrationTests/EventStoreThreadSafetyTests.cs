@@ -158,7 +158,7 @@ public class EventStoreThreadSafetyTests : IDisposable
                     await _eventStore.AppendAsync([updateEvent], condition);
                     Interlocked.Increment(ref successCount);
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     Interlocked.Increment(ref failureCount);
                 }
@@ -329,7 +329,7 @@ public class EventStoreThreadSafetyTests : IDisposable
                     await _eventStore.AppendAsync([evt], condition);
                     Interlocked.Increment(ref successfulAppends);
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     // Expected for all but the first
                 }

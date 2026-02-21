@@ -107,7 +107,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
                     return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, student10Id));
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     return new CommandResult(false, "Concurrency conflict detected");
                 }
@@ -119,7 +119,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
                     return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, student11Id));
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     return new CommandResult(false, "Concurrency conflict detected");
                 }
@@ -264,7 +264,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
                     return await mediator.InvokeAsync<CommandResult>(
                         new EnrollStudentToCourseCommand(courseId, studentId));
                 }
-                catch (ConcurrencyException)
+                catch (AppendConditionFailedException)
                 {
                     return new CommandResult(false, "Concurrency conflict");
                 }
@@ -345,7 +345,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var studentId = Guid.NewGuid();
 
         // Create initial event
-        var createEvent = new SequencedEvent
+        var createEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -364,7 +364,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var lastPosition = events[^1].Position;
 
         // Another operation appends an event (simulating concurrent modification)
-        var concurrentEvent = new SequencedEvent
+        var concurrentEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -384,7 +384,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             FailIfEventsMatch = Query.FromItems() // Empty query - we're only testing AfterSequencePosition
         };
 
-        var newEvent = new SequencedEvent
+        var newEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -395,7 +395,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        // Assert - Should throw ConcurrencyException
+        // Assert - Should throw ConcurrencyException (subclass of AppendConditionFailedException)
         await Assert.ThrowsAsync<ConcurrencyException>(async () =>
             await eventStore.AppendAsync([newEvent], appendCondition));
     }
@@ -415,7 +415,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var courseId = Guid.NewGuid();
 
         // Create initial event
-        var createEvent = new SequencedEvent
+        var createEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -429,7 +429,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         await eventStore.AppendAsync([createEvent], null);
 
         // Append a conflicting event
-        var enrollEvent = new SequencedEvent
+        var enrollEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -456,7 +456,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             FailIfEventsMatch = conflictQuery // This will match the existing enrollment event
         };
 
-        var newEvent = new SequencedEvent
+        var newEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -467,7 +467,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
 
-        // Assert - Should throw ConcurrencyException
+        // Assert - Should throw ConcurrencyException (subclass of AppendConditionFailedException)
         await Assert.ThrowsAsync<ConcurrencyException>(async () =>
             await eventStore.AppendAsync([newEvent], appendCondition));
     }

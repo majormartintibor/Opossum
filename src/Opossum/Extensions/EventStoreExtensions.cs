@@ -133,14 +133,14 @@ public class DomainEventBuilder
     }
 
     /// <summary>
-    /// Builds the final SequencedEvent
+    /// Builds the final <see cref="NewEvent"/> ready to be passed to
+    /// <see cref="IEventStore.AppendAsync"/>.
     /// </summary>
-    /// <returns>A SequencedEvent ready to be appended to the event store</returns>
-    public SequencedEvent Build()
+    /// <returns>A <see cref="NewEvent"/> ready to be appended to the event store</returns>
+    public NewEvent Build()
     {
-        return new SequencedEvent
+        return new NewEvent
         {
-            Position = 0, // Will be assigned by event store
             Event = new DomainEvent
             {
                 EventType = _event.GetType().Name,
@@ -156,9 +156,9 @@ public class DomainEventBuilder
     }
 
     /// <summary>
-    /// Implicit conversion to SequencedEvent for convenience
+    /// Implicit conversion to <see cref="NewEvent"/> for convenience
     /// </summary>
-    public static implicit operator SequencedEvent(DomainEventBuilder builder)
+    public static implicit operator NewEvent(DomainEventBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder.Build();
@@ -179,12 +179,12 @@ public static class EventStoreExtensions
     /// Appends a single event to the event store
     /// </summary>
     /// <param name="eventStore">The event store</param>
-    /// <param name="event">The sequenced event to append</param>
+    /// <param name="event">The new event to append</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
-        SequencedEvent @event,
+        NewEvent @event,
         AppendCondition? condition = null)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
@@ -197,11 +197,11 @@ public static class EventStoreExtensions
     /// Appends multiple events to the event store without an append condition
     /// </summary>
     /// <param name="eventStore">The event store</param>
-    /// <param name="events">The sequenced events to append</param>
+    /// <param name="events">The new events to append</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
-        SequencedEvent[] events)
+        NewEvent[] events)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(events);
@@ -244,6 +244,28 @@ public static class EventStoreExtensions
     }
 
     /// <summary>
+    /// Reads events from the event store that were appended after <paramref name="fromPosition"/>,
+    /// without any read options. Useful for incrementally polling new events from a known checkpoint.
+    /// </summary>
+    /// <param name="eventStore">The event store</param>
+    /// <param name="query">The query to filter events</param>
+    /// <param name="fromPosition">
+    /// Only events with <c>Position &gt; fromPosition</c> are returned.
+    /// Pass the last processed sequence position to receive only new events.
+    /// </param>
+    /// <returns>A task representing the asynchronous operation returning the matching events</returns>
+    public static Task<SequencedEvent[]> ReadAsync(
+        this IEventStore eventStore,
+        Query query,
+        long fromPosition)
+    {
+        ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(query);
+
+        return eventStore.ReadAsync(query, readOptions: null, fromPosition: fromPosition);
+    }
+
+    /// <summary>
     /// Appends a single domain event to the event store with simplified syntax
     /// </summary>
     /// <param name="eventStore">The event store</param>
@@ -262,9 +284,8 @@ public static class EventStoreExtensions
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(@event);
 
-        var sequencedEvent = new SequencedEvent
+        var newEvent = new NewEvent
         {
-            Position = 0, // Will be assigned by AppendAsync
             Event = new DomainEvent
             {
                 EventType = @event.GetType().Name,
@@ -278,7 +299,7 @@ public static class EventStoreExtensions
             }
         };
 
-        return eventStore.AppendAsync([sequencedEvent], condition);
+        return eventStore.AppendAsync([newEvent], condition);
     }
 
     /// <summary>
@@ -307,9 +328,8 @@ public static class EventStoreExtensions
             CorrelationId = Guid.NewGuid()
         };
 
-        var sequencedEvents = events.Select(e => new SequencedEvent
+        var newEvents = events.Select(e => new NewEvent
         {
-            Position = 0,
             Event = new DomainEvent
             {
                 EventType = e.GetType().Name,
@@ -319,21 +339,26 @@ public static class EventStoreExtensions
             Metadata = sharedMetadata
         }).ToArray();
 
-        return eventStore.AppendAsync(sequencedEvents, condition);
+        return eventStore.AppendAsync(newEvents, condition);
     }
 
     /// <summary>
-    /// Builds projection objects by grouping events by aggregate and applying them sequentially
+    /// Builds projection objects by grouping events by a shared key and folding them sequentially.
+    /// Each unique key value produces one projection instance — equivalent to a <c>GroupBy</c> followed by a left-fold.
     /// </summary>
     /// <typeparam name="TProjection">The projection type to build</typeparam>
     /// <param name="events">Events to process</param>
-    /// <param name="aggregateIdSelector">Function to extract aggregate ID from each event</param>
-    /// <param name="applyEvent">Function to apply an event to the current projection state (null for first event of aggregate)</param>
-    /// <returns>Enumerable of built projections, one per unique aggregate ID</returns>
+    /// <param name="keySelector">
+    /// Function that extracts the grouping key from each event.
+    /// All events returning the same key are folded into a single projection instance.
+    /// In DCB terms this is typically the value of a domain identity tag (e.g. the value of a <c>studentId</c> tag).
+    /// </param>
+    /// <param name="applyEvent">Function to apply an event to the current projection state (<see langword="null"/> on the first event for each key)</param>
+    /// <returns>Enumerable of built projections, one per unique key value</returns>
     /// <example>
     /// <code>
     /// var students = events.BuildProjections&lt;StudentShortInfo&gt;(
-    ///     aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+    ///     keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
     ///     applyEvent: (evt, current) => evt switch
     ///     {
     ///         StudentRegisteredEvent registered => new StudentShortInfo(...),
@@ -345,16 +370,16 @@ public static class EventStoreExtensions
     /// </example>
     public static IEnumerable<TProjection> BuildProjections<TProjection>(
         this SequencedEvent[] events,
-        Func<SequencedEvent, string> aggregateIdSelector,
+        Func<SequencedEvent, string> keySelector,
         Func<IEvent, TProjection?, TProjection?> applyEvent)
         where TProjection : class
     {
         ArgumentNullException.ThrowIfNull(events);
-        ArgumentNullException.ThrowIfNull(aggregateIdSelector);
+        ArgumentNullException.ThrowIfNull(keySelector);
         ArgumentNullException.ThrowIfNull(applyEvent);
 
         return events
-            .GroupBy(aggregateIdSelector)
+            .GroupBy(keySelector)
             .Select(eventGroup => eventGroup.Aggregate(
                 seed: (TProjection?)null,
                 func: (current, seqEvent) => applyEvent((IEvent)seqEvent.Event.Event, current)

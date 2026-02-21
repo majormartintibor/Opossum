@@ -38,12 +38,12 @@ public sealed class CreateCourseCommandHandler()
         CreateCourseCommand command,
         IEventStore eventStore)
     {
-        SequencedEvent sequencedEvent = new CourseCreatedEvent(command.CourseId, command.Name, command.Description, command.MaxStudentCount)
+        NewEvent newEvent = new CourseCreatedEvent(command.CourseId, command.Name, command.Description, command.MaxStudentCount)
             .ToDomainEvent()
             .WithTag("courseId", command.CourseId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
-        
-        await eventStore.AppendAsync(sequencedEvent);
+
+        await eventStore.AppendAsync(newEvent);
 
         return new CommandResult(Success: true);
     }

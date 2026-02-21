@@ -51,14 +51,14 @@ public sealed class UpdateStudentSubscriptionCommandHandler()
             return CommandResult.Fail($"Student with ID {command.StudentId} does not exist.");
         }
 
-        SequencedEvent sequencedEvent = new StudentSubscriptionUpdatedEvent(
+        NewEvent newEvent = new StudentSubscriptionUpdatedEvent(
             StudentId: command.StudentId,
             EnrollmentTier: command.EnrollmentTier)
             .ToDomainEvent()
             .WithTag("studentId", command.StudentId.ToString())            
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        await eventStore.AppendAsync(sequencedEvent);
+        await eventStore.AppendAsync(newEvent);
 
         return CommandResult.Ok();
     }

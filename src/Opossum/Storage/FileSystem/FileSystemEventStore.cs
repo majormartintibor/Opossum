@@ -45,7 +45,7 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         _appendLock.Dispose();
     }
 
-    public async Task AppendAsync(SequencedEvent[] events, AppendCondition? condition)
+    public async Task AppendAsync(NewEvent[] events, AppendCondition? condition)
     {
         // 1. Validation
         ArgumentNullException.ThrowIfNull(events);
@@ -90,29 +90,35 @@ internal class FileSystemEventStore : IEventStore, IDisposable
                 await ValidateAppendConditionAsync(contextPath, condition).ConfigureAwait(false);
             }
 
-            // 5. Allocate sequence positions
+            // 5. Allocate sequence positions and build SequencedEvents
             var startPosition = await _ledgerManager.GetNextSequencePositionAsync(contextPath).ConfigureAwait(false);
 
+            var sequencedEvents = new SequencedEvent[events.Length];
             for (int i = 0; i < events.Length; i++)
             {
-                events[i].Position = startPosition + i;
-
-                // Set metadata timestamp if not already set
-                if (events[i].Metadata.Timestamp == default)
+                var metadata = events[i].Metadata;
+                if (metadata.Timestamp == default)
                 {
-                    events[i].Metadata.Timestamp = DateTimeOffset.UtcNow;
+                    metadata.Timestamp = DateTimeOffset.UtcNow;
                 }
+
+                sequencedEvents[i] = new SequencedEvent
+                {
+                    Position = startPosition + i,
+                    Event = events[i].Event,
+                    Metadata = metadata
+                };
             }
 
             // 6. Write events to files
             var eventsPath = GetEventsPath(contextPath);
-            foreach (var evt in events)
+            foreach (var evt in sequencedEvents)
             {
                 await _eventFileManager.WriteEventAsync(eventsPath, evt).ConfigureAwait(false);
             }
 
             // 7. Update indices
-            foreach (var evt in events)
+            foreach (var evt in sequencedEvents)
             {
                 await _indexManager.AddEventToIndicesAsync(contextPath, evt).ConfigureAwait(false);
             }
@@ -127,7 +133,7 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         }
     }
 
-    public async Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions)
+    public async Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null)
     {
         // 1. Validation
         ArgumentNullException.ThrowIfNull(query);
@@ -143,8 +149,8 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         // TODO: Multi-context support - accept context parameter and route to correct storage
         var contextPath = GetContextPath(_options.Contexts[0]);
 
-        // 3. Get positions matching query
-        var positions = await GetPositionsForQueryAsync(contextPath, query).ConfigureAwait(false);
+        // 3. Get positions matching query, optionally filtered by fromPosition
+        var positions = await GetPositionsForQueryAsync(contextPath, query, fromPosition).ConfigureAwait(false);
 
         if (positions.Length == 0)
         {
@@ -168,13 +174,15 @@ internal class FileSystemEventStore : IEventStore, IDisposable
     /// <summary>
     /// Gets all positions for a query.
     /// Implements full query logic with OR between QueryItems and proper AND/OR within items.
+    /// When <paramref name="fromPosition"/> is provided, only positions strictly greater than
+    /// that value are returned.
     /// </summary>
-    private async Task<long[]> GetPositionsForQueryAsync(string contextPath, Query query)
+    private async Task<long[]> GetPositionsForQueryAsync(string contextPath, Query query, long? fromPosition = null)
     {
         // Handle Query.All() - return all positions from ledger
         if (query.QueryItems.Count == 0)
         {
-            return await GetAllPositionsAsync(contextPath).ConfigureAwait(false);
+            return await GetAllPositionsAsync(contextPath, fromPosition).ConfigureAwait(false);
         }
 
         var allPositions = new HashSet<long>();
@@ -191,6 +199,14 @@ internal class FileSystemEventStore : IEventStore, IDisposable
 
         var result = allPositions.ToArray();
         Array.Sort(result);
+
+        // Filter by fromPosition for non-All queries (index lookups return all positions)
+        if (fromPosition.HasValue)
+        {
+            var threshold = fromPosition.Value;
+            result = Array.FindAll(result, p => p > threshold);
+        }
+
         return result;
     }
 
@@ -261,8 +277,10 @@ internal class FileSystemEventStore : IEventStore, IDisposable
     /// <summary>
     /// Gets all event positions in the context (for Query.All()).
     /// Optimized: uses simple sequential array generation (most efficient for contiguous sequences).
+    /// When <paramref name="fromPosition"/> is provided, only positions strictly greater than
+    /// that value are generated — avoiding allocation of the full prefix.
     /// </summary>
-    private async Task<long[]> GetAllPositionsAsync(string contextPath)
+    private async Task<long[]> GetAllPositionsAsync(string contextPath, long? fromPosition = null)
     {
         var lastPosition = await _ledgerManager.GetLastSequencePositionAsync(contextPath).ConfigureAwait(false);
 
@@ -271,12 +289,19 @@ internal class FileSystemEventStore : IEventStore, IDisposable
             return [];
         }
 
-        // Sequential generation is fastest for creating contiguous number sequences
-        // Parallelization adds overhead without benefit for simple array filling
-        var positions = new long[lastPosition];
-        for (long i = 0; i < lastPosition; i++)
+        var startPosition = fromPosition.HasValue ? fromPosition.Value + 1 : 1L;
+
+        if (startPosition > lastPosition)
         {
-            positions[i] = i + 1;
+            return [];
+        }
+
+        // Sequential generation is fastest for creating contiguous number sequences
+        var count = (int)(lastPosition - startPosition + 1);
+        var positions = new long[count];
+        for (int i = 0; i < count; i++)
+        {
+            positions[i] = startPosition + i;
         }
 
         return positions;

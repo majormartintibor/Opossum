@@ -18,15 +18,15 @@ public class EventStoreExtensionsTests
     {
         // Arrange
         var stub = new EventStoreStub();
-        var sequencedEvent = CreateTestEvent(1);
+        var newEvent = CreateTestEvent(1);
 
         // Act
-        await stub.AppendAsync(sequencedEvent);
+        await stub.AppendAsync(newEvent);
 
         // Assert
         Assert.NotNull(stub.LastAppendedEvents);
         Assert.Single(stub.LastAppendedEvents);
-        Assert.Same(sequencedEvent, stub.LastAppendedEvents[0]);
+        Assert.Same(newEvent, stub.LastAppendedEvents[0]);
     }
 
     [Fact]
@@ -34,10 +34,10 @@ public class EventStoreExtensionsTests
     {
         // Arrange
         var stub = new EventStoreStub();
-        var sequencedEvent = CreateTestEvent(1);
+        var newEvent = CreateTestEvent(1);
 
         // Act
-        await stub.AppendAsync(sequencedEvent);
+        await stub.AppendAsync(newEvent);
 
         // Assert
         Assert.Null(stub.LastAppendCondition);
@@ -48,7 +48,7 @@ public class EventStoreExtensionsTests
     {
         // Arrange
         var stub = new EventStoreStub();
-        var sequencedEvent = CreateTestEvent(1);
+        var newEvent = CreateTestEvent(1);
         var appendCondition = new AppendCondition 
         { 
             FailIfEventsMatch = Query.All(),
@@ -56,7 +56,7 @@ public class EventStoreExtensionsTests
         };
 
         // Act
-        await stub.AppendAsync(sequencedEvent, appendCondition);
+        await stub.AppendAsync(newEvent, appendCondition);
 
         // Assert
         Assert.Same(appendCondition, stub.LastAppendCondition);
@@ -67,11 +67,11 @@ public class EventStoreExtensionsTests
     {
         // Arrange
         IEventStore? nullStore = null;
-        var sequencedEvent = CreateTestEvent(1);
+        var newEvent = CreateTestEvent(1);
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await nullStore!.AppendAsync(sequencedEvent));
+            async () => await nullStore!.AppendAsync(newEvent));
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class EventStoreExtensionsTests
     {
         // Arrange
         var stub = new EventStoreStub();
-        SequencedEvent? nullEvent = null;
+        NewEvent? nullEvent = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -127,7 +127,7 @@ public class EventStoreExtensionsTests
     {
         // Arrange
         var stub = new EventStoreStub();
-        SequencedEvent[]? nullEvents = null;
+        NewEvent[]? nullEvents = null;
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -205,8 +205,8 @@ public class EventStoreExtensionsTests
         var query = Query.All();
         var expectedEvents = new[]
         {
-            CreateTestEvent(1),
-            CreateTestEvent(2)
+            CreateSequencedEvent(1),
+            CreateSequencedEvent(2)
         };
         var stub = new EventStoreStub { EventsToReturn = expectedEvents };
 
@@ -468,13 +468,13 @@ public class EventStoreExtensionsTests
         var @event = new TestEventData { Id = Guid.NewGuid() };
 
         // Act
-        SequencedEvent sequencedEvent = @event.ToDomainEvent()
+        NewEvent newEvent = @event.ToDomainEvent()
             .WithTag("key1", "value1");
 
         // Assert
-        Assert.NotNull(sequencedEvent);
-        Assert.Equal("TestEventData", sequencedEvent.Event.EventType);
-        Assert.Single(sequencedEvent.Event.Tags);
+        Assert.NotNull(newEvent);
+        Assert.Equal("TestEventData", newEvent.Event.EventType);
+        Assert.Single(newEvent.Event.Tags);
     }
 
     [Fact]
@@ -486,7 +486,7 @@ public class EventStoreExtensionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
         {
-            SequencedEvent _ = nullBuilder!;
+            NewEvent _ = nullBuilder!;
         });
     }
 
@@ -731,20 +731,22 @@ public class EventStoreExtensionsTests
         // Arrange
         var stub = new EventStoreStub
         {
-            EventsToReturn = new[] { CreateTestEvent(1), CreateTestEvent(2) }
+            EventsToReturn = new[] { CreateSequencedEvent(1), CreateSequencedEvent(2) }
         };
+        var singleAppendEvent = CreateTestEvent(1);
+        var arrayAppendEvents = new[] { CreateTestEvent(1), CreateTestEvent(2) };
         var query = Query.All();
 
         // Act - Use all extension methods
-        await stub.AppendAsync(stub.EventsToReturn[0]); // Single event
-        await stub.AppendAsync(stub.EventsToReturn); // Array without condition
+        await stub.AppendAsync(singleAppendEvent); // Single event
+        await stub.AppendAsync(arrayAppendEvents); // Array without condition
         var readResult1 = await stub.ReadAsync(query); // No options
         var readResult2 = await stub.ReadAsync(query, ReadOption.Descending); // Single option
 
         // Assert - Verify all methods were called correctly
         Assert.Same(stub.EventsToReturn, readResult1);
         Assert.Same(stub.EventsToReturn, readResult2);
-        Assert.Same(stub.EventsToReturn, stub.LastAppendedEvents);
+        Assert.Same(arrayAppendEvents, stub.LastAppendedEvents);
     }
 
     [Fact]
@@ -767,7 +769,24 @@ public class EventStoreExtensionsTests
 
     #region Helper Methods
 
-    private static SequencedEvent CreateTestEvent(long position)
+    private static NewEvent CreateTestEvent(long position)
+    {
+        return new NewEvent
+        {
+            Event = new DomainEvent
+            {
+                EventType = "TestEvent",
+                Event = new TestEventData { Id = Guid.NewGuid() },
+                Tags = []
+            },
+            Metadata = new Metadata
+            {
+                Timestamp = DateTimeOffset.UtcNow
+            }
+        };
+    }
+
+    private static SequencedEvent CreateSequencedEvent(long position)
     {
         return new SequencedEvent
         {
@@ -795,23 +814,26 @@ public class EventStoreExtensionsTests
     /// </summary>
     private class EventStoreStub : IEventStore
     {
-        public SequencedEvent[]? LastAppendedEvents { get; private set; }
+        public NewEvent[]? LastAppendedEvents { get; private set; }
         public AppendCondition? LastAppendCondition { get; private set; }
         public Query? LastQuery { get; private set; }
         public ReadOption[]? LastReadOptions { get; private set; }
         public SequencedEvent[] EventsToReturn { get; set; } = [];
 
-        public Task AppendAsync(SequencedEvent[] events, AppendCondition? condition)
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition)
         {
             LastAppendedEvents = events;
             LastAppendCondition = condition;
             return Task.CompletedTask;
         }
 
-        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions)
+        public long? LastFromPosition { get; private set; }
+
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null)
         {
             LastQuery = query;
             LastReadOptions = readOptions;
+            LastFromPosition = fromPosition;
             return Task.FromResult(EventsToReturn);
         }
     }
@@ -830,13 +852,13 @@ public class EventStoreExtensionsTests
             _onAppend = onAppend;
         }
 
-        public Task AppendAsync(SequencedEvent[] events, AppendCondition? condition)
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition)
         {
             _onAppend();
             return Task.CompletedTask;
         }
 
-        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions)
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null)
         {
             return Task.FromResult(Array.Empty<SequencedEvent>());
         }

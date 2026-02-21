@@ -27,7 +27,7 @@ public sealed record CourseDetails(
 }
 
 [ProjectionDefinition("CourseDetails")]
-public sealed class CourseDetailsProjection : IMultiStreamProjectionDefinition<CourseDetails>
+public sealed class CourseDetailsProjection : IProjectionWithRelatedEvents<CourseDetails>
 {
     public string ProjectionName => "CourseDetails";
 

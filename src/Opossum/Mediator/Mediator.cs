@@ -8,7 +8,7 @@ public sealed class Mediator(
     Dictionary<Type, IMessageHandler> handlers) : IMediator
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-    private readonly Dictionary<Type, IMessageHandler> _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+    private readonly IReadOnlyDictionary<Type, IMessageHandler> _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
 
     public async Task<T> InvokeAsync<T>(
         object message, 

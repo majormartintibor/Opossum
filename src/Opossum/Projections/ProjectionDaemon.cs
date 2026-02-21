@@ -124,16 +124,9 @@ internal sealed class ProjectionDaemon : BackgroundService
             minCheckpoint = 0;
         }
 
-        // Read all events (we'll filter by position in memory for now)
-        // TODO: Add position-based filtering to Query/QueryItem when available
-        var query = Query.All();
-        var allEvents = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
-
-        // Filter to events after the minimum checkpoint
-        var newEvents = allEvents
-            .Where(e => e.Position > minCheckpoint)
-            .OrderBy(e => e.Position)
-            .ToArray();
+        // Read only events after the minimum checkpoint position — the store filters at
+        // the index level, so we never load already-processed events into memory.
+        var newEvents = await _eventStore.ReadAsync(Query.All(), null, minCheckpoint).ConfigureAwait(false);
 
         if (newEvents.Length == 0)
         {
@@ -148,7 +141,8 @@ internal sealed class ProjectionDaemon : BackgroundService
 
         foreach (var batch in batches)
         {
-            await _projectionManager.UpdateAsync(batch.ToArray(), cancellationToken).ConfigureAwait(false);
+            // Chunk returns T[] segments — no need to call ToArray() again
+            await _projectionManager.UpdateAsync(batch, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogDebug("Processed {EventCount} events successfully", newEvents.Length);

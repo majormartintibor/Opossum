@@ -66,10 +66,12 @@ public class FileSystemEventStoreTests : IDisposable
         // Act
         await _store.AppendAsync(events, null);
 
-        // Assert
-        Assert.Equal(1, events[0].Position);
-        Assert.Equal(2, events[1].Position);
-        Assert.Equal(3, events[2].Position);
+        // Assert - read back to verify positions were assigned sequentially
+        var result = await _store.ReadAsync(Query.All(), null);
+        Assert.Equal(3, result.Length);
+        Assert.Equal(1, result[0].Position);
+        Assert.Equal(2, result[1].Position);
+        Assert.Equal(3, result[2].Position);
     }
 
     [Fact]
@@ -109,7 +111,9 @@ public class FileSystemEventStoreTests : IDisposable
         // Assert - Verify ledger by checking next append starts at position 3
         var moreEvents = new[] { CreateTestEvent("Event3", new TestDomainEvent { Data = "3" }) };
         await _store.AppendAsync(moreEvents, null);
-        Assert.Equal(3, moreEvents[0].Position);
+
+        var result = await _store.ReadAsync(Query.All(), null);
+        Assert.Equal(3, result[^1].Position);
     }
 
     [Fact]
@@ -156,11 +160,13 @@ public class FileSystemEventStoreTests : IDisposable
         // Act
         await _store.AppendAsync(events, null);
 
-        // Assert
+        // Assert - read back to verify timestamp was set
         var afterAppend = DateTimeOffset.UtcNow;
-        Assert.NotEqual(default(DateTimeOffset), events[0].Metadata.Timestamp);
-        Assert.True(events[0].Metadata.Timestamp >= beforeAppend);
-        Assert.True(events[0].Metadata.Timestamp <= afterAppend);
+        var result = await _store.ReadAsync(Query.All(), null);
+        Assert.Single(result);
+        Assert.NotEqual(default(DateTimeOffset), result[0].Metadata.Timestamp);
+        Assert.True(result[0].Metadata.Timestamp >= beforeAppend);
+        Assert.True(result[0].Metadata.Timestamp <= afterAppend);
     }
 
     [Fact]
@@ -174,8 +180,10 @@ public class FileSystemEventStoreTests : IDisposable
         // Act
         await _store.AppendAsync(events, null);
 
-        // Assert
-        Assert.Equal(specificTime, events[0].Metadata.Timestamp);
+        // Assert - read back to verify timestamp was preserved
+        var result = await _store.ReadAsync(Query.All(), null);
+        Assert.Single(result);
+        Assert.Equal(specificTime, result[0].Metadata.Timestamp);
     }
 
     // ========================================================================
@@ -194,7 +202,7 @@ public class FileSystemEventStoreTests : IDisposable
     public async Task AppendAsync_WithEmptyArray_ThrowsArgumentException()
     {
         // Arrange
-        var events = Array.Empty<SequencedEvent>();
+        var events = Array.Empty<NewEvent>();
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -256,17 +264,19 @@ public class FileSystemEventStoreTests : IDisposable
         var batch3 = new[] { CreateTestEvent("Event3", new TestDomainEvent { Data = "3" }) };
         await _store.AppendAsync(batch3, null);
 
-        // Assert
-        Assert.Equal(1, batch1[0].Position);
-        Assert.Equal(2, batch2[0].Position);
-        Assert.Equal(3, batch3[0].Position);
+        // Assert - read back to verify continuous sequence
+        var result = await _store.ReadAsync(Query.All(), null);
+        Assert.Equal(3, result.Length);
+        Assert.Equal(1, result[0].Position);
+        Assert.Equal(2, result[1].Position);
+        Assert.Equal(3, result[2].Position);
     }
 
     [Fact]
     public async Task AppendAsync_LargerBatch_AssignsCorrectPositions()
     {
         // Arrange
-        var events = new SequencedEvent[10];
+        var events = new NewEvent[10];
         for (int i = 0; i < 10; i++)
         {
             events[i] = CreateTestEvent($"Event{i}", new TestDomainEvent { Data = i.ToString() });
@@ -275,10 +285,11 @@ public class FileSystemEventStoreTests : IDisposable
         // Act
         await _store.AppendAsync(events, null);
 
-        // Assert
+        // Assert - read back to verify positions
+        var result = await _store.ReadAsync(Query.All(), null);
         for (int i = 0; i < 10; i++)
         {
-            Assert.Equal(i + 1, events[i].Position);
+            Assert.Equal(i + 1, result[i].Position);
         }
     }
 
@@ -306,8 +317,10 @@ public class FileSystemEventStoreTests : IDisposable
         var newEvents = new[] { CreateTestEvent("Event3", new TestDomainEvent { Data = "3" }) };
         await _store.AppendAsync(newEvents, condition);
 
-        // Assert
-        Assert.Equal(3, newEvents[0].Position);
+        // Assert - read back to verify position 3 was assigned
+        var result = await _store.ReadAsync(Query.FromEventTypes("Event3"), null);
+        Assert.Single(result);
+        Assert.Equal(3, result[0].Position);
     }
 
     [Fact]
@@ -354,8 +367,10 @@ public class FileSystemEventStoreTests : IDisposable
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
         await _store.AppendAsync(newEvents, condition);
 
-        // Assert
-        Assert.Equal(2, newEvents[0].Position);
+        // Assert - read back to verify position 2 was assigned
+        var result = await _store.ReadAsync(Query.FromEventTypes("Event2"), null);
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Position);
     }
 
     [Fact]
@@ -392,8 +407,10 @@ public class FileSystemEventStoreTests : IDisposable
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
         await _store.AppendAsync(newEvents, condition);
 
-        // Assert
-        Assert.Equal(2, newEvents[0].Position);
+        // Assert - read back to verify position 2 was assigned
+        var result = await _store.ReadAsync(Query.FromEventTypes("Event2"), null);
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Position);
     }
 
     [Fact]
@@ -431,8 +448,10 @@ public class FileSystemEventStoreTests : IDisposable
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
         await _store.AppendAsync(newEvents, condition);
 
-        // Assert
-        Assert.Equal(2, newEvents[0].Position);
+        // Assert - read back to verify position 2 was assigned
+        var result = await _store.ReadAsync(Query.FromEventTypes("Event2"), null);
+        Assert.Single(result);
+        Assert.Equal(2, result[0].Position);
     }
 
     // ========================================================================
@@ -457,10 +476,11 @@ public class FileSystemEventStoreTests : IDisposable
         await _store.AppendAsync(new[] { event1 }, null);
         await _store.AppendAsync([event2, event3], null);
 
-        // Assert - Verify positions
-        Assert.Equal(1, event1.Position);
-        Assert.Equal(2, event2.Position);
-        Assert.Equal(3, event3.Position);
+        // Assert - read back to verify positions
+        var all = await _store.ReadAsync(Query.All(), null);
+        Assert.Equal(1, all[0].Position);
+        Assert.Equal(2, all[1].Position);
+        Assert.Equal(3, all[2].Position);
 
         // Verify files exist
         var eventsPath = Path.Combine(_tempRootPath, "TestContext", "events");
@@ -660,7 +680,7 @@ public class FileSystemEventStoreTests : IDisposable
     public async Task ReadAsync_QueryAll_HandlesLargeDatasets()
     {
         // Arrange - Add 1000 events
-        var events = new SequencedEvent[1000];
+        var events = new NewEvent[1000];
         for (int i = 0; i < 1000; i++)
         {
             events[i] = CreateTestEvent($"Event{i}", new TestDomainEvent { Data = $"Data{i}" });
@@ -688,7 +708,7 @@ public class FileSystemEventStoreTests : IDisposable
     public async Task ReadAsync_QueryAll_WithDescending_HandlesLargeDatasets()
     {
         // Arrange - Add 1000 events
-        var events = new SequencedEvent[1000];
+        var events = new NewEvent[1000];
         for (int i = 0; i < 1000; i++)
         {
             events[i] = CreateTestEvent($"Event{i}", new TestDomainEvent { Data = $"Data{i}" });
@@ -774,11 +794,10 @@ public class FileSystemEventStoreTests : IDisposable
     // Helper Methods
     // ========================================================================
 
-    private static SequencedEvent CreateTestEvent(string eventType, IEvent domainEvent)
+    private static NewEvent CreateTestEvent(string eventType, IEvent domainEvent)
     {
-        return new SequencedEvent
+        return new NewEvent
         {
-            Position = 0, // Will be assigned by AppendAsync
             Event = new DomainEvent
             {
                 EventType = eventType,

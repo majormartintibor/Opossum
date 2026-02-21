@@ -22,14 +22,14 @@ public class ProjectionRebuildBenchmarks
     private TempFileSystemHelper _tempHelper = null!;
 
     // Pre-created event sets (populated in IterationSetup, not measured)
-    private SequencedEvent[] _events50 = null!;
-    private SequencedEvent[] _events250 = null!;
-    private SequencedEvent[] _events500 = null!;
+    private NewEvent[] _events50 = null!;
+    private NewEvent[] _events250 = null!;
+    private NewEvent[] _events500 = null!;
     private Dictionary<Guid, StudentProjection> _baseProjection250 = null!;
 
     // Pre-created incremental events (for incremental update benchmarks)
-    private SequencedEvent _incrementalEvent1 = null!;
-    private SequencedEvent[] _incrementalEvents10 = null!;
+    private NewEvent _incrementalEvent1 = null!;
+    private NewEvent[] _incrementalEvents10 = null!;
 
     [GlobalSetup]
     public void GlobalSetup()
@@ -191,15 +191,14 @@ public class ProjectionRebuildBenchmarks
     // Helper Methods
     // ========================================================================
 
-    private SequencedEvent[] CreateStudentEvents(int count, int startIndex = 0, string eventType = "StudentRegistered")
+    private NewEvent[] CreateStudentEvents(int count, int startIndex = 0, string eventType = "StudentRegistered")
     {
-        var events = new SequencedEvent[count];
+        var events = new NewEvent[count];
         for (int i = 0; i < count; i++)
         {
             var studentId = Guid.NewGuid();
-            events[i] = new SequencedEvent
+            events[i] = new NewEvent
             {
-                Position = 0,
                 Event = new DomainEvent
                 {
                     EventType = eventType, // Use parameterized event type for isolation
@@ -227,7 +226,7 @@ public class ProjectionRebuildBenchmarks
         {
             events[i] = new SequencedEvent
             {
-                Position = 0,
+                Position = i + 1,
                 Event = new DomainEvent
                 {
                     EventType = "StudentEnrolled",
@@ -252,7 +251,7 @@ public class ProjectionRebuildBenchmarks
         {
             events[i] = new SequencedEvent
             {
-                Position = 0,
+                Position = i + 1,
                 Event = new DomainEvent
                 {
                     EventType = "GradeAssigned",
@@ -286,9 +285,19 @@ public class ProjectionRebuildBenchmarks
         return projection;
     }
 
+    private void ApplyEventToProjection(Dictionary<Guid, StudentProjection> projection, NewEvent evt)
+    {
+        ApplyEventData(projection, evt.Event.Event);
+    }
+
     private void ApplyEventToProjection(Dictionary<Guid, StudentProjection> projection, SequencedEvent evt)
     {
-        if (evt.Event.Event is StudentRegisteredEvent registered)
+        ApplyEventData(projection, evt.Event.Event);
+    }
+
+    private static void ApplyEventData(Dictionary<Guid, StudentProjection> projection, IEvent eventData)
+    {
+        if (eventData is StudentRegisteredEvent registered)
         {
             projection[registered.StudentId] = new StudentProjection
             {

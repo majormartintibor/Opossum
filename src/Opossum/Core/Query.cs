@@ -61,4 +61,36 @@ public class Query
     {
         QueryItems = [new QueryItem { Tags = [.. tags] }]
     };
+
+    /// <summary>
+    /// Returns true if the given event matches this query using the same OR/AND logic
+    /// applied by the event store. Useful for in-memory filtering and unit testing.
+    /// </summary>
+    /// <remarks>
+    /// <para><c>Query.All()</c> (empty QueryItems) matches every event.</para>
+    /// <para>
+    /// Within a <see cref="QueryItem"/>: types are OR'd, tags are AND'd, then the two
+    /// groups are AND'd together. Multiple QueryItems are OR'd.
+    /// </para>
+    /// </remarks>
+    public bool Matches(SequencedEvent evt)
+    {
+        ArgumentNullException.ThrowIfNull(evt);
+        ArgumentNullException.ThrowIfNull(evt.Event);
+
+        if (QueryItems.Count == 0)
+            return true;
+
+        return QueryItems.Any(item =>
+        {
+            var typeMatch = item.EventTypes.Count == 0 ||
+                            item.EventTypes.Contains(evt.Event.EventType);
+
+            var tagMatch = item.Tags.Count == 0 ||
+                           item.Tags.All(t => evt.Event.Tags.Any(et =>
+                               et.Key == t.Key && et.Value == t.Value));
+
+            return typeMatch && tagMatch;
+        });
+    }
 }
