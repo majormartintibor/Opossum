@@ -495,6 +495,144 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     // ========================================================================
+    // ReadAsync - fromPosition Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionNull_ReturnsAllEvents()
+    {
+        // Arrange
+        await AppendTestEvents(5);
+
+        // Act
+        var events = await _store.ReadAsync(Query.All(), null, fromPosition: null);
+
+        // Assert
+        Assert.Equal(5, events.Length);
+        Assert.Equal(1, events[0].Position);
+        Assert.Equal(5, events[4].Position);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionZero_ReturnsAllEvents()
+    {
+        // Arrange
+        await AppendTestEvents(5);
+
+        // Act
+        var events = await _store.ReadAsync(Query.All(), null, fromPosition: 0);
+
+        // Assert — position 0 is below position 1, so all events are returned
+        Assert.Equal(5, events.Length);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionInMiddle_ReturnsOnlyEventsAfterPosition()
+    {
+        // Arrange – append 5 events at positions 1–5
+        await AppendTestEvents(5);
+
+        // Act – ask for events after position 3
+        var events = await _store.ReadAsync(Query.All(), null, fromPosition: 3);
+
+        // Assert – only positions 4 and 5 returned
+        Assert.Equal(2, events.Length);
+        Assert.Equal(4, events[0].Position);
+        Assert.Equal(5, events[1].Position);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionAtLastEvent_ReturnsEmpty()
+    {
+        // Arrange
+        await AppendTestEvents(3);
+
+        // Act
+        var events = await _store.ReadAsync(Query.All(), null, fromPosition: 3);
+
+        // Assert
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionBeyondLastEvent_ReturnsEmpty()
+    {
+        // Arrange
+        await AppendTestEvents(3);
+
+        // Act
+        var events = await _store.ReadAsync(Query.All(), null, fromPosition: 100);
+
+        // Assert
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionAndEventTypeFilter_ReturnsOnlyMatchingEventsAfterPosition()
+    {
+        // Arrange – positions 1–5: alternating OrderCreated / OrderShipped
+        await AppendEventWithType("OrderCreated"); // pos 1
+        await AppendEventWithType("OrderShipped"); // pos 2
+        await AppendEventWithType("OrderCreated"); // pos 3
+        await AppendEventWithType("OrderShipped"); // pos 4
+        await AppendEventWithType("OrderCreated"); // pos 5
+
+        // Act – OrderCreated events after position 2
+        var events = await _store.ReadAsync(
+            Query.FromEventTypes("OrderCreated"), null, fromPosition: 2);
+
+        // Assert – positions 3 and 5 match
+        Assert.Equal(2, events.Length);
+        Assert.Equal(3, events[0].Position);
+        Assert.Equal(5, events[1].Position);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingEventsAfterPosition()
+    {
+        // Arrange
+        var tag = new Tag { Key = "env", Value = "prod" };
+        await AppendEventWithTags(tag);                              // pos 1
+        await AppendEventWithTags(new Tag { Key = "env", Value = "dev" }); // pos 2
+        await AppendEventWithTags(tag);                              // pos 3
+        await AppendEventWithTags(tag);                              // pos 4
+
+        // Act – prod-tagged events after position 1
+        var events = await _store.ReadAsync(Query.FromTags(tag), null, fromPosition: 1);
+
+        // Assert – positions 3 and 4
+        Assert.Equal(2, events.Length);
+        Assert.Equal(3, events[0].Position);
+        Assert.Equal(4, events[1].Position);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionOnEmptyStore_ReturnsEmpty()
+    {
+        // Act
+        var events = await _store.ReadAsync(Query.All(), null, fromPosition: 0);
+
+        // Assert
+        Assert.Empty(events);
+    }
+
+    [Fact]
+    public async Task ReadAsync_WithFromPositionAndDescendingOption_ReturnsFilteredEventsDescending()
+    {
+        // Arrange
+        await AppendTestEvents(5);
+
+        // Act – events after position 2, descending
+        var events = await _store.ReadAsync(Query.All(), [ReadOption.Descending], fromPosition: 2);
+
+        // Assert – positions 3, 4, 5 in descending order
+        Assert.Equal(3, events.Length);
+        Assert.Equal(5, events[0].Position);
+        Assert.Equal(4, events[1].Position);
+        Assert.Equal(3, events[2].Position);
+    }
+
+    // ========================================================================
     // Helper Methods
     // ========================================================================
 
@@ -523,11 +661,10 @@ public class FileSystemEventStoreReadTests : IDisposable
         await _store.AppendAsync(new[] { evt }, null);
     }
 
-    private static SequencedEvent CreateTestEvent(string eventType, IEvent domainEvent)
+    private static NewEvent CreateTestEvent(string eventType, IEvent domainEvent)
     {
-        return new SequencedEvent
+        return new NewEvent
         {
-            Position = 0, // Will be assigned by AppendAsync
             Event = new DomainEvent
             {
                 EventType = eventType,

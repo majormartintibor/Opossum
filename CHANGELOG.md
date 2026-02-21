@@ -7,9 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`fromPosition` parameter on `IEventStore.ReadAsync`** — Fulfils the DCB specification SHOULD
+  requirement for reading events from a given starting sequence position. Pass the last processed
+  position to receive only events with `Position > fromPosition`, eliminating the need to load
+  the full event log and filter in memory. `null` (the default) preserves existing behaviour and
+  returns all matching events. For `Query.All()`, the position range is generated directly
+  (no wasted allocation); for indexed queries, positions are filtered after the index lookup.
+  A convenience extension overload `ReadAsync(query, fromPosition)` is also provided.
+
+- **`ProjectionDaemon` now passes `fromPosition` directly to `ReadAsync`** — The polling loop
+  previously read all events and filtered them in memory with `Where(e => e.Position > checkpoint)`.
+  It now calls `ReadAsync(Query.All(), null, minCheckpoint)`, so the store itself skips
+  already-processed events at the index level.
+
+- **`NewEvent` type for the write side of `IEventStore.AppendAsync`** — Introduced `NewEvent`
+  (`src/Opossum/Core/NewEvent.cs`) as a dedicated write-side type that holds `DomainEvent` and
+  `Metadata` but has **no `Position`** property. This aligns Opossum with the DCB specification,
+  which distinguishes between `Event` (input to `append`, no position) and `SequencedEvent`
+  (output of `read`, position assigned by the store). The old workaround `Position = 0,
+  // Will be assigned by AppendAsync` is gone from the entire codebase.
+
 ### Changed
 
-- **Thread safety: `FileSystemProjectionStore.DeleteAllIndicesAsync`** — `_projectionTags.Clear()`
+- **`DomainEvent.EventType` now auto-derives from `Event.GetType().Name` when not set** —
+  The property is backed by a nullable field: if you never assign it, the getter returns the
+  inner `IEvent`'s simple class name automatically. An explicit assignment still takes effect
+  (e.g. `"StudentRegistered"` instead of `"StudentRegisteredEvent"`), so deliberate custom type
+  names continue to work. This eliminates the pre-existing silent divergence where a manually
+  constructed `DomainEvent` with a forgotten or mistyped `EventType` would be indexed under the
+  wrong name while `$type`-based deserialization still succeeded. The existing `AppendAsync`
+  validation (`IsNullOrWhiteSpace(EventType)`) now only fires for the genuine bug of an
+  explicitly blank string.
+
+- **Breaking: `IEventStore.AppendAsync` now takes `NewEvent[]` instead of `SequencedEvent[]`**
+  All callers (command handlers, extension methods, test helpers, benchmark helpers) updated
+  accordingly. `DomainEventBuilder.Build()` and its implicit cast now produce `NewEvent`.
+  `SequencedEvent` remains the exclusive return type of `ReadAsync`.
+
+- **Thread safety: `FileSystemProjectionStore.DeleteAllIndicesAsync`**
   was called without holding `_lock`, creating a data race with any concurrent `SaveAsync` or
   `DeleteAsync`. Now acquires `_lock` for the clear operation.
 

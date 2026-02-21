@@ -54,7 +54,7 @@ public sealed class EnrollStudentToCourseCommandHandler()
         if (studentLimit.IsAtLimit)
             return CommandResult.Fail($"Student has reached their enrollment limit ({studentLimit.MaxAllowed} courses for {studentLimit.Tier} tier).");
 
-        SequencedEvent enrollmentEvent = new StudentEnrolledToCourseEvent(
+        NewEvent enrollmentEvent = new StudentEnrolledToCourseEvent(
             CourseId: command.CourseId,
             StudentId: command.StudentId)
             .ToDomainEvent()

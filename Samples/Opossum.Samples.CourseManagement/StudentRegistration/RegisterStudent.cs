@@ -60,7 +60,7 @@ public sealed class RegisterStudentCommandHandler()
         }
 
         // Append student registered event using fluent API
-        SequencedEvent sequencedEvent = new StudentRegisteredEvent(
+        NewEvent newEvent = new StudentRegisteredEvent(
                 command.StudentId,
                 command.FirstName,
                 command.LastName,
@@ -94,7 +94,7 @@ public sealed class RegisterStudentCommandHandler()
         // If an AppendConditionFailedException (or its ConcurrencyException subclass) is thrown,
         // the global exception handler maps it to HTTP 409 Conflict (see Program.cs).
         await eventStore.AppendAsync(
-            sequencedEvent,
+            newEvent,
             condition: new AppendCondition() { FailIfEventsMatch = validateEmailNotTakenQuery });
 
         return new CommandResult(Success: true);

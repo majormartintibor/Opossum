@@ -1,5 +1,4 @@
 using Opossum.Core;
-using Opossum.Extensions;
 using Opossum.Projections;
 
 namespace Opossum.UnitTests.Projections;
@@ -60,9 +59,17 @@ public class ProjectionWithRelatedEventsTests
         var relatedId = Guid.NewGuid();
         var evt = new TestEventWithRelation("main", relatedId);
 
-        var relatedEvent = new RelatedEvent(relatedId, "Related Data")
-            .ToDomainEvent()
-            .Build();
+        var relatedEvent = new SequencedEvent
+        {
+            Position = 1,
+            Event = new DomainEvent
+            {
+                EventType = nameof(RelatedEvent),
+                Event = new RelatedEvent(relatedId, "Related Data"),
+                Tags = []
+            },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
         var relatedEvents = new[] { relatedEvent };
 
@@ -122,14 +129,26 @@ public class ProjectionWithRelatedEventsTests
         var relatedId = Guid.NewGuid();
         var evt = new TestEventWithRelation("main", relatedId);
 
-        var evt1 = new RelatedEvent(relatedId, "First").ToDomainEvent().Build();
-        evt1.Position = 1;
+        var evt1 = new SequencedEvent
+        {
+            Position = 1,
+            Event = new DomainEvent { EventType = nameof(RelatedEvent), Event = new RelatedEvent(relatedId, "First"), Tags = [] },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
-        var evt2 = new RelatedEvent(relatedId, "Second").ToDomainEvent().Build();
-        evt2.Position = 2;
+        var evt2 = new SequencedEvent
+        {
+            Position = 2,
+            Event = new DomainEvent { EventType = nameof(RelatedEvent), Event = new RelatedEvent(relatedId, "Second"), Tags = [] },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
-        var evt3 = new RelatedEvent(relatedId, "Latest").ToDomainEvent().Build();
-        evt3.Position = 3;
+        var evt3 = new SequencedEvent
+        {
+            Position = 3,
+            Event = new DomainEvent { EventType = nameof(RelatedEvent), Event = new RelatedEvent(relatedId, "Latest"), Tags = [] },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 
         var relatedEvents = new[] { evt1, evt2, evt3 };
 

@@ -139,8 +139,8 @@ public class ParallelRebuildLockingTests : IDisposable
         await Task.Delay(50);
 
         // Try to update while rebuild is running
-        var newEvents = new[] { CreateEvent<LongRunningEvent>() };
-        
+        var newEvents = new[] { CreateSequencedEvent<LongRunningEvent>(51) };
+
         // This should not throw - it should skip gracefully
         await _projectionManager.UpdateAsync(newEvents, CancellationToken.None);
 
@@ -193,12 +193,31 @@ public class ParallelRebuildLockingTests : IDisposable
         Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
-    // Helper method to create test events
-    private SequencedEvent CreateEvent<T>() where T : IEvent, new()
+    // Helper method to create test events for appending
+    private NewEvent CreateEvent<T>() where T : IEvent, new()
+    {
+        return new NewEvent
+        {
+            Event = new DomainEvent
+            {
+                EventType = typeof(T).Name,
+                Event = new T(),
+                Tags = []
+            },
+            Metadata = new Metadata
+            {
+                Timestamp = DateTimeOffset.UtcNow,
+                CorrelationId = Guid.NewGuid()
+            }
+        };
+    }
+
+    // Helper method to create sequenced events for UpdateAsync (already-stored events)
+    private static SequencedEvent CreateSequencedEvent<T>(long position) where T : IEvent, new()
     {
         return new SequencedEvent
         {
-            Position = 0, // Will be set by event store
+            Position = position,
             Event = new DomainEvent
             {
                 EventType = typeof(T).Name,

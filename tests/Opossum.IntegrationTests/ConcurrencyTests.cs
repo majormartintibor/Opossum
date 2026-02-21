@@ -345,7 +345,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var studentId = Guid.NewGuid();
 
         // Create initial event
-        var createEvent = new SequencedEvent
+        var createEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -364,7 +364,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var lastPosition = events[^1].Position;
 
         // Another operation appends an event (simulating concurrent modification)
-        var concurrentEvent = new SequencedEvent
+        var concurrentEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -384,7 +384,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             FailIfEventsMatch = Query.FromItems() // Empty query - we're only testing AfterSequencePosition
         };
 
-        var newEvent = new SequencedEvent
+        var newEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -415,7 +415,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var courseId = Guid.NewGuid();
 
         // Create initial event
-        var createEvent = new SequencedEvent
+        var createEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -429,7 +429,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         await eventStore.AppendAsync([createEvent], null);
 
         // Append a conflicting event
-        var enrollEvent = new SequencedEvent
+        var enrollEvent = new NewEvent
         {
             Event = new DomainEvent
             {
@@ -456,7 +456,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             FailIfEventsMatch = conflictQuery // This will match the existing enrollment event
         };
 
-        var newEvent = new SequencedEvent
+        var newEvent = new NewEvent
         {
             Event = new DomainEvent
             {

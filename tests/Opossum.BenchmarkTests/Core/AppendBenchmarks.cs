@@ -13,7 +13,7 @@ public class AppendBenchmarks
     private IServiceProvider _serviceProvider = null!;
     private IEventStore _store = null!;
     private TempFileSystemHelper _tempHelper = null!;
-    private SequencedEvent _singleEvent = null!;
+    private NewEvent _singleEvent = null!;
 
     [GlobalSetup]
     public void GlobalSetup()

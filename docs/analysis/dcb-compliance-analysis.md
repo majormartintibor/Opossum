@@ -17,14 +17,14 @@
 | Query & QueryItem semantics | ✅ Compliant | OR / AND logic correct |
 | AppendCondition / optimistic concurrency | ✅ Compliant | Full DCB pattern implemented |
 | SequencedEvent / Sequence Position | ✅ Compliant | Unique, monotonically increasing |
-| Read from starting position (SHOULD) | ⚠️ Missing | Spec SHOULD – not yet implemented |
-| AppendAsync input type | ⚠️ Design issue | Accepts `SequencedEvent[]`; position ignored |
-| Concurrency exception taxonomy | ⚠️ Inconsistency | Two exception types for same condition |
-| Decision Model projection layer | 🔴 Missing | Core DCB pattern has no first-class API |
-| `BuildDecisionModel()` helper | 🔴 Missing | Manual wiring required in every handler |
-| `ComposeProjections()` helper | 🔴 Missing | Manual composition required |
-| `Query.Matches()` helper | 🔴 Missing | No in-memory event matching |
-| Streaming reads (`IAsyncEnumerable`) | 🔴 Missing | Full arrays loaded into memory |
+| Read from starting position (SHOULD) | ✅ Compliant | `fromPosition` parameter added to `ReadAsync` |
+| AppendAsync input type | ✅ Fixed | `NewEvent[]` — no position field |
+| Concurrency exception taxonomy | ✅ Fixed | `ConcurrencyException` is a subclass of `AppendConditionFailedException` |
+| Decision Model projection layer | ✅ Implemented | `IDecisionProjection<TState>`, `DecisionModel<TState>` |
+| `BuildDecisionModel()` helper | ✅ Implemented | `BuildDecisionModelAsync()` extension (1-, 2-, and 3-projection overloads) |
+| `ComposeProjections()` helper | ✅ Implemented | Multi-projection overloads of `BuildDecisionModelAsync` |
+| `Query.Matches()` helper | ✅ Implemented | In-memory event matching on `Query` |
+| Streaming reads (`IAsyncEnumerable`) | 🔴 Not planned | Full arrays acceptable for target scale |
 
 ---
 
@@ -45,29 +45,35 @@ Backed by `EventTypeIndex` and `TagIndex` files on disk — queries never do ful
 `ValidateAppendConditionAsync` correctly restricts the conflict check to positions
 `> AfterSequencePosition`, matching the spec precisely.
 
-#### ⚠️ SHOULD: Read from a given starting Sequence Position
+#### ✅ SHOULD: Read from a given starting Sequence Position
 
 The spec states:
 > The Event Store *SHOULD* provide a way to read Events from a given starting Sequence Position.
 
-**Current state:** `ReadAsync` always reads from position 0. There is no `fromPosition` / `afterPosition` parameter.
+**Current state:** `IEventStore.ReadAsync` now accepts an optional `fromPosition` parameter:
 
-**Impact:**
-- Projection incremental updates (daemon polling) must re-query all matching events and
-  filter in memory by position — this gets slower as the event log grows.
-- Any application that wants to "tail" the event log from a known position must
-  load all events from the beginning and skip.
-- A `ProjectionManager.RebuildAsync` that was interrupted mid-way always restarts from
-  zero because there is no way to resume from the checkpoint position.
-
-**Proposed addition:**
 ```csharp
-// IEventStore
 Task<SequencedEvent[]> ReadAsync(
     Query query,
     ReadOption[]? readOptions,
-    long? fromPosition = null);   // NEW: read only events with Position > fromPosition
+    long? fromPosition = null);   // read only events with Position > fromPosition
 ```
+
+A convenience extension `ReadAsync(query, fromPosition)` is also available for the common
+polling pattern:
+
+```csharp
+// Incrementally poll new events from a known checkpoint
+var newEvents = await eventStore.ReadAsync(Query.All(), fromPosition: lastCheckpoint);
+```
+
+For `Query.All()`, the position range is generated directly from `lastCheckpoint + 1` to
+`lastPosition` — no wasted allocation of the full prefix. For indexed queries, positions are
+retrieved from the index and then filtered. When `fromPosition` is `null` (the default), behaviour
+is identical to the previous API.
+
+The `ProjectionDaemon` polling loop was updated to pass `minCheckpoint` directly to `ReadAsync`
+instead of loading all events and filtering in memory.
 
 ---
 
@@ -81,45 +87,12 @@ read-validate-write-index cycle. Only one append runs at a time; concurrent call
 `ConcurrencyException` is thrown when any matching event exists after `AfterSequencePosition`.
 The sample command handler demonstrates the correct retry loop.
 
-#### ⚠️ Design issue: `AppendAsync` accepts `SequencedEvent[]` but overwrites Position
+#### ✅ Design issue resolved: `AppendAsync` now accepts `NewEvent[]`
 
-The spec's `append` receives *Events* (unsequenced). Opossum's public interface receives
-`SequencedEvent[]`, meaning callers must construct an object that includes a `Position`
-field — yet that field is silently overwritten by the store:
-
-```csharp
-// FileSystemEventStore.AppendAsync – position is always reassigned
-events[i].Position = startPosition + i;
-```
-
-`DomainEventBuilder.Build()` works around this by setting `Position = 0` as a placeholder,
-and `AppendEventAsync` / `AppendEventsAsync` extensions do the same.
-
-**Problems this causes:**
-- The input type misleads callers into thinking they control the position.
-- `SequencedEvent` (an output concept from `ReadAsync`) doubles as an input type
-  for `AppendAsync`, breaking the clear read-vs-write model.
-- The `implicit operator SequencedEvent(DomainEventBuilder)` hides the conversion.
-
-**Proposed fix — two-level model:**
-```csharp
-// New type for append input (no Position)
-public class NewEvent
-{
-    public required IEvent Event { get; set; }
-    public List<Tag> Tags { get; set; } = [];
-    public Metadata? Metadata { get; set; }
-}
-
-// Cleaner interface
-public interface IEventStore
-{
-    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null);
-    Task AppendAsync(NewEvent[] events, AppendCondition? condition = null);
-}
-```
-
-This matches the spec's `append(events: Events|Event, condition?: AppendCondition)` intent exactly.
+`NewEvent` is a dedicated write-side type with no `Position` field, matching the DCB spec's
+`append(events: Events|Event, ...)` intent exactly. `SequencedEvent` remains the exclusive
+output type of `ReadAsync`. `DomainEventBuilder.Build()` and the `implicit operator NewEvent`
+produce `NewEvent` directly.
 
 ---
 
@@ -169,19 +142,12 @@ Implemented as `AppendCondition.FailIfEventsMatch`.
 Implemented as `AppendCondition.AfterSequencePosition` (nullable `long`).
 When null, the conflict check applies to all events (spec: "if omitted, no Events will be ignored").
 
-#### ⚠️ Two exception types for one concept
+#### ✅ Exception taxonomy unified
 
-Both `ConcurrencyException` and `AppendConditionFailedException` exist, and the sample
-command handler catches both:
-
-```csharp
-catch (ConcurrencyException) when (attempt < MaxRetryAttempts - 1)   { ... }
-catch (AppendConditionFailedException) when (attempt < MaxRetryAttempts - 1) { ... }
-```
-
-This is confusing. Per the spec there is exactly one failure mode: the append condition
-was violated. The library should throw a single, well-named exception. `AppendConditionFailedException`
-is the right name; `ConcurrencyException` should either be removed or made a subclass.
+`ConcurrencyException` is now a subclass of `AppendConditionFailedException`. Callers catch
+the base type and receive both internal ledger-level races and query-based condition failures
+through a single, well-named exception. The sample command handler catches only
+`AppendConditionFailedException`.
 
 ---
 
@@ -200,205 +166,61 @@ Opossum has a well-developed **Read Model** projection system (`IProjectionDefin
 
 ---
 
-### 2.1 Missing: `IDecisionProjection<TState>`
+### 2.1 ✅ `IDecisionProjection<TState>`
 
-The spec's projection type is:
+`IDecisionProjection<TState>` is implemented in `src/Opossum/DecisionModel/IDecisionProjection.cs`.
+The concrete `DecisionProjection<TState>` record type provides a simple constructor-based
+implementation. The factory function pattern is idiomatic C# and documented with examples.
 
-```typescript
-type Projection<S> = {
-  initialState: S
-  apply(state: S, event: SequencedEvent): S
-  query: Query
-}
-```
+---
 
-In Opossum today, this pattern is implemented **manually** in each command handler.
-`CourseEnrollmentAggregate` is a decision model projection, but it is:
-- Not expressed through any Opossum interface
-- Not composable with other projections
-- Requires manual query construction (`Queries.GetCourseEnrollmentQuery()`)
-- Requires manual `AppendCondition` construction
+### 2.2 ✅ `Query.Matches(SequencedEvent)`
 
-**Proposed interface:**
+Implemented on `Query` in `src/Opossum/Core/Query.cs`. Applies the same OR/AND logic used
+by the event store and is used by `DecisionModelExtensions.FoldEvents` to route events to
+the correct sub-projection in multi-projection `BuildDecisionModelAsync` overloads.
+
+---
+
+### 2.3 ✅ `BuildDecisionModelAsync()` extension on `IEventStore`
+
+Implemented in `src/Opossum/DecisionModel/DecisionModelExtensions.cs`. Overloads exist for
+1, 2, and 3 independent projections. Each overload makes a single `ReadAsync` call with the
+union of all sub-queries, folds events into each projection's state using `Query.Matches`,
+and returns the combined `AppendCondition`.
+
 ```csharp
-/// <summary>
-/// Defines an in-memory, ephemeral projection used to build a Decision Model for
-/// enforcing consistency during command handling (the DCB write-side pattern).
-/// </summary>
-public interface IDecisionProjection<TState>
-{
-    /// <summary>Starting state before any events are applied.</summary>
-    TState InitialState { get; }
+var model = await eventStore.BuildDecisionModelAsync(
+    CourseProjections.Capacity(command.CourseId));
 
-    /// <summary>
-    /// The query that selects events relevant to this projection.
-    /// Used to load events from the store and as the FailIfEventsMatch query.
-    /// </summary>
-    Query Query { get; }
+if (model.State.IsFull)
+    return CommandResult.Fail("Course is at capacity.");
 
-    /// <summary>Folds a single event into the current state.</summary>
-    TState Apply(TState state, SequencedEvent evt);
-}
+await eventStore.AppendAsync(newEvent, model.AppendCondition);
 ```
 
 ---
 
-### 2.2 Missing: `Query.Matches(SequencedEvent)`
+### 2.4 ✅ `ComposeProjections()`
 
-The spec's library exposes `projection.query.matchesEvent(event)` for in-memory filtering.
-Opossum's `Query` has no such helper. This is needed when:
+Implemented via 2- and 3-projection overloads of `BuildDecisionModelAsync`. Each overload
+builds a union query from all sub-queries, reads once, and routes events to the correct
+projection using `Query.Matches`. The `AppendCondition` spans all sub-queries so a concurrent
+write matching any sub-query invalidates the decision.
 
-- Unit-testing command handlers without touching the file system
-- Filtering an already-loaded batch of events for a specific sub-projection
-- Implementing `ComposeProjections` (see below)
-
-**Proposed addition to `Query`:**
 ```csharp
-/// <summary>
-/// Returns true if the given event matches this query.
-/// Implements the same OR/AND logic used by the event store.
-/// </summary>
-public bool Matches(SequencedEvent evt)
-{
-    // Query.All() matches everything
-    if (QueryItems.Count == 0) return true;
-
-    return QueryItems.Any(item =>
-    {
-        var typeMatch = item.EventTypes.Count == 0 ||
-                        item.EventTypes.Contains(evt.Event.EventType);
-        var tagMatch  = item.Tags.Count == 0 ||
-                        item.Tags.All(t => evt.Event.Tags.Any(et =>
-                            et.Key == t.Key && et.Value == t.Value));
-        return typeMatch && tagMatch;
-    });
-}
+var (capacity, studentLimit, condition) = await eventStore.BuildDecisionModelAsync(
+    CourseProjections.Capacity(command.CourseId),
+    StudentProjections.EnrollmentLimit(command.StudentId));
 ```
 
 ---
 
-### 2.3 Missing: `BuildDecisionModel()` extension on `IEventStore`
+### 2.5 ✅ Factory function pattern support
 
-The spec's central helper:
-
-```js
-const { state, appendCondition } = buildDecisionModel(eventStore, {
-  courseExists: CourseExistsProjection("c1"),
-  courseTitle:  CourseTitleProjection("c1"),
-})
-```
-
-In Opossum today, every command handler manually performs all three steps:
+The factory pattern is idiomatic C# with `IDecisionProjection<TState>`:
 
 ```csharp
-// Step 1: manually build query
-var query = command.GetCourseEnrollmentQuery();
-// Step 2: manually read
-var events = await eventStore.ReadAsync(enrollmentQuery, ReadOption.None);
-// Step 3: manually fold
-var aggregate = events.OrderBy(e => e.Position)
-    .Select(e => e.Event.Event)
-    .Aggregate(new CourseEnrollmentAggregate(...), (a, e) => a.Apply(e));
-// Step 4: manually build AppendCondition
-var condition = new AppendCondition
-{
-    AfterSequencePosition = events.Length > 0 ? events.Max(e => e.Position) : null,
-    FailIfEventsMatch = enrollmentQuery
-};
-```
-
-This is ~15 lines of plumbing that every command handler must duplicate. The spec
-reduces this to a single call that returns `(state, appendCondition)`.
-
-**Proposed extension:**
-```csharp
-public static class DecisionModelExtensions
-{
-    /// <summary>
-    /// Builds a Decision Model by reading relevant events, folding them into state,
-    /// and returning the AppendCondition that guards the decision.
-    /// </summary>
-    public static async Task<DecisionModel<TState>> BuildDecisionModelAsync<TState>(
-        this IEventStore eventStore,
-        IDecisionProjection<TState> projection,
-        CancellationToken cancellationToken = default)
-    {
-        var events = await eventStore.ReadAsync(projection.Query, null)
-            .ConfigureAwait(false);
-
-        var state = events
-            .OrderBy(e => e.Position)
-            .Aggregate(projection.InitialState, projection.Apply);
-
-        var appendCondition = new AppendCondition
-        {
-            FailIfEventsMatch = projection.Query,
-            AfterSequencePosition = events.Length > 0
-                ? events.Max(e => e.Position)
-                : null
-        };
-
-        return new DecisionModel<TState>(state, appendCondition);
-    }
-}
-
-public sealed record DecisionModel<TState>(TState State, AppendCondition AppendCondition);
-```
-
----
-
-### 2.4 Missing: `ComposeProjections()`
-
-The spec recommends composing multiple single-purpose projections instead of building
-monolithic ones:
-
-```js
-const compositeProjection = composeProjections({
-  courseExists: CourseExistsProjection("c1"),
-  courseTitle:  CourseTitleProjection("c1"),
-})
-```
-
-**Why this matters:** Each small projection has its own `Query`, so only events relevant
-to at least one sub-projection are loaded. The combined query is the union (OR) of all
-sub-queries — the consistency boundary is as narrow as the business decision requires.
-
-Without `ComposeProjections`, developers are tempted to write one large projection that
-combines multiple concerns (which is what `CourseEnrollmentAggregate` currently does):
-loading more events than strictly necessary for any single invariant.
-
-**Proposed API:**
-```csharp
-/// <summary>
-/// Combines multiple IDecisionProjection instances into one composite projection.
-/// The composite query is the union of all sub-queries.
-/// The composite state is a dictionary keyed by projection name.
-/// </summary>
-public static IDecisionProjection<IReadOnlyDictionary<string, object?>> ComposeProjections(
-    IReadOnlyDictionary<string, IDecisionProjection<object?>> projections)
-```
-
-A strongly-typed variant using source generators or a builder API would provide
-better ergonomics for the typical 2–5 projection composition case.
-
----
-
-### 2.5 Missing: Factory function pattern support
-
-The spec shows projection factories that inject dynamic entity identifiers:
-
-```js
-const CourseExistsProjection = (courseId) => createProjection({
-  tagFilter: [`course:${courseId}`]
-})
-```
-
-In Opossum today, the equivalent is implemented as a static class with an extension
-method returning a hand-built `Query` (`Queries.GetCourseEnrollmentQuery()`).
-With `IDecisionProjection<TState>` this becomes a conventional C# pattern:
-
-```csharp
-// The factory pattern becomes idiomatic C#
 public static IDecisionProjection<bool> CourseExists(Guid courseId) =>
     new DecisionProjection<bool>(
         initialState: false,
@@ -415,7 +237,7 @@ public static IDecisionProjection<bool> CourseExists(Guid courseId) =>
         });
 ```
 
-No new framework feature is needed here; this is a design guidance / documentation gap.
+No framework feature is needed; the sample application demonstrates this pattern.
 
 ---
 
@@ -437,21 +259,14 @@ This is the most impactful long-term architectural change.
 
 ---
 
-### 3.2 Projection rebuild ignores checkpoint position
+### 3.2 ✅ Projection daemon uses `fromPosition`
 
-`ProjectionManager.RebuildAsync` builds the query from event types alone:
+`ProjectionDaemon.ProcessNewEventsAsync` now calls
+`ReadAsync(Query.All(), null, minCheckpoint)` directly. The store skips already-processed
+events at the index level — no in-memory filtering of stale events.
 
-```csharp
-var query = Query.FromEventTypes(registration.EventTypes);
-var events = await _eventStore.ReadAsync(query, null);
-```
-
-Even with checkpoint support, the daemon's incremental update passes all events since
-last-processed position through an in-memory position filter, rather than asking the
-store to start reading from that position. Once a `fromPosition` parameter exists on
-`ReadAsync` (see §1.1), the projection daemon and rebuild path should be updated to
-pass the checkpoint position directly to the store, eliminating the unnecessary load
-of already-processed events.
+`ProjectionManager.RebuildAsync` intentionally reads from position 0 because a rebuild
+always reprocesses the full history.
 
 ---
 
@@ -485,57 +300,56 @@ breaking changes later.
 
 ## Part 4 — Improvement Priority Matrix
 
-### P0 — Spec compliance gaps (SHOULD)
+### P0 — Spec compliance gaps (SHOULD) — ✅ All resolved
 
-| # | Item | Effort |
+| # | Item | Status |
 |---|---|---|
-| P0.1 | Add `fromPosition` parameter to `ReadAsync` | Medium |
-| P0.2 | Unify `ConcurrencyException` / `AppendConditionFailedException` into one type | Small |
+| P0.1 | Add `fromPosition` parameter to `ReadAsync` | ✅ Done |
+| P0.2 | Unify `ConcurrencyException` / `AppendConditionFailedException` into one type | ✅ Done |
 
-### P1 — Core DCB Projections pattern (Decision Model layer)
+### P1 — Core DCB Projections pattern (Decision Model layer) — ✅ All resolved
 
-| # | Item | Effort |
+| # | Item | Status |
 |---|---|---|
-| P1.1 | Add `Query.Matches(SequencedEvent)` helper | Small |
-| P1.2 | Add `IDecisionProjection<TState>` interface | Small |
-| P1.3 | Add `DecisionModel<TState>` result type | Small |
-| P1.4 | Add `BuildDecisionModelAsync()` extension on `IEventStore` | Small |
-| P1.5 | Add `ComposeProjections()` helper | Medium |
-| P1.6 | Update sample app `CourseEnrollmentAggregate` to use new API | Medium |
+| P1.1 | Add `Query.Matches(SequencedEvent)` helper | ✅ Done |
+| P1.2 | Add `IDecisionProjection<TState>` interface | ✅ Done |
+| P1.3 | Add `DecisionModel<TState>` result type | ✅ Done |
+| P1.4 | Add `BuildDecisionModelAsync()` extension on `IEventStore` | ✅ Done |
+| P1.5 | Add `ComposeProjections()` helper | ✅ Done (2- and 3-projection overloads) |
+| P1.6 | Update sample app to use new API | ✅ Done |
 
-### P2 — API design clean-up
+### P2 — API design clean-up — ✅ All resolved
 
-| # | Item | Effort |
+| # | Item | Status |
 |---|---|---|
-| P2.1 | Introduce `NewEvent` type; change `AppendAsync` input away from `SequencedEvent[]` | Medium |
-| P2.2 | Tag uniqueness enforcement on append | Small |
-| P2.3 | Pass `SequencedEvent` (not `IEvent`) to `IProjectionDefinition.Apply` | Medium (breaking) |
+| P2.1 | Introduce `NewEvent` type; change `AppendAsync` input away from `SequencedEvent[]` | ✅ Done |
+| P2.2 | Tag uniqueness enforcement on append | 🔵 Deferred (low priority) |
+| P2.3 | Pass `SequencedEvent` (not `IEvent`) to `IProjectionDefinition.Apply` | 🔵 Deferred (breaking) |
 
 ### P3 — Performance & scalability
 
-| # | Item | Effort |
+| # | Item | Status |
 |---|---|---|
-| P3.1 | `ReadAsync` streaming via `IAsyncEnumerable<SequencedEvent>` | Large |
-| P3.2 | Use `fromPosition` in projection daemon / rebuild once P0.1 is done | Small |
-| P3.3 | Multi-context API surface design (even if implementation is later) | Medium |
+| P3.1 | `ReadAsync` streaming via `IAsyncEnumerable<SequencedEvent>` | 🔵 Not planned for target scale |
+| P3.2 | Use `fromPosition` in projection daemon / rebuild | ✅ Done (daemon; rebuild intentionally full) |
+| P3.3 | Multi-context API surface design | 🔵 Planned future release |
 
 ---
 
 ## Part 5 — Summary
 
-Opossum correctly implements every **MUST** requirement of the DCB Event Store Specification.
-The core read/append/concurrency semantics are solid and the sample application demonstrates
-the full DCB pattern working end-to-end.
+Opossum now correctly implements **every MUST and SHOULD requirement** of the DCB Event Store
+Specification.
 
-The main gap is the **Decision Model projection layer** — the half of the DCB spec that
-describes how to build the state used to enforce invariants during command handling.
-Currently this is entirely manual boilerplate in each command handler. Adding `IDecisionProjection<TState>`,
-`Query.Matches()`, `BuildDecisionModelAsync()`, and `ComposeProjections()` would make
-Opossum a genuinely complete DCB library rather than a DCB-capable event store that
-leaves the projection wiring to the caller.
+The core read/append/concurrency semantics are solid. The Decision Model projection layer —
+the write-side DCB pattern — is fully implemented via `IDecisionProjection<TState>`,
+`DecisionModel<TState>`, `Query.Matches()`, `BuildDecisionModelAsync()` (1-, 2-, and
+3-projection overloads), and the factory function pattern. `ReadAsync` accepts an optional
+`fromPosition` parameter that fulfils the SHOULD requirement and enables efficient incremental
+polling without loading already-processed events. The `ProjectionDaemon` exploits this
+directly. The exception taxonomy is unified under `AppendConditionFailedException` with
+`ConcurrencyException` as a subclass.
 
-The secondary gap is `ReadAsync` lacking a `fromPosition` parameter, which is a
-`SHOULD` requirement in the spec and would also unlock more efficient incremental
-projection rebuilding.
-
-All other findings are API design improvements that do not affect spec compliance.
+The only remaining open items are API design improvements that do not affect spec compliance:
+tag uniqueness enforcement, richer `Apply` context for read model projections, and the
+multi-context routing API — all deferred to future releases.

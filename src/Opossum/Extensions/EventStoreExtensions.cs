@@ -133,14 +133,14 @@ public class DomainEventBuilder
     }
 
     /// <summary>
-    /// Builds the final SequencedEvent
+    /// Builds the final <see cref="NewEvent"/> ready to be passed to
+    /// <see cref="IEventStore.AppendAsync"/>.
     /// </summary>
-    /// <returns>A SequencedEvent ready to be appended to the event store</returns>
-    public SequencedEvent Build()
+    /// <returns>A <see cref="NewEvent"/> ready to be appended to the event store</returns>
+    public NewEvent Build()
     {
-        return new SequencedEvent
+        return new NewEvent
         {
-            Position = 0, // Will be assigned by event store
             Event = new DomainEvent
             {
                 EventType = _event.GetType().Name,
@@ -156,9 +156,9 @@ public class DomainEventBuilder
     }
 
     /// <summary>
-    /// Implicit conversion to SequencedEvent for convenience
+    /// Implicit conversion to <see cref="NewEvent"/> for convenience
     /// </summary>
-    public static implicit operator SequencedEvent(DomainEventBuilder builder)
+    public static implicit operator NewEvent(DomainEventBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
         return builder.Build();
@@ -179,12 +179,12 @@ public static class EventStoreExtensions
     /// Appends a single event to the event store
     /// </summary>
     /// <param name="eventStore">The event store</param>
-    /// <param name="event">The sequenced event to append</param>
+    /// <param name="event">The new event to append</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
-        SequencedEvent @event,
+        NewEvent @event,
         AppendCondition? condition = null)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
@@ -197,11 +197,11 @@ public static class EventStoreExtensions
     /// Appends multiple events to the event store without an append condition
     /// </summary>
     /// <param name="eventStore">The event store</param>
-    /// <param name="events">The sequenced events to append</param>
+    /// <param name="events">The new events to append</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
-        SequencedEvent[] events)
+        NewEvent[] events)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(events);
@@ -244,6 +244,28 @@ public static class EventStoreExtensions
     }
 
     /// <summary>
+    /// Reads events from the event store that were appended after <paramref name="fromPosition"/>,
+    /// without any read options. Useful for incrementally polling new events from a known checkpoint.
+    /// </summary>
+    /// <param name="eventStore">The event store</param>
+    /// <param name="query">The query to filter events</param>
+    /// <param name="fromPosition">
+    /// Only events with <c>Position &gt; fromPosition</c> are returned.
+    /// Pass the last processed sequence position to receive only new events.
+    /// </param>
+    /// <returns>A task representing the asynchronous operation returning the matching events</returns>
+    public static Task<SequencedEvent[]> ReadAsync(
+        this IEventStore eventStore,
+        Query query,
+        long fromPosition)
+    {
+        ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(query);
+
+        return eventStore.ReadAsync(query, readOptions: null, fromPosition: fromPosition);
+    }
+
+    /// <summary>
     /// Appends a single domain event to the event store with simplified syntax
     /// </summary>
     /// <param name="eventStore">The event store</param>
@@ -262,9 +284,8 @@ public static class EventStoreExtensions
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(@event);
 
-        var sequencedEvent = new SequencedEvent
+        var newEvent = new NewEvent
         {
-            Position = 0, // Will be assigned by AppendAsync
             Event = new DomainEvent
             {
                 EventType = @event.GetType().Name,
@@ -278,7 +299,7 @@ public static class EventStoreExtensions
             }
         };
 
-        return eventStore.AppendAsync([sequencedEvent], condition);
+        return eventStore.AppendAsync([newEvent], condition);
     }
 
     /// <summary>
@@ -307,9 +328,8 @@ public static class EventStoreExtensions
             CorrelationId = Guid.NewGuid()
         };
 
-        var sequencedEvents = events.Select(e => new SequencedEvent
+        var newEvents = events.Select(e => new NewEvent
         {
-            Position = 0,
             Event = new DomainEvent
             {
                 EventType = e.GetType().Name,
@@ -319,7 +339,7 @@ public static class EventStoreExtensions
             Metadata = sharedMetadata
         }).ToArray();
 
-        return eventStore.AppendAsync(sequencedEvents, condition);
+        return eventStore.AppendAsync(newEvents, condition);
     }
 
     /// <summary>

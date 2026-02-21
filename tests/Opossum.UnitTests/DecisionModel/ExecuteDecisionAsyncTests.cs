@@ -13,8 +13,8 @@ public class ExecuteDecisionAsyncTests
     // Minimal stub — the store instance is only passed through to the operation delegate.
     private sealed class StubEventStore : IEventStore
     {
-        public Task AppendAsync(SequencedEvent[] events, AppendCondition? condition) => Task.CompletedTask;
-        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions) =>
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition) => Task.CompletedTask;
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null) =>
             Task.FromResult(Array.Empty<SequencedEvent>());
     }
 

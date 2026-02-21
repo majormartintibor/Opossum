@@ -124,16 +124,9 @@ internal sealed class ProjectionDaemon : BackgroundService
             minCheckpoint = 0;
         }
 
-        // Read all events (we'll filter by position in memory for now)
-        // TODO: Add position-based filtering to Query/QueryItem when available
-        var query = Query.All();
-        var allEvents = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
-
-        // Filter to events after the minimum checkpoint
-        // ReadAsync already returns events in ascending position order — Where preserves that order
-        var newEvents = allEvents
-            .Where(e => e.Position > minCheckpoint)
-            .ToArray();
+        // Read only events after the minimum checkpoint position — the store filters at
+        // the index level, so we never load already-processed events into memory.
+        var newEvents = await _eventStore.ReadAsync(Query.All(), null, minCheckpoint).ConfigureAwait(false);
 
         if (newEvents.Length == 0)
         {

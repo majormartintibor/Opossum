@@ -189,7 +189,7 @@ var query = Query.FromItems(new QueryItem
     Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
 });
 
-var events = await _eventStore.ReadAsync(query, ReadOption.None);
+var events = await _eventStore.ReadAsync(query);
 
 foreach (var evt in events)
 {
@@ -278,18 +278,34 @@ public class StudentController
 public record CourseCreatedEvent(Guid CourseId, string Name, int MaxStudents) : IEvent;
 ```
 
-### Sequenced Events
+### NewEvent (Write Side)
 
-When appended, events receive a **sequence position** (monotonic increasing number) and become `SequencedEvent`:
+What you pass to `AppendAsync`. Contains the event payload and optional metadata, but **no position** — the store assigns that during append:
+
+```csharp
+public class NewEvent
+{
+    public DomainEvent Event { get; set; }  // Your domain event + EventType + Tags
+    public Metadata Metadata { get; set; }  // Optional: Timestamp, correlation IDs
+}
+```
+
+You rarely construct this directly — use the fluent builder instead (see [Extension Methods](#extension-methods)).
+
+### SequencedEvent (Read Side)
+
+What `ReadAsync` returns. Wraps the original event with a **position** assigned by the store:
 
 ```csharp
 public class SequencedEvent
 {
-    public long Position { get; set; }      // Global sequence number
+    public long Position { get; set; }      // Global sequence number (assigned by store)
     public DomainEvent Event { get; set; }  // Wrapper containing your domain event + tags
     public Metadata Metadata { get; set; }  // Timestamp, correlation/causation IDs
 }
 ```
+
+This is the DCB-spec distinction: **`Event`** (write input, no position) vs **`SequencedEvent`** (read output, position assigned by store).
 
 ### Tags
 
@@ -587,25 +603,35 @@ Core event store operations:
 ```csharp
 public interface IEventStore
 {
-    // Append one or more events
-    Task AppendAsync(SequencedEvent events, AppendCondition? condition = null);
-    Task AppendAsync(SequencedEvent[] events, AppendCondition? condition = null);
+    // Append one or more events (position is assigned by the store)
+    Task AppendAsync(NewEvent @event, AppendCondition? condition = null);
+    Task AppendAsync(NewEvent[] events, AppendCondition? condition = null);
 
-    // Read events matching a query
-    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions = null);
+    // Read events matching a query (returns sequenced events with positions)
+    // fromPosition: when provided, only events with Position > fromPosition are returned
+    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null);
 }
 ```
 
 ### Extension Methods
 
 ```csharp
-// Convert a domain event (IEvent) to a fluent DomainEventBuilder, then to SequencedEvent:
-SequencedEvent evt = new MyEvent(...)
+// Convert a domain event (IEvent) to a fluent DomainEventBuilder, then to NewEvent:
+NewEvent evt = new MyEvent(...)
     .ToDomainEvent()                          // IEvent → DomainEventBuilder
     .WithTag("key", "value")                  // add a single tag
     .WithTags(tag1, tag2)                     // add multiple tags
     .WithTimestamp(DateTimeOffset.UtcNow);    // set timestamp
-                                              // implicit conversion → SequencedEvent
+                                              // implicit conversion → NewEvent
+
+// Read all matching events (ascending order):
+SequencedEvent[] all = await eventStore.ReadAsync(query);
+
+// Read only events appended after a known position (incremental polling):
+SequencedEvent[] newEvents = await eventStore.ReadAsync(query, fromPosition: lastCheckpoint);
+
+// Read in descending order (latest first):
+SequencedEvent[] desc = await eventStore.ReadAsync(query, ReadOption.Descending);
 
 // Decision model — read + fold + condition in one call:
 DecisionModel<TState> model = await eventStore.BuildDecisionModelAsync(projection);

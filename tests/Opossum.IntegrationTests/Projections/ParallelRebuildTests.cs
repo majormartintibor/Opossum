@@ -165,11 +165,10 @@ public class ParallelRebuildTests : IDisposable
         _projectionManager.RegisterProjection(projection);
 
         // Add some events using the extension method
-        var stream1Events = new List<SequencedEvent>
+        var stream1Events = new List<NewEvent>
         {
-            new SequencedEvent
+            new NewEvent
             {
-                Position = 1,
                 Event = new DomainEvent
                 {
                     EventType = nameof(TestEvent1),
@@ -184,11 +183,10 @@ public class ParallelRebuildTests : IDisposable
             }
         };
 
-        var stream2Events = new List<SequencedEvent>
+        var stream2Events = new List<NewEvent>
         {
-            new SequencedEvent
+            new NewEvent
             {
-                Position = 2,
                 Event = new DomainEvent
                 {
                     EventType = nameof(TestEvent1),
