@@ -366,6 +366,87 @@ public class CourseEnrollmentProjection : IProjectionDefinition<CourseEnrollment
 }
 ```
 
+#### Cross-Aggregate Enrichment (`IProjectionWithRelatedEvents<T>`)
+
+When a projection needs data from a different aggregate to build its state, implement `IProjectionWithRelatedEvents<TState>` instead of `IProjectionDefinition<TState>`. The framework calls `GetRelatedEventsQuery` before `Apply`, fetches the matching events in one extra read, and passes them in as a third parameter — no N+1 queries, no manual cross-reads.
+
+Example: `CourseDetailsProjection` needs student names when a `StudentEnrolledToCourseEvent` arrives, but that data lives in `StudentRegisteredEvent` under a different tag:
+
+```csharp
+[ProjectionDefinition("CourseDetails")]
+public sealed class CourseDetailsProjection : IProjectionWithRelatedEvents<CourseDetails>
+{
+    public string ProjectionName => "CourseDetails";
+    public string[] EventTypes => [nameof(CourseCreatedEvent), nameof(StudentEnrolledToCourseEvent)];
+    public string KeySelector(SequencedEvent evt) =>
+        evt.Event.Tags.First(t => t.Key == "courseId").Value;
+
+    // Return a query for the extra events needed, or null if this event needs nothing extra.
+    public Query? GetRelatedEventsQuery(IEvent evt)
+    {
+        if (evt is StudentEnrolledToCourseEvent enrolled)
+            return Query.FromItems(new QueryItem
+            {
+                Tags = [new Tag { Key = "studentId", Value = enrolled.StudentId.ToString() }],
+                EventTypes = [nameof(StudentRegisteredEvent)]
+            });
+        return null;
+    }
+
+    // relatedEvents contains what GetRelatedEventsQuery returned (empty array when null was returned).
+    public CourseDetails? Apply(CourseDetails? current, IEvent evt, SequencedEvent[] relatedEvents) =>
+        evt switch
+        {
+            CourseCreatedEvent created => new CourseDetails(
+                CourseId: created.CourseId,
+                Name: created.Name,
+                MaxStudentCount: created.MaxStudentCount,
+                CurrentEnrollmentCount: 0,
+                EnrolledStudents: []),
+
+            StudentEnrolledToCourseEvent when current is not null
+                && relatedEvents.FirstOrDefault(e => e.Event.Event is StudentRegisteredEvent) is
+                    { Event.Event: StudentRegisteredEvent reg } =>
+                current with
+                {
+                    CurrentEnrollmentCount = current.CurrentEnrollmentCount + 1,
+                    EnrolledStudents = [..current.EnrolledStudents,
+                        new EnrolledStudentInfo(reg.StudentId, reg.FirstName, reg.LastName, reg.Email)]
+                },
+
+            _ => current
+        };
+}
+```
+
+#### Tag-Indexed Queries (`IProjectionTagProvider<T>`)
+
+By default, projections are keyed by a single string (`KeySelector`) so `GetAsync` retrieves one instance by key. To also query projections by their current state properties — e.g., "all courses that are not yet full" — attach a tag provider. The index is updated automatically every time a projection is saved.
+
+```csharp
+// 1. Implement the tag provider — return whatever tags should be queryable
+public sealed class CourseShortInfoTagProvider : IProjectionTagProvider<CourseShortInfo>
+{
+    public IEnumerable<Tag> GetTags(CourseShortInfo state)
+    {
+        yield return new Tag { Key = "IsFull", Value = state.IsFull.ToString() };
+    }
+}
+
+// 2. Attach it to the projection with [ProjectionTags] — auto-discovered during assembly scanning
+[ProjectionDefinition("CourseShortInfo")]
+[ProjectionTags(typeof(CourseShortInfoTagProvider))]
+public sealed class CourseShortInfoProjection : IProjectionDefinition<CourseShortInfo>
+{
+    // ... normal IProjectionDefinition<T> implementation
+}
+
+// 3. Query by tag — uses the persisted index, no full table scan
+IProjectionStore<CourseShortInfo> courseStore = ...;
+var availableCourses = await courseStore.QueryByTagsAsync(
+    [new Tag { Key = "IsFull", Value = "False" }]);
+```
+
 ### Decision Model Projections
 
 **Write-side, ephemeral projections** used in the DCB read → decide → append pattern. Each projection is a typed in-memory fold that yields state _and_ a pre-built `AppendCondition` — no persistence, no background services.
@@ -373,60 +454,45 @@ public class CourseEnrollmentProjection : IProjectionDefinition<CourseEnrollment
 Unlike read-side projections, Decision Model projections are:
 - **In-memory only** — run once per command, result is never stored
 - **Strongly typed** — each projection owns a single business concern
-- **Composable** — two or three projections share a single `ReadAsync` call and produce a single `AppendCondition` that spans all their queries
+- **Composable** — multiple projections share a single `ReadAsync` call and produce one `AppendCondition` that spans all their queries
 
 ```csharp
-// 1. Define one projection factory per business concern
-public static class CourseEnrollmentProjections
-{
-    public static IDecisionProjection<CourseCapacityState?> CourseCapacity(Guid courseId) =>
-        new DecisionProjection<CourseCapacityState?>(
-            initialState: null,
-            query: Query.FromItems(new QueryItem
-            {
-                EventTypes = [nameof(CourseCreatedEvent), nameof(StudentEnrolledToCourseEvent)],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
-            }),
-            apply: (state, evt) => evt.Event.Event switch
-            {
-                CourseCreatedEvent created => new CourseCapacityState(created.MaxStudentCount, 0),
-                StudentEnrolledToCourseEvent when state is not null =>
-                    state with { CurrentCount = state.CurrentCount + 1 },
-                _ => state
-            });
-}
+// Each projection is a self-contained factory method:
+IDecisionProjection<MyState?> MyProjection(Guid id) =>
+    new DecisionProjection<MyState?>(
+        initialState: null,
+        query: Query.FromItems(new QueryItem
+        {
+            EventTypes = [nameof(MyEvent)],
+            Tags = [new Tag { Key = "id", Value = id.ToString() }]
+        }),
+        apply: (state, evt) => evt.Event.Event switch
+        {
+            MyEvent e => new MyState(e.Value),
+            _ => state
+        });
 
-// 2. Wrap the read → decide → append cycle with ExecuteDecisionAsync.
-//    On AppendConditionFailedException or ConcurrencyException it re-reads and retries automatically.
+// Compose up to three projections — one read, one atomic AppendCondition:
+var (state1, state2, state3, appendCondition) =
+    await eventStore.BuildDecisionModelAsync(
+        MyProjection(id1),
+        AnotherProjection(id2),
+        YetAnotherProjection(id3));
+
+// Wrap the full cycle with automatic retry on concurrency conflicts:
 return await eventStore.ExecuteDecisionAsync(async (store, ct) =>
 {
-    var (courseCapacity, studentLimit, alreadyEnrolled, appendCondition) =
-        await store.BuildDecisionModelAsync(
-            CourseEnrollmentProjections.CourseCapacity(command.CourseId),
-            CourseEnrollmentProjections.StudentEnrollmentLimit(command.StudentId),
-            CourseEnrollmentProjections.AlreadyEnrolled(command.CourseId, command.StudentId), ct);
-
-    // 3. Check invariants using the strongly-typed states
-    if (courseCapacity is null)      return Fail("Course does not exist.");
-    if (studentLimit is null)        return Fail("Student is not registered.");
-    if (alreadyEnrolled)             return Fail("Student is already enrolled.");
-    if (courseCapacity.IsFull)       return Fail("Course is at maximum capacity.");
-    if (studentLimit.IsAtLimit)      return Fail("Student has reached their enrollment limit.");
-
-    // 4. Append — the AppendCondition spans all three queries automatically.
-    //    If a concurrent write matched any query between the read and this append,
-    //    AppendConditionFailedException is thrown and ExecuteDecisionAsync retries from step 2.
-    await store.AppendAsync(newEvent, appendCondition);
-    return Ok();
+    var (s1, s2, s3, condition) = await store.BuildDecisionModelAsync(p1, p2, p3, ct);
+    // ... check invariants using s1, s2, s3 ...
+    await store.AppendAsync(newEvent, condition);
+    return result;
 });
-
-// If all retries are exhausted, ExecuteDecisionAsync re-throws so the caller can decide:
-// catch (AppendConditionFailedException) { return Fail("Concurrent update — please retry."); }
+// If all retries are exhausted, ExecuteDecisionAsync re-throws AppendConditionFailedException.
 ```
 
 Three `BuildDecisionModelAsync` overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), and three-projection (`(T1, T2, T3, AppendCondition)`). Use `ExecuteDecisionAsync` to wrap the entire cycle with automatic exponential-backoff retry.
 
-See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) for a complete real-world example.
+See the [Full Example](#-full-example) section for a complete real-world walkthrough enforcing three invariants across two aggregates in a single read.
 
 ### Dynamic Consistency Boundaries (DCB)
 
@@ -449,6 +515,45 @@ await _eventStore.AppendAsync(
 ```
 
 **Why this matters:** Prevents race conditions without distributed locks.
+
+### Mediator
+
+Opossum includes a lightweight in-process mediator that automatically discovers command and query handlers — no manual registration of individual handlers needed.
+
+**Discovery convention:** any class whose name ends with `Handler` (or is marked `[MessageHandler]`), with a method named `HandleAsync` or `Handle`, where the first parameter is the message type and any additional parameters are injected from the DI container.
+
+```csharp
+// 1. Register — auto-scans the calling assembly by default
+builder.Services.AddMediator();
+
+// 2. Define the command and its handler — no interface, no DI registration needed
+public sealed record RegisterStudentCommand(Guid StudentId, string FirstName, string LastName, string Email);
+
+public sealed class RegisterStudentCommandHandler
+{
+    // IEventStore is resolved automatically from DI
+    public async Task<CommandResult> HandleAsync(
+        RegisterStudentCommand command,
+        IEventStore eventStore)
+    {
+        var evt = new StudentRegisteredEvent(command.StudentId, command.FirstName, command.LastName, command.Email)
+            .ToDomainEvent()
+            .WithTag("studentId", command.StudentId.ToString())
+            .WithTimestamp(DateTimeOffset.UtcNow);
+
+        await eventStore.AppendAsync(evt);
+        return CommandResult.Ok();
+    }
+}
+
+// 3. Dispatch — IMediator routes to the matching handler automatically
+app.MapPost("/students", async ([FromBody] RegisterStudentRequest req, IMediator mediator) =>
+{
+    var command = new RegisterStudentCommand(Guid.NewGuid(), req.FirstName, req.LastName, req.Email);
+    var result = await mediator.InvokeAsync<CommandResult>(command);
+    return result.Success ? Results.Created() : Results.BadRequest(result.ErrorMessage);
+});
+```
 
 ---
 
@@ -678,124 +783,262 @@ new AppendCondition
 }
 ```
 
-### IProjectionStore
+### IProjectionStore\<TState\>
 
-Query projections (read models):
+Query projections (read models). Resolved from DI as `IProjectionStore<TState>`:
 
 ```csharp
-public interface IProjectionStore
+public interface IProjectionStore<TState> where TState : class
 {
-    // Get single projection by key
-    Task<TState?> GetAsync<TState>(string projectionName, string key) 
-        where TState : class;
+    // Get a single projection instance by key
+    Task<TState?> GetAsync(string key);
 
-    // Query projections by tags
-    Task<TState[]> QueryByTagsAsync<TState>(Tag[] tags) 
-        where TState : class;
+    // Get all projection instances
+    Task<IReadOnlyList<TState>> GetAllAsync();
 
-    // Rebuild all projections
-    Task RebuildAllAsync();
+    // Filter in-memory with a predicate
+    Task<IReadOnlyList<TState>> QueryAsync(Func<TState, bool> predicate);
+
+    // Query by a single tag — index-based, requires [ProjectionTags] (see above)
+    Task<IReadOnlyList<TState>> QueryByTagAsync(Tag tag);
+
+    // Query by multiple tags with AND logic — index-based, requires [ProjectionTags]
+    Task<IReadOnlyList<TState>> QueryByTagsAsync(IEnumerable<Tag> tags);
 }
+```
+
+```csharp
+// Inject the typed store directly — no projection name string needed
+public class CourseController(IProjectionStore<CourseShortInfo> courseStore)
+{
+    public async Task<IReadOnlyList<CourseShortInfo>> GetAvailableAsync() =>
+        await courseStore.QueryByTagsAsync([new Tag { Key = "IsFull", Value = "False" }]);
+
+    public async Task<CourseShortInfo?> GetByIdAsync(Guid courseId) =>
+        await courseStore.GetAsync(courseId.ToString());
+}
+```
+
+### IProjectionManager
+
+Manage projection lifecycle for operational tasks such as disaster recovery or evolving projections in a live system:
+
+```csharp
+public interface IProjectionManager
+{
+    // Rebuild all projections in parallel (respects MaxConcurrentRebuilds config)
+    // forceRebuild: true  = rebuild even projections that already have a checkpoint
+    // forceRebuild: false = only rebuild projections with checkpoint = 0 (new/missing)
+    Task<ProjectionRebuildResult> RebuildAllAsync(bool forceRebuild = false);
+
+    // Rebuild a single named projection
+    Task RebuildAsync(string projectionName);
+
+    // Rebuild a specific subset — useful after fixing a bug in one projection
+    Task<ProjectionRebuildResult> RebuildAsync(string[] projectionNames);
+
+    // Poll current rebuild progress
+    Task<ProjectionRebuildStatus> GetRebuildStatusAsync();
+}
+```
+
+Expose as an admin endpoint (add proper authentication in production):
+
+```csharp
+app.MapPost("/admin/projections/rebuild", async (IProjectionManager manager) =>
+{
+    var result = await manager.RebuildAllAsync(forceRebuild: false);
+    return result.Success
+        ? Results.Ok(result)
+        : Results.Problem($"Rebuild failed: {string.Join(", ", result.FailedProjections)}");
+})
+.RequireAuthorization("Admin");
 ```
 
 ---
 
 ## ?? Full Example
 
-Here's a complete example showing student registration with email-uniqueness enforcement using the DCB Decision Model pattern:
+The following example is taken directly from the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) and shows the full DCB pattern at its most expressive: **three independent business invariants enforced atomically through a single read**.
+
+Enrolling a student in a course requires checking three separate concerns simultaneously:
+
+- ? **Course capacity** — the course must exist and have available seats
+- ? **Student enrollment limit** — the student must be registered and below their tier's course limit  
+- ? **Duplicate prevention** — the student must not already be enrolled in this course
+
+All three are evaluated from **one `ReadAsync` call**. The resulting `AppendCondition` spans all three queries automatically — a concurrent write matching any of them will cause `ExecuteDecisionAsync` to retry from scratch, with no manual retry logic required.
 
 ```csharp
-// 1. Define the event
-public record StudentRegisteredEvent(
+// ── Step 1: Domain events ─────────────────────────────────────────────────────
+
+public sealed record CourseCreatedEvent(
+    Guid CourseId,
+    string Name,
+    string Description,
+    int MaxStudentCount) : IEvent;
+
+public sealed record StudentRegisteredEvent(
     Guid StudentId,
     string FirstName,
     string LastName,
     string Email) : IEvent;
 
-// 2. Decision projection — in-memory fold that yields state + AppendCondition
-public static IDecisionProjection<bool> EmailTaken(string email) =>
-    new DecisionProjection<bool>(
-        initialState: false,
-        query: Query.FromItems(new QueryItem
-        {
-            Tags = [new Tag { Key = "studentEmail", Value = email }]
-        }),
-        apply: (_, _) => true);  // any matching event means the email is already taken
+public sealed record StudentEnrolledToCourseEvent(
+    Guid CourseId,
+    Guid StudentId) : IEvent;
 
-// 3. Command handler
-public class RegisterStudentHandler
+// ── Step 2: Decision state types — one per business concern ──────────────────
+
+// null until the course is created
+public sealed record CourseCapacityState(int MaxCapacity, int CurrentEnrollmentCount)
 {
-    private readonly IEventStore _eventStore;
+    public bool IsFull => CurrentEnrollmentCount >= MaxCapacity;
+}
 
-    public async Task<CommandResult<Guid>> RegisterAsync(
-        string firstName, string lastName, string email)
+// null until the student is registered
+public sealed record StudentEnrollmentLimitState(EnrollmentTier Tier, int CurrentCourseCount)
+{
+    public int MaxAllowed => GetMaxCoursesByTier(Tier);   // e.g. Basic = 3, Professional = 10
+    public bool IsAtLimit => CurrentCourseCount >= MaxAllowed;
+}
+
+// ── Step 3: Three focused, ephemeral decision projections ─────────────────────
+
+public static class CourseEnrollmentProjections
+{
+    // Is the course over capacity?
+    public static IDecisionProjection<CourseCapacityState?> CourseCapacity(Guid courseId) =>
+        new DecisionProjection<CourseCapacityState?>(
+            initialState: null,
+            query: Query.FromItems(new QueryItem
+            {
+                EventTypes =
+                [
+                    nameof(CourseCreatedEvent),
+                    nameof(CourseStudentLimitModifiedEvent),
+                    nameof(StudentEnrolledToCourseEvent)
+                ],
+                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+            }),
+            apply: (state, evt) => evt.Event.Event switch
+            {
+                CourseCreatedEvent created =>
+                    new CourseCapacityState(created.MaxStudentCount, 0),
+                CourseStudentLimitModifiedEvent modified when state is not null =>
+                    state with { MaxCapacity = modified.NewMaxStudentCount },
+                StudentEnrolledToCourseEvent when state is not null =>
+                    state with { CurrentEnrollmentCount = state.CurrentEnrollmentCount + 1 },
+                _ => state
+            });
+
+    // Has the student hit their tier's course limit?
+    public static IDecisionProjection<StudentEnrollmentLimitState?> StudentEnrollmentLimit(Guid studentId) =>
+        new DecisionProjection<StudentEnrollmentLimitState?>(
+            initialState: null,
+            query: Query.FromItems(new QueryItem
+            {
+                EventTypes =
+                [
+                    nameof(StudentRegisteredEvent),
+                    nameof(StudentSubscriptionUpdatedEvent),
+                    nameof(StudentEnrolledToCourseEvent)
+                ],
+                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+            }),
+            apply: (state, evt) => evt.Event.Event switch
+            {
+                StudentRegisteredEvent =>
+                    new StudentEnrollmentLimitState(EnrollmentTier.Basic, 0),
+                StudentSubscriptionUpdatedEvent updated when state is not null =>
+                    state with { Tier = updated.EnrollmentTier },
+                StudentEnrolledToCourseEvent when state is not null =>
+                    state with { CurrentCourseCount = state.CurrentCourseCount + 1 },
+                _ => state
+            });
+
+    // Is this exact student–course pair already enrolled?
+    // Both tags are required, so only the precise pair triggers this projection.
+    public static IDecisionProjection<bool> AlreadyEnrolled(Guid courseId, Guid studentId) =>
+        new DecisionProjection<bool>(
+            initialState: false,
+            query: Query.FromItems(new QueryItem
+            {
+                EventTypes = [nameof(StudentEnrolledToCourseEvent)],
+                Tags =
+                [
+                    new Tag { Key = "courseId", Value = courseId.ToString() },
+                    new Tag { Key = "studentId", Value = studentId.ToString() }
+                ]
+            }),
+            apply: (_, _) => true);   // any match means already enrolled
+}
+
+// ── Step 4: Command + handler — read → decide → append with automatic retry ──
+
+public sealed record EnrollStudentToCourseCommand(Guid CourseId, Guid StudentId);
+
+public sealed class EnrollStudentToCourseCommandHandler
+{
+    public async Task<CommandResult> HandleAsync(
+        EnrollStudentToCourseCommand command,
+        IEventStore eventStore)
     {
         try
         {
-            return await _eventStore.ExecuteDecisionAsync(async (store, ct) =>
-            {
-                // Read + fold — yields state and the AppendCondition in one call
-                var emailCheck = await store.BuildDecisionModelAsync(EmailTaken(email), ct);
-
-                if (emailCheck.State)
-                    return CommandResult<Guid>.Fail("Email already registered");
-
-                var studentId = Guid.NewGuid();
-                var evt = new StudentRegisteredEvent(studentId, firstName, lastName, email)
-                    .ToDomainEvent()
-                    .WithTag("studentId", studentId.ToString())
-                    .WithTag("studentEmail", email)
-                    .WithTimestamp(DateTimeOffset.UtcNow);
-
-                // AppendCondition ensures no concurrent registration slips through
-                await store.AppendAsync(evt, emailCheck.AppendCondition);
-                return CommandResult<Guid>.Ok(studentId);
-            });
+            return await eventStore.ExecuteDecisionAsync(
+                (store, ct) => TryEnrollAsync(command, store));
         }
         catch (AppendConditionFailedException)
         {
-            // Exhausted retries — a concurrent request claimed the email
-            return CommandResult<Guid>.Fail("Email was just registered by another request");
+            return CommandResult.Fail(
+                "Failed to enroll student due to concurrent updates. Please try again.");
         }
     }
-}
 
-// 4. Projection (read model)
-public record StudentListItem(Guid StudentId, string FullName, string Email);
-
-[ProjectionDefinition("StudentList")]
-public class StudentListProjection : IProjectionDefinition<StudentListItem>
-{
-    public string ProjectionName => "StudentList";
-    public string[] EventTypes => [nameof(StudentRegisteredEvent)];
-
-    public string KeySelector(SequencedEvent evt) =>
-        evt.Event.Tags.First(t => t.Key == "studentId").Value;
-
-    public StudentListItem? Apply(StudentListItem? current, IEvent evt)
+    private static async Task<CommandResult> TryEnrollAsync(
+        EnrollStudentToCourseCommand command,
+        IEventStore eventStore)
     {
-        if (evt is StudentRegisteredEvent registered)
-        {
-            return new StudentListItem(
-                registered.StudentId,
-                $"{registered.FirstName} {registered.LastName}",
-                registered.Email);
-        }
-        return current;
+        // One ReadAsync call materialises all three projections simultaneously.
+        // appendCondition spans all three queries — if a concurrent write matches
+        // ANY of them between this read and the append, AppendConditionFailedException
+        // is thrown and ExecuteDecisionAsync retries automatically.
+        var (courseCapacity, studentLimit, alreadyEnrolled, appendCondition) =
+            await eventStore.BuildDecisionModelAsync(
+                CourseEnrollmentProjections.CourseCapacity(command.CourseId),
+                CourseEnrollmentProjections.StudentEnrollmentLimit(command.StudentId),
+                CourseEnrollmentProjections.AlreadyEnrolled(command.CourseId, command.StudentId));
+
+        if (courseCapacity is null)
+            return CommandResult.Fail("Course does not exist.");
+        if (studentLimit is null)
+            return CommandResult.Fail("Student is not registered.");
+        if (alreadyEnrolled)
+            return CommandResult.Fail("Student is already enrolled in this course.");
+        if (courseCapacity.IsFull)
+            return CommandResult.Fail($"Course is at maximum capacity ({courseCapacity.MaxCapacity} students).");
+        if (studentLimit.IsAtLimit)
+            return CommandResult.Fail($"Student has reached their enrollment limit ({studentLimit.MaxAllowed} courses for {studentLimit.Tier} tier).");
+
+        NewEvent enrollmentEvent = new StudentEnrolledToCourseEvent(
+            CourseId: command.CourseId,
+            StudentId: command.StudentId)
+            .ToDomainEvent()
+            .WithTag("courseId", command.CourseId.ToString())
+            .WithTag("studentId", command.StudentId.ToString())
+            .WithTimestamp(DateTimeOffset.UtcNow);
+
+        // appendCondition guarantees all three invariants hold atomically at write time
+        await eventStore.AppendAsync(enrollmentEvent, appendCondition);
+        return CommandResult.Ok();
     }
-}
-
-// 5. Query the projection
-public class StudentController
-{
-    private readonly IProjectionStore _projectionStore;
-
-    public async Task<StudentListItem?> GetStudentAsync(Guid studentId) =>
-        await _projectionStore.GetAsync<StudentListItem>(
-            "StudentList",
-            studentId.ToString());
 }
 ```
+
+**Why this matters:** Three separate business rules — touching two different aggregates (course + student) — are enforced with a single read and a single atomic append condition. There are no distributed locks, no sagas, and no two-phase commits. The DCB pattern handles concurrent writes through optimistic concurrency with automatic retry built in to `ExecuteDecisionAsync`.
+
+See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) for the full working application including read-side projections and API endpoints.
 
 ---
 
