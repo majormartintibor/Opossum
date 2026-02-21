@@ -366,9 +366,9 @@ public class CourseEnrollmentProjection : IProjectionDefinition<CourseEnrollment
 }
 ```
 
-#### Cross-Aggregate Enrichment (`IProjectionWithRelatedEvents<T>`)
+#### Related-Event Enrichment (`IProjectionWithRelatedEvents<T>`)
 
-When a projection needs data from a different aggregate to build its state, implement `IProjectionWithRelatedEvents<TState>` instead of `IProjectionDefinition<TState>`. The framework calls `GetRelatedEventsQuery` before `Apply`, fetches the matching events in one extra read, and passes them in as a third parameter — no N+1 queries, no manual cross-reads.
+When building a projection's state requires data from events matched by an additional query — events with different types or tags — implement `IProjectionWithRelatedEvents<TState>` instead of `IProjectionDefinition<TState>`. The framework calls `GetRelatedEventsQuery` before `Apply`, executes that second query, and passes the results in as a third parameter — no N+1 queries, no manual secondary reads.
 
 Example: `CourseDetailsProjection` needs student names when a `StudentEnrolledToCourseEvent` arrives, but that data lives in `StudentRegisteredEvent` under a different tag:
 
@@ -492,7 +492,7 @@ return await eventStore.ExecuteDecisionAsync(async (store, ct) =>
 
 Three `BuildDecisionModelAsync` overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), and three-projection (`(T1, T2, T3, AppendCondition)`). Use `ExecuteDecisionAsync` to wrap the entire cycle with automatic exponential-backoff retry.
 
-See the [Full Example](#-full-example) section for a complete real-world walkthrough enforcing three invariants across two aggregates in a single read.
+See the [Full Example](#-full-example) section for a complete real-world walkthrough enforcing three invariants across two independent tag-based queries in a single read.
 
 ### Dynamic Consistency Boundaries (DCB)
 
@@ -1036,7 +1036,7 @@ public sealed class EnrollStudentToCourseCommandHandler
 }
 ```
 
-**Why this matters:** Three separate business rules — touching two different aggregates (course + student) — are enforced with a single read and a single atomic append condition. There are no distributed locks, no sagas, and no two-phase commits. The DCB pattern handles concurrent writes through optimistic concurrency with automatic retry built in to `ExecuteDecisionAsync`.
+**Why this matters:** Three separate business rules — spanning two independent tag-based queries (course events tagged with `courseId`, student events tagged with `studentId`) — are enforced with a single read and a single atomic append condition. There are no distributed locks, no sagas, and no two-phase commits. The DCB pattern handles concurrent writes through optimistic concurrency with automatic retry built in to `ExecuteDecisionAsync`.
 
 See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) for the full working application including read-side projections and API endpoints.
 

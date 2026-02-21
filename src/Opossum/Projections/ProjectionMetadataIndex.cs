@@ -127,6 +127,38 @@ internal sealed class ProjectionMetadataIndex
     }
 
     /// <summary>
+    /// Saves multiple metadata entries in a single atomic disk write.
+    /// More efficient than calling <see cref="SaveAsync"/> per entry — used during rebuilds.
+    /// </summary>
+    /// <param name="projectionPath">Path to the projection folder</param>
+    /// <param name="entries">All metadata entries to persist</param>
+    public async Task BatchSaveAsync(string projectionPath, IReadOnlyDictionary<string, ProjectionMetadata> entries)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectionPath);
+        ArgumentNullException.ThrowIfNull(entries);
+
+        if (entries.Count == 0)
+        {
+            return;
+        }
+
+        await _indexLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            foreach (var (key, metadata) in entries)
+            {
+                _cache[key] = metadata;
+            }
+
+            await PersistIndexAsync(projectionPath).ConfigureAwait(false);
+        }
+        finally
+        {
+            _indexLock.Release();
+        }
+    }
+
+    /// <summary>
     /// Clears all metadata (used during projection rebuild).
     /// Thread-safe operation.
     /// </summary>

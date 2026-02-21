@@ -121,12 +121,19 @@ internal sealed class ProjectionManager : IProjectionManager
             // Clear existing projection data
             await registration.ClearAsync(cancellationToken).ConfigureAwait(false);
 
+            // Switch store to rebuild mode: state changes are buffered in memory and
+            // flushed to disk once at the end, reducing disk I/O from O(events) to O(unique keys).
+            await registration.BeginRebuildAsync().ConfigureAwait(false);
+
             // Rebuild from events (ReadAsync already returns events in ascending position order)
             foreach (var evt in events)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
             }
+
+            // Flush all buffered state to disk in a single pass
+            await registration.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
 
             // Save checkpoint
             if (events.Length > 0)
@@ -525,6 +532,8 @@ internal sealed class ProjectionManager : IProjectionManager
         public abstract string[] EventTypes { get; }
         public abstract Task ApplyAsync(SequencedEvent evt, CancellationToken cancellationToken);
         public abstract Task ClearAsync(CancellationToken cancellationToken);
+        public abstract Task BeginRebuildAsync();
+        public abstract Task CommitRebuildAsync(CancellationToken cancellationToken);
     }
 
     private sealed class ProjectionRegistration<TState> : ProjectionRegistration where TState : class
@@ -606,6 +615,23 @@ internal sealed class ProjectionManager : IProjectionManager
                         File.Delete(file);
                     }
                 }
+            }
+        }
+
+        public override Task BeginRebuildAsync()
+        {
+            if (_store is FileSystemProjectionStore<TState> fsStore)
+            {
+                fsStore.BeginRebuild();
+            }
+            return Task.CompletedTask;
+        }
+
+        public override async Task CommitRebuildAsync(CancellationToken cancellationToken)
+        {
+            if (_store is FileSystemProjectionStore<TState> fsStore)
+            {
+                await fsStore.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
             }
         }
     }

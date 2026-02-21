@@ -54,7 +54,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: StudentProjection.Apply
         ).ToList();
 
@@ -66,7 +66,7 @@ public class BuildProjectionsTests
     }
 
     [Fact]
-    public void BuildProjections_WithMultipleAggregates_BuildsMultipleProjections()
+    public void BuildProjections_WithMultipleEntities_BuildsMultipleProjections()
     {
         // Arrange
         var student1Id = Guid.NewGuid();
@@ -82,7 +82,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: StudentProjection.Apply
         ).ToList();
 
@@ -113,7 +113,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: StudentProjection.Apply
         ).ToList();
 
@@ -131,7 +131,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: StudentProjection.Apply
         ).ToList();
 
@@ -151,7 +151,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: (evt, current) =>
             {
                 // Verify current is null on first event
@@ -177,14 +177,14 @@ public class BuildProjectionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             nullEvents!.BuildProjections<StudentProjection>(
-                aggregateIdSelector: e => "test",
+                keySelector: e => "test",
                 applyEvent: StudentProjection.Apply
             )
         );
     }
 
     [Fact]
-    public void BuildProjections_ThrowsIfAggregateIdSelectorIsNull()
+    public void BuildProjections_ThrowsIfKeySelectorIsNull()
     {
         // Arrange
         var events = Array.Empty<SequencedEvent>();
@@ -192,7 +192,7 @@ public class BuildProjectionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             events.BuildProjections<StudentProjection>(
-                aggregateIdSelector: null!,
+                keySelector: null!,
                 applyEvent: StudentProjection.Apply
             )
         );
@@ -207,7 +207,7 @@ public class BuildProjectionsTests
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() =>
             events.BuildProjections<StudentProjection>(
-                aggregateIdSelector: e => "test",
+                keySelector: e => "test",
                 applyEvent: null!
             )
         );
@@ -225,7 +225,7 @@ public class BuildProjectionsTests
 
         // Act - applyEvent returns null
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: (evt, current) => null // Always return null
         ).ToList();
 
@@ -250,7 +250,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: StudentProjection.Apply
         ).ToList();
 
@@ -290,7 +290,7 @@ public class BuildProjectionsTests
 
         // Act
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: StudentProjection.Apply
         ).ToList();
 
@@ -326,7 +326,7 @@ public class BuildProjectionsTests
 
         // Act - Using pattern matching like in the real usage
         var projections = events.BuildProjections<StudentProjection>(
-            aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+            keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
             applyEvent: (evt, current) => evt switch
             {
                 StudentCreatedEvent created => new StudentProjection(

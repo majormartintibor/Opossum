@@ -343,17 +343,22 @@ public static class EventStoreExtensions
     }
 
     /// <summary>
-    /// Builds projection objects by grouping events by aggregate and applying them sequentially
+    /// Builds projection objects by grouping events by a shared key and folding them sequentially.
+    /// Each unique key value produces one projection instance — equivalent to a <c>GroupBy</c> followed by a left-fold.
     /// </summary>
     /// <typeparam name="TProjection">The projection type to build</typeparam>
     /// <param name="events">Events to process</param>
-    /// <param name="aggregateIdSelector">Function to extract aggregate ID from each event</param>
-    /// <param name="applyEvent">Function to apply an event to the current projection state (null for first event of aggregate)</param>
-    /// <returns>Enumerable of built projections, one per unique aggregate ID</returns>
+    /// <param name="keySelector">
+    /// Function that extracts the grouping key from each event.
+    /// All events returning the same key are folded into a single projection instance.
+    /// In DCB terms this is typically the value of a domain identity tag (e.g. the value of a <c>studentId</c> tag).
+    /// </param>
+    /// <param name="applyEvent">Function to apply an event to the current projection state (<see langword="null"/> on the first event for each key)</param>
+    /// <returns>Enumerable of built projections, one per unique key value</returns>
     /// <example>
     /// <code>
     /// var students = events.BuildProjections&lt;StudentShortInfo&gt;(
-    ///     aggregateIdSelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
+    ///     keySelector: e => e.Event.Tags.First(t => t.Key == "studentId").Value,
     ///     applyEvent: (evt, current) => evt switch
     ///     {
     ///         StudentRegisteredEvent registered => new StudentShortInfo(...),
@@ -365,16 +370,16 @@ public static class EventStoreExtensions
     /// </example>
     public static IEnumerable<TProjection> BuildProjections<TProjection>(
         this SequencedEvent[] events,
-        Func<SequencedEvent, string> aggregateIdSelector,
+        Func<SequencedEvent, string> keySelector,
         Func<IEvent, TProjection?, TProjection?> applyEvent)
         where TProjection : class
     {
         ArgumentNullException.ThrowIfNull(events);
-        ArgumentNullException.ThrowIfNull(aggregateIdSelector);
+        ArgumentNullException.ThrowIfNull(keySelector);
         ArgumentNullException.ThrowIfNull(applyEvent);
 
         return events
-            .GroupBy(aggregateIdSelector)
+            .GroupBy(keySelector)
             .Select(eventGroup => eventGroup.Aggregate(
                 seed: (TProjection?)null,
                 func: (current, seqEvent) => applyEvent((IEvent)seqEvent.Event.Event, current)
