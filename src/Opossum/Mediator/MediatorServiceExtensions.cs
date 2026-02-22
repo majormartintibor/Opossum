@@ -32,7 +32,7 @@ public static class MediatorServiceExtensions
 
         // Register mediator
         services.AddSingleton<IMediator>(sp =>
-            new Mediator(sp, generatedHandlers));
+            new Mediator(sp, generatedHandlers, sp.GetService<ILogger<Mediator>>()));
 
         return services;
     }

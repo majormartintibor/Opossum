@@ -5,7 +5,7 @@ namespace Opossum.Projections;
 /// <summary>
 /// Background service that continuously updates projections from the event store
 /// </summary>
-internal sealed class ProjectionDaemon : BackgroundService
+internal sealed partial class ProjectionDaemon : BackgroundService
 {
     private readonly IProjectionManager _projectionManager;
     private readonly IEventStore _eventStore;
@@ -31,7 +31,7 @@ internal sealed class ProjectionDaemon : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Projection daemon starting...");
+        LogDaemonStarting();
 
         // Wait a bit for application startup to complete
         await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken).ConfigureAwait(false);
@@ -42,7 +42,7 @@ internal sealed class ProjectionDaemon : BackgroundService
             await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
         }
 
-        _logger.LogInformation("Projection daemon polling started with interval: {Interval}", _options.PollingInterval);
+        LogPollingStarted(_options.PollingInterval);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -57,18 +57,18 @@ internal sealed class ProjectionDaemon : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing events in projection daemon");
+                LogProcessingError(ex);
             }
 
             await Task.Delay(_options.PollingInterval, stoppingToken).ConfigureAwait(false);
         }
 
-        _logger.LogInformation("Projection daemon stopped");
+        LogDaemonStopped();
     }
 
     private async Task RebuildMissingProjectionsAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Checking for projections that need rebuilding...");
+        LogCheckingForRebuilds();
 
         // Use the new RebuildAllAsync method (only rebuilds missing projections)
         var result = await _projectionManager.RebuildAllAsync(
@@ -77,27 +77,20 @@ internal sealed class ProjectionDaemon : BackgroundService
 
         if (result.TotalRebuilt == 0)
         {
-            _logger.LogInformation("All projections are up to date (no rebuilds needed)");
+            LogAllProjectionsUpToDate();
             return;
         }
 
         if (result.Success)
         {
-            _logger.LogInformation(
-                "Successfully rebuilt {Count} projections in {Duration}. Details: {@Details}",
-                result.TotalRebuilt,
-                result.Duration,
-                result.Details);
+            LogRebuildSucceeded(result.TotalRebuilt, result.Duration);
         }
         else
         {
-            _logger.LogWarning(
-                "Projection rebuild completed with {SuccessCount} successes and {FailureCount} failures. " +
-                "Failed projections: {FailedProjections}. Details: {@Details}",
+            LogRebuildWithFailures(
                 result.TotalRebuilt,
                 result.Details.Count - result.TotalRebuilt,
-                string.Join(", ", result.FailedProjections),
-                result.Details);
+                string.Join(", ", result.FailedProjections));
         }
     }
 
@@ -133,8 +126,7 @@ internal sealed class ProjectionDaemon : BackgroundService
             return;
         }
 
-        _logger.LogDebug("Processing {EventCount} new events from position {MinPosition}",
-            newEvents.Length, minCheckpoint + 1);
+        LogProcessingEvents(newEvents.Length, minCheckpoint + 1);
 
         // Process in batches
         var batches = newEvents.Chunk(_options.BatchSize);
@@ -145,6 +137,36 @@ internal sealed class ProjectionDaemon : BackgroundService
             await _projectionManager.UpdateAsync(batch, cancellationToken).ConfigureAwait(false);
         }
 
-        _logger.LogDebug("Processed {EventCount} events successfully", newEvents.Length);
+        LogProcessedEvents(newEvents.Length);
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Projection daemon starting...")]
+    private partial void LogDaemonStarting();
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Projection daemon polling started with interval: {Interval}")]
+    private partial void LogPollingStarted(TimeSpan interval);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error processing events in projection daemon")]
+    private partial void LogProcessingError(Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Projection daemon stopped")]
+    private partial void LogDaemonStopped();
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Checking for projections that need rebuilding...")]
+    private partial void LogCheckingForRebuilds();
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "All projections are up to date (no rebuilds needed)")]
+    private partial void LogAllProjectionsUpToDate();
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Successfully rebuilt {Count} projections in {Duration}")]
+    private partial void LogRebuildSucceeded(int count, TimeSpan duration);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Projection rebuild completed with {SuccessCount} successes and {FailureCount} failures. Failed projections: {FailedProjections}")]
+    private partial void LogRebuildWithFailures(int successCount, int failureCount, string failedProjections);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Processing {EventCount} new events from position {MinPosition}")]
+    private partial void LogProcessingEvents(int eventCount, long minPosition);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Processed {EventCount} events successfully")]
+    private partial void LogProcessedEvents(int eventCount);
 }

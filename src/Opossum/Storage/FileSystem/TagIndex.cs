@@ -14,6 +14,8 @@ internal class TagIndex
         WriteIndented = true
     };
 
+    private static readonly char[] _invalidFileNameChars = Path.GetInvalidFileNameChars();
+
     // Per-instance lock for defense in depth
     // Protects Read-Modify-Write operations on index files
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -109,9 +111,7 @@ internal class TagIndex
     /// </summary>
     private static string GetSafeFileName(string input)
     {
-        // Replace invalid characters with underscores
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var safeFileName = string.Join("_", input.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        var safeFileName = string.Join("_", input.Split(_invalidFileNameChars, StringSplitOptions.RemoveEmptyEntries));
         return safeFileName;
     }
 

@@ -11,6 +11,7 @@ using Opossum.Samples.CourseManagement.StudentDetails;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
+using Opossum.Telemetry;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -82,6 +83,38 @@ builder.Services.AddProblemDetails();
 
 // Add OpenAPI with native .NET support (respects JsonStringEnumConverter)
 builder.Services.AddOpenApi();
+
+// ============================================================================
+// DEVELOPMENT TRACING — Opossum ActivitySource console listener
+// ============================================================================
+// Prints every Opossum span (Append, Read, Projection.Rebuild) to the console
+// with its duration and structured tags. No external packages required.
+//
+// To wire up a real tracing backend instead, replace this entire block with:
+//
+//   builder.Services.AddOpenTelemetry()
+//       .WithTracing(t => t
+//           .AddAspNetCoreInstrumentation()
+//           .AddSource(OpossumTelemetry.ActivitySourceName)
+//           .AddOtlpExporter()); // Jaeger, Grafana Tempo, Azure Monitor, ...
+// ============================================================================
+if (builder.Environment.IsDevelopment())
+{
+    var opossumTraceListener = new ActivityListener
+    {
+        ShouldListenTo = source => source.Name == OpossumTelemetry.ActivitySourceName,
+        Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+        ActivityStopped = activity =>
+        {
+            var tags = string.Join(", ", activity.Tags.Select(t => $"{t.Key}={t.Value}"));
+            var status = activity.Status == ActivityStatusCode.Error
+                ? $" [ERROR: {activity.StatusDescription}]"
+                : string.Empty;
+            Console.WriteLine($"[Opossum] {activity.OperationName,-26} | {activity.Duration.TotalMilliseconds,6:F1}ms | {tags}{status}");
+        }
+    };
+    ActivitySource.AddActivityListener(opossumTraceListener);
+}
 
 var app = builder.Build();
 

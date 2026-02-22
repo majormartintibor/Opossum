@@ -5,6 +5,88 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-preview.2] - 2026-02-22
+
+### Fixed
+
+- **`TotalEventsProcessed` in projection checkpoints was always wrong** — `SaveCheckpointAsync`
+  previously stored `oldCheckpoint + 1` on every update after the first, meaning the value
+  drifted further from reality with each polling cycle. It is now always set to the current
+  `lastProcessedPosition`, which equals the total event count in a 1-indexed sequential store.
+
+- **`StorageInitializer` created `Events/` but the store used `events/`** — On case-sensitive
+  file systems (Linux) this caused a spurious empty `Events/` directory to be created at startup
+  while actual event files went into the separate `events/` directory created on first write.
+  The initializer now pre-creates `events/` (lower-case) consistently with `EventFileManager`.
+
+### Added
+
+- **`OpossumTelemetry.ActivitySourceName`** — public constant (`"Opossum"`) that consumers pass
+  to `tracerProviderBuilder.AddSource(...)` to receive Opossum distributed traces in any
+  OpenTelemetry-compatible pipeline. No Opossum package dependencies are required on the
+  consumer side; the library emits traces purely via `System.Diagnostics.ActivitySource`.
+
+- **Distributed tracing via `ActivitySource`** — three operations now emit activities:
+  - `EventStore.Append` — tagged with `db.operation`, `opossum.event_count`, and
+    `opossum.context`. On `AppendConditionFailedException` the activity is tagged with
+    `opossum.append.conflict = true` (not treated as an error — conflict is expected in
+    the DCB retry pattern). All other unexpected exceptions set `ActivityStatusCode.Error`.
+  - `EventStore.Read` — tagged with `db.operation`, `opossum.context`, and
+    `opossum.event_count` (populated after the read completes).
+  - `Projection.Rebuild` — tagged with `opossum.projection` and `opossum.events_processed`.
+  When no listener is attached the overhead is a single null-check per operation.
+
+- **Structured error logging in `FileSystemEventStore`** — the event store now accepts an
+  optional `ILogger<FileSystemEventStore>?` via its constructor (injected automatically by
+  the DI container when `services.AddLogging()` is present; falls back to `NullLogger`
+  otherwise). Unexpected I/O or serialisation exceptions in `AppendAsync` and `ReadAsync` are
+  logged at `Error` level. `AppendConditionFailedException` / `ConcurrencyException` are
+  intentionally **not** logged — they are part of normal DCB flow and handled by the caller.
+
+- **Structured error logging in `Mediator`** — an optional `ILogger<Mediator>?` is now
+  injected into the mediator (via the DI factory registered by `AddMediator()`). A missing
+  handler is logged at `Error` level before the `InvalidOperationException` is thrown.
+
+- **Sample app `ActivityListener` demo** — `Program.cs` registers a zero-dependency
+  `ActivityListener` in development that prints every Opossum span with duration and tags to
+  the console, with an inline comment showing the one-liner OpenTelemetry replacement.
+
+### Performance
+
+- **`[LoggerMessage]` source-generated logging in `ProjectionDaemon` and `ProjectionManager`**
+  — all `_logger.LogXxx(...)` calls in both classes have been converted to
+  `[LoggerMessage]`-attributed `partial` methods. The source generator produces static
+  callbacks that skip boxing and string allocation entirely when the requested log level is
+  disabled, which benefits the hot polling loop (`ProcessNewEventsAsync` runs on every tick).
+
+- **O(1) event-type matching in `ProjectionManager.UpdateAsync`** — the internal
+  `ProjectionRegistration<T>` now builds a `HashSet<string>` from `definition.EventTypes` at
+  registration time. The hot polling loop's `Contains()` check drops from O(n) array scan to
+  O(1) hash lookup. The public `IProjectionDefinition<TState>.EventTypes` API is unchanged.
+
+- **`Path.GetInvalidFileNameChars()` cached as `static readonly`** — `TagIndex` and
+  `EventTypeIndex` previously called `Path.GetInvalidFileNameChars()` on every index write,
+  allocating a new `char[]` each time. Both now hold a single cached instance.
+
+### Changed
+
+- **`LogRebuildingProjection` downgraded from `Information` → `Debug`** — the per-projection
+  "Rebuilding projection 'X'..." progress message is repeated N times per rebuild (once per
+  registered projection). The completion message `"Projection 'X' rebuilt in Xms"` and the
+  overall summary `"All N projections rebuilt in X"` remain at `Information` and are sufficient
+  for production observability. Enable `Debug` to see individual projection rebuild progress.
+
+- **Sample app log-level guidance** — `appsettings.json` now documents all Opossum log-level
+  options and per-component overrides with inline comments. `appsettings.Development.json`
+  sets `"Opossum": "Debug"` so polling and per-projection rebuild details are visible during
+  local development without any extra configuration.
+
+### Documentation
+
+- **XML docs added to previously undocumented public types** — `IEvent`, `Tag`,
+  `SequencedEvent`, `DomainEvent`, `QueryItem`, and `IEventStore.AppendAsync` now have full
+  IntelliSense documentation including remarks, parameter descriptions, and exception docs.
+
 ## [0.2.0-preview.1] - 2026-02-21
 
 ### Performance

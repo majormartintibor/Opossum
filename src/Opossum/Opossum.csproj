@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.2.0-preview.1</Version>
+    <Version>0.2.0-preview.2</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -24,7 +24,7 @@
     <!-- Assembly Versioning -->
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
     <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-preview.1</InformationalVersion>
+    <InformationalVersion>0.2.0-preview.2</InformationalVersion>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

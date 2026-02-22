@@ -4,6 +4,26 @@ namespace Opossum;
 
 public interface IEventStore
 {
+    /// <summary>
+    /// Atomically appends one or more events to the event store,
+    /// optionally enforcing a concurrency guard.
+    /// </summary>
+    /// <param name="events">
+    /// One or more events to append. The array must not be empty and every
+    /// <see cref="Core.NewEvent.Event"/> must have a non-empty
+    /// <see cref="Core.DomainEvent.EventType"/>.
+    /// </param>
+    /// <param name="condition">
+    /// Optional <see cref="Core.AppendCondition"/> that guards the append against
+    /// concurrent writes. Pass <see langword="null"/> for an unconditional append.
+    /// </param>
+    /// <exception cref="Exceptions.AppendConditionFailedException">
+    /// Thrown when <paramref name="condition"/> is set and a conflicting event was
+    /// appended between the caller's read and this append. Catch this exception and
+    /// retry the full read → decide → append cycle.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">When <paramref name="events"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException">When <paramref name="events"/> is empty or contains an event with a null/empty <see cref="Core.DomainEvent.EventType"/>.</exception>
     Task AppendAsync(NewEvent[] events, AppendCondition? condition);
 
     /// <summary>

@@ -3,12 +3,14 @@ namespace Opossum.Mediator;
 /// <summary>
 /// Default implementation of the mediator pattern
 /// </summary>
-public sealed class Mediator(
+public sealed partial class Mediator(
     IServiceProvider serviceProvider,
-    Dictionary<Type, IMessageHandler> handlers) : IMediator
+    Dictionary<Type, IMessageHandler> handlers,
+    ILogger<Mediator>? logger = null) : IMediator
 {
     private readonly IServiceProvider _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     private readonly IReadOnlyDictionary<Type, IMessageHandler> _handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
+    private readonly ILogger<Mediator> _logger = logger ?? NullLogger<Mediator>.Instance;
 
     public async Task<T> InvokeAsync<T>(
         object message,
@@ -21,6 +23,7 @@ public sealed class Mediator(
 
         if (!_handlers.TryGetValue(messageType, out var handler))
         {
+            LogNoHandlerRegistered(messageType.FullName ?? messageType.Name);
             throw new InvalidOperationException(
                 $"No handler registered for message type {messageType.FullName}");
         }
@@ -52,4 +55,7 @@ public sealed class Mediator(
 
         return typedResponse;
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "No handler registered for message type '{MessageType}'")]
+    private partial void LogNoHandlerRegistered(string messageType);
 }
