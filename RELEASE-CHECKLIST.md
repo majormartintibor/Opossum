@@ -1,17 +1,18 @@
-# NuGet Release Checklist - v0.1.0-preview.1
+# NuGet Release Checklist - v0.2.0-preview.2
 
 ## ✅ Status Overview
 
 | Category | Status | Notes |
 |----------|--------|-------|
-| **Project Configuration** | ❌ TODO | Need package metadata |
-| **Versioning** | ❌ TODO | Need version properties |
+| **Project Configuration** | ✅ DONE | Package metadata set |
+| **Versioning** | ✅ DONE | 0.2.0-preview.2 |
 | **Documentation** | ✅ DONE | README, LICENSE, CONTRIBUTING |
 | **XML Documentation** | ✅ DONE | Generated and included |
-| **Build & Test** | ✅ DONE | Builds successfully |
-| **CHANGELOG** | ✅ DONE | Created |
+| **Build & Test** | ✅ DONE | 805 tests pass (805 unit + integration) |
+| **CHANGELOG** | ✅ DONE | Updated for 0.2.0-preview.2 |
 | **Icon/Logo** | ✅ DONE | opossum.png included |
-| **Git Tagging** | ❌ TODO | Tag before release |
+| **Git Tagging** | ✅ DONE | v0.2.0-preview.2 tagged and pushed |
+| **NuGet Published** | ✅ DONE | https://www.nuget.org/packages/Opossum/ |
 
 ---
 
