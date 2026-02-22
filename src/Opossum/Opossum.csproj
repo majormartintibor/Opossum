@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.2.0-preview.2</Version>
+    <Version>0.3.0-preview.1</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -19,12 +19,12 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>opossum.png</PackageIcon>
-    <PackageReleaseNotes>Second preview release of Opossum event store. See CHANGELOG.md for full details.</PackageReleaseNotes>
+    <PackageReleaseNotes>Third preview release of Opossum event store. Includes Apply(SequencedEvent), streaming reads via IAsyncEnumerable, and multi-context support. See CHANGELOG.md for full details.</PackageReleaseNotes>
 
     <!-- Assembly Versioning -->
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-preview.2</InformationalVersion>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
+    <InformationalVersion>0.3.0-preview.1</InformationalVersion>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

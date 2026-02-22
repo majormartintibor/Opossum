@@ -68,6 +68,7 @@
   </Folder>
   <Folder Name="/docs/future-plans/">
     <File Path="docs/future-plans/0.3.0-preview.1-roadmap.md" />
+    <File Path="docs/future-plans/0.4.0-roadmap.md" />
     <File Path="docs/future-plans/batched-flush-redesign-plan.md" />
   </Folder>
   <Folder Name="/docs/guides/">

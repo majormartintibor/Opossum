@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-preview.1] - Unreleased
+
+### Added
+- Multi-context support — `AppendAsync` and `ReadAsync` gain an optional `context` parameter;
+  each registered context gets its own `SemaphoreSlim` to avoid unnecessary serialisation
+  of appends to unrelated contexts.
+- Streaming reads via `IAsyncEnumerable<SequencedEvent>` — `IEventStore.ReadAsync` return
+  type changed from `Task<SequencedEvent[]>` to `IAsyncEnumerable<SequencedEvent>`, enabling
+  incremental event processing and eliminating full-result materialisation on large reads.
+- `CancellationToken` parameter on `AppendAsync` — all async operations in the public API
+  now accept a `CancellationToken`.
+
+### Changed
+- **Breaking: `IProjectionDefinition<TState>.Apply` now receives `SequencedEvent` instead of `IEvent`** —
+  the full event envelope (tags, metadata, position) is available in every `Apply` call,
+  removing the asymmetry with `KeySelector(SequencedEvent)`.
+- **Breaking: `IProjectionWithRelatedEvents<TState>.Apply` and `GetRelatedEventsQuery`** — both
+  methods updated to accept `SequencedEvent` for consistency with the base interface.
+- **Breaking: `IEventStore.ReadAsync`** — return type changed from `Task<SequencedEvent[]>` to
+  `IAsyncEnumerable<SequencedEvent>`. Callers that need a full array use `.ToArrayAsync()`.
+- **Breaking: `Tag` and `QueryItem` are now immutable `record` types** — construction syntax
+  changes; existing positional or property-init call sites are unaffected.
+- `ProjectionManager.RebuildAsync` and `ProjectionDaemon` adopt `await foreach` streaming,
+  eliminating the "load all events then iterate" allocation pattern on large event logs.
+
+### Fixed
+- Metadata mutation side-effect in `AppendAsync` — the store no longer mutates the caller's
+  `NewEvent` instances while assigning derived metadata fields.
+
+### Removed
+- `docs/limitations/mvp-single-context.md` — limitation no longer applies; replaced by a
+  multi-context usage guide.
+
+---
+
 ## [0.2.0-preview.2] - 2026-02-22
 
 ### Fixed
