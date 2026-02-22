@@ -1,5 +1,15 @@
 namespace Opossum.Core;
 
+/// <summary>
+/// Envelope that carries a domain event payload (<see cref="Event"/>) together with
+/// its indexing metadata (<see cref="EventType"/> and <see cref="Tags"/>).
+/// </summary>
+/// <remarks>
+/// You do not need to set <see cref="EventType"/> manually — when left unassigned it
+/// defaults to the simple class name of the inner <see cref="Event"/> object
+/// (e.g. <c>"StudentRegisteredEvent"</c>). Override it only when you want to decouple
+/// the stored type name from the CLR class name.
+/// </remarks>
 public class DomainEvent
 {
     /// <summary>

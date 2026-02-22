@@ -48,6 +48,14 @@
     <File Path="docs/benchmarking/results/20260221/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github-run2.md" />
     <File Path="docs/benchmarking/results/20260221/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
   </Folder>
+  <Folder Name="/docs/benchmarking/results/20260222/">
+    <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Core.AppendBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Core.DescendingOrderIsolatedBenchmark-report-github.md" />
+    <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Core.QueryBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Core.ReadBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
+  </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
@@ -125,7 +133,6 @@
     <Project Path="Samples/Opossum.Samples.DataSeeder/Opossum.Samples.DataSeeder.csproj" Id="d2fb5b4e-cee3-48f1-b61e-9db18a950231" />
   </Folder>
   <Folder Name="/Solution Items/">
-    <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path="CHANGELOG.md" />`r`n    <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Packages.props" />

@@ -1,22 +1,25 @@
 using Opossum.Core;
 using Opossum.Configuration;
 using Opossum.Exceptions;
+using Opossum.Telemetry;
 
 namespace Opossum.Storage.FileSystem;
 
-internal class FileSystemEventStore : IEventStore, IDisposable
+internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
 {
     private readonly OpossumOptions _options;
     private readonly LedgerManager _ledgerManager;
     private readonly EventFileManager _eventFileManager;
     private readonly IndexManager _indexManager;
     private readonly SemaphoreSlim _appendLock = new(1, 1);
+    private readonly ILogger<FileSystemEventStore> _logger;
 
-    public FileSystemEventStore(OpossumOptions options)
+    public FileSystemEventStore(OpossumOptions options, ILogger<FileSystemEventStore>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         _options = options;
+        _logger = logger ?? NullLogger<FileSystemEventStore>.Instance;
         _ledgerManager = new LedgerManager(options.FlushEventsImmediately);
         _eventFileManager = new EventFileManager(options.FlushEventsImmediately);
         _indexManager = new IndexManager();
@@ -35,6 +38,7 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         ArgumentNullException.ThrowIfNull(indexManager);
 
         _options = options;
+        _logger = NullLogger<FileSystemEventStore>.Instance;
         _ledgerManager = ledgerManager;
         _eventFileManager = eventFileManager;
         _indexManager = indexManager;
@@ -79,6 +83,11 @@ internal class FileSystemEventStore : IEventStore, IDisposable
 
         // TODO: Multi-context support - accept context parameter and route to correct storage
         var contextPath = GetContextPath(_options.Contexts[0]);
+
+        using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.Append);
+        activity?.SetTag("db.operation", "append");
+        activity?.SetTag("opossum.event_count", events.Length);
+        activity?.SetTag("opossum.context", _options.Contexts[0]);
 
         // 3. Use semaphore for atomic operation (one append at a time)
         await _appendLock.WaitAsync().ConfigureAwait(false);
@@ -127,6 +136,17 @@ internal class FileSystemEventStore : IEventStore, IDisposable
             var lastPosition = startPosition + events.Length - 1;
             await _ledgerManager.UpdateSequencePositionAsync(contextPath, lastPosition).ConfigureAwait(false);
         }
+        catch (AppendConditionFailedException)
+        {
+            activity?.SetTag("opossum.append.conflict", true);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogAppendError(ex, _options.Contexts[0]);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
         finally
         {
             _appendLock.Release();
@@ -149,26 +169,40 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         // TODO: Multi-context support - accept context parameter and route to correct storage
         var contextPath = GetContextPath(_options.Contexts[0]);
 
-        // 3. Get positions matching query, optionally filtered by fromPosition
-        var positions = await GetPositionsForQueryAsync(contextPath, query, fromPosition).ConfigureAwait(false);
+        using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.Read);
+        activity?.SetTag("db.operation", "read");
+        activity?.SetTag("opossum.context", _options.Contexts[0]);
 
-        if (positions.Length == 0)
+        try
         {
-            return [];
-        }
+            // 3. Get positions matching query, optionally filtered by fromPosition
+            var positions = await GetPositionsForQueryAsync(contextPath, query, fromPosition).ConfigureAwait(false);
 
-        // 4. Apply descending order to positions BEFORE reading
-        // This is 10x faster than reading all events then reversing the array
-        if (readOptions != null && readOptions.Contains(ReadOption.Descending))
+            if (positions.Length == 0)
+            {
+                return [];
+            }
+
+            // 4. Apply descending order to positions BEFORE reading
+            // This is 10x faster than reading all events then reversing the array
+            if (readOptions != null && readOptions.Contains(ReadOption.Descending))
+            {
+                Array.Reverse(positions);
+            }
+
+            // 5. Read events from files in the correct order
+            var eventsPath = GetEventsPath(contextPath);
+            var events = await _eventFileManager.ReadEventsAsync(eventsPath, positions).ConfigureAwait(false);
+
+            activity?.SetTag("opossum.event_count", events.Length);
+            return events;
+        }
+        catch (Exception ex)
         {
-            Array.Reverse(positions);
+            LogReadError(ex, _options.Contexts[0]);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
         }
-
-        // 5. Read events from files in the correct order
-        var eventsPath = GetEventsPath(contextPath);
-        var events = await _eventFileManager.ReadEventsAsync(eventsPath, positions).ConfigureAwait(false);
-
-        return events;
     }
 
     /// <summary>
@@ -380,4 +414,10 @@ internal class FileSystemEventStore : IEventStore, IDisposable
     {
         return Path.Combine(contextPath, "events");
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error appending events to context '{Context}'")]
+    private partial void LogAppendError(Exception ex, string context);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error reading events from context '{Context}'")]
+    private partial void LogReadError(Exception ex, string context);
 }

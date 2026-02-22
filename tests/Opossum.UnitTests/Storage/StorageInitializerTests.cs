@@ -91,7 +91,7 @@ public class StorageInitializerTests : IDisposable
         Assert.True(File.Exists(ledgerPath));
 
         // Assert - Events directory
-        var eventsPath = Path.Combine(contextPath, "Events");
+        var eventsPath = Path.Combine(contextPath, "events");
         Assert.True(Directory.Exists(eventsPath));
 
         // Assert - Indices directory
@@ -131,9 +131,9 @@ public class StorageInitializerTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_testRootPath, "Billing", ".ledger")));
 
         // Assert - All Events directories exist
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Events")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment", "Events")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing", "Events")));
+        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "events")));
+        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment", "events")));
+        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing", "events")));
 
         // Assert - All index structures exist
         Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Indices", "EventType")));

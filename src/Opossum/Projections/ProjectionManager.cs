@@ -1,12 +1,13 @@
 using Opossum.Configuration;
 using Opossum.Core;
+using Opossum.Telemetry;
 
 namespace Opossum.Projections;
 
 /// <summary>
 /// Manages projection lifecycle and updates
 /// </summary>
-internal sealed class ProjectionManager : IProjectionManager
+internal sealed partial class ProjectionManager : IProjectionManager
 {
     private readonly OpossumOptions _options;
     private readonly IEventStore _eventStore;
@@ -105,6 +106,9 @@ internal sealed class ProjectionManager : IProjectionManager
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
 
+        using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.ProjectionRebuild);
+        activity?.SetTag("opossum.projection", projectionName);
+
         // Acquire per-projection lock (fail-fast if already locked)
         using (await AcquireProjectionLockAsync(projectionName, cancellationToken).ConfigureAwait(false))
         {
@@ -115,7 +119,7 @@ internal sealed class ProjectionManager : IProjectionManager
             }
 
             // Read all events for this projection's event types
-            var query = Query.FromEventTypes(registration.EventTypes);
+            var query = Query.FromEventTypes([.. registration.EventTypes]);
             var events = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
 
             // Clear existing projection data
@@ -140,6 +144,7 @@ internal sealed class ProjectionManager : IProjectionManager
             {
                 var lastPosition = events.Max(e => e.Position);
                 await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
+                activity?.SetTag("opossum.events_processed", events.Length);
             }
         }
         // Lock automatically released here
@@ -186,9 +191,7 @@ internal sealed class ProjectionManager : IProjectionManager
             {
                 // Projection is being rebuilt - skip this update batch
                 // The rebuild will process these events anyway
-                _logger.LogDebug(
-                    "Skipping update for projection '{ProjectionName}' - currently being rebuilt",
-                    projectionName);
+                LogSkippingProjectionUpdate(projectionName);
             }
         }
     }
@@ -221,7 +224,7 @@ internal sealed class ProjectionManager : IProjectionManager
             ProjectionName = projectionName,
             LastProcessedPosition = position,
             LastUpdated = DateTimeOffset.UtcNow,
-            TotalEventsProcessed = currentCheckpoint == 0 ? position : currentCheckpoint + 1
+            TotalEventsProcessed = position
         };
 
         var filePath = GetCheckpointFilePath(projectionName);
@@ -267,7 +270,7 @@ internal sealed class ProjectionManager : IProjectionManager
 
         if (projectionsToRebuild.Count == 0)
         {
-            _logger.LogInformation("All projections are up to date (no rebuilds needed)");
+            LogAllProjectionsUpToDate();
 
             return new ProjectionRebuildResult
             {
@@ -309,10 +312,7 @@ internal sealed class ProjectionManager : IProjectionManager
         {
             var maxConcurrency = _projectionOptions.MaxConcurrentRebuilds;
 
-            _logger.LogInformation(
-                "Starting parallel rebuild of {Count} projections with max {MaxConcurrency} concurrent rebuilds",
-                projectionNames.Length,
-                maxConcurrency);
+            LogStartingParallelRebuild(projectionNames.Length, maxConcurrency);
 
             // Rebuild projections in parallel
             await Parallel.ForEachAsync(
@@ -331,7 +331,7 @@ internal sealed class ProjectionManager : IProjectionManager
 
                     try
                     {
-                        _logger.LogInformation("Rebuilding projection '{ProjectionName}'...", projectionName);
+                        LogRebuildingProjection(projectionName);
 
                         // Call existing RebuildAsync(string) method
                         await RebuildAsync(projectionName, ct).ConfigureAwait(false);
@@ -349,11 +349,7 @@ internal sealed class ProjectionManager : IProjectionManager
                             ErrorMessage = null
                         });
 
-                        _logger.LogInformation(
-                            "Projection '{ProjectionName}' rebuilt successfully in {Duration}ms ({EventCount} events)",
-                            projectionName,
-                            stopwatch.ElapsedMilliseconds,
-                            eventsProcessed);
+                        LogProjectionRebuiltSuccessfully(projectionName, stopwatch.ElapsedMilliseconds, eventsProcessed);
                     }
                     catch (Exception ex)
                     {
@@ -368,9 +364,7 @@ internal sealed class ProjectionManager : IProjectionManager
                             ErrorMessage = ex.Message
                         });
 
-                        _logger.LogError(ex,
-                            "Failed to rebuild projection '{ProjectionName}'",
-                            projectionName);
+                        LogProjectionRebuildFailed(ex, projectionName);
                     }
                     finally
                     {
@@ -390,15 +384,11 @@ internal sealed class ProjectionManager : IProjectionManager
 
             if (result.Success)
             {
-                _logger.LogInformation(
-                    "All {Count} projections rebuilt successfully in {Duration}",
-                    result.TotalRebuilt,
-                    overallStopwatch.Elapsed);
+                LogAllProjectionsRebuiltSuccessfully(result.TotalRebuilt, overallStopwatch.Elapsed);
             }
             else
             {
-                _logger.LogWarning(
-                    "Projection rebuild completed with errors. Success: {Success}/{Total}. Failed: {Failed}",
+                LogRebuildWithErrors(
                     result.TotalRebuilt,
                     projectionNames.Length,
                     string.Join(", ", result.FailedProjections));
@@ -473,6 +463,30 @@ internal sealed class ProjectionManager : IProjectionManager
         return Path.Combine(_checkpointPath, $"{projectionName}.checkpoint");
     }
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "All projections are up to date (no rebuilds needed)")]
+    private partial void LogAllProjectionsUpToDate();
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting parallel rebuild of {Count} projections with max {MaxConcurrency} concurrent rebuilds")]
+    private partial void LogStartingParallelRebuild(int count, int maxConcurrency);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Rebuilding projection '{ProjectionName}'...")]
+    private partial void LogRebuildingProjection(string projectionName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Projection '{ProjectionName}' rebuilt successfully in {ElapsedMs}ms ({EventCount} events)")]
+    private partial void LogProjectionRebuiltSuccessfully(string projectionName, long elapsedMs, long eventCount);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to rebuild projection '{ProjectionName}'")]
+    private partial void LogProjectionRebuildFailed(Exception ex, string projectionName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "All {Count} projections rebuilt successfully in {Duration}")]
+    private partial void LogAllProjectionsRebuiltSuccessfully(int count, TimeSpan duration);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Projection rebuild completed with errors. Success: {SuccessCount}/{TotalCount}. Failed: {FailedProjections}")]
+    private partial void LogRebuildWithErrors(int successCount, int totalCount, string failedProjections);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Skipping update for projection '{ProjectionName}' - currently being rebuilt")]
+    private partial void LogSkippingProjectionUpdate(string projectionName);
+
     /// <summary>
     /// Acquires a per-projection lock to prevent concurrent operations on the same projection.
     /// Uses fail-fast approach: throws if projection is already locked.
@@ -530,7 +544,7 @@ internal sealed class ProjectionManager : IProjectionManager
     /// </summary>
     private abstract class ProjectionRegistration
     {
-        public abstract string[] EventTypes { get; }
+        public abstract IReadOnlySet<string> EventTypes { get; }
         public abstract Task ApplyAsync(SequencedEvent evt, CancellationToken cancellationToken);
         public abstract Task ClearAsync(CancellationToken cancellationToken);
         public abstract Task BeginRebuildAsync();
@@ -542,6 +556,7 @@ internal sealed class ProjectionManager : IProjectionManager
         private readonly IProjectionDefinition<TState> _definition;
         private readonly IProjectionStore<TState> _store;
         private readonly IEventStore? _eventStore;
+        private readonly IReadOnlySet<string> _eventTypes;
 
         public ProjectionRegistration(
             IProjectionDefinition<TState> definition,
@@ -551,9 +566,10 @@ internal sealed class ProjectionManager : IProjectionManager
             _definition = definition;
             _store = store;
             _eventStore = eventStore;
+            _eventTypes = new HashSet<string>(definition.EventTypes, StringComparer.Ordinal);
         }
 
-        public override string[] EventTypes => _definition.EventTypes;
+        public override IReadOnlySet<string> EventTypes => _eventTypes;
 
         public override async Task ApplyAsync(SequencedEvent evt, CancellationToken cancellationToken)
         {

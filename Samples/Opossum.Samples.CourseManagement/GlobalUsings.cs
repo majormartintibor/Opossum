@@ -1,7 +1,8 @@
 // Global using directives for external dependencies
 // Opossum.* namespaces should remain in individual files for clarity
 
+global using Microsoft.AspNetCore.Diagnostics;
 global using Microsoft.AspNetCore.Mvc;
 global using Scalar.AspNetCore;
+global using System.Diagnostics;
 global using System.Text.Json.Serialization;
-global using Microsoft.AspNetCore.Diagnostics;

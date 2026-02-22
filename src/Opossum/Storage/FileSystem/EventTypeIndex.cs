@@ -12,6 +12,8 @@ internal class EventTypeIndex
         WriteIndented = true
     };
 
+    private static readonly char[] _invalidFileNameChars = Path.GetInvalidFileNameChars();
+
     // Per-instance lock for defense in depth
     // Protects Read-Modify-Write operations on index files
     private readonly SemaphoreSlim _lock = new(1, 1);
@@ -103,9 +105,7 @@ internal class EventTypeIndex
     /// </summary>
     private static string GetSafeFileName(string eventType)
     {
-        // Replace invalid characters with underscores
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var safeFileName = string.Join("_", eventType.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+        var safeFileName = string.Join("_", eventType.Split(_invalidFileNameChars, StringSplitOptions.RemoveEmptyEntries));
         return safeFileName;
     }
 

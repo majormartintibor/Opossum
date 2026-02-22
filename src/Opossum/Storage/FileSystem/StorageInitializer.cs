@@ -69,8 +69,8 @@ internal sealed class StorageInitializer
         var ledgerPath = Path.Combine(contextPath, ".ledger");
         EnsureLedgerFileExists(ledgerPath);
 
-        // Create Events directory
-        var eventsPath = Path.Combine(contextPath, "Events");
+        // Create events directory (lowercase — matches EventFileManager.GetEventsPath)
+        var eventsPath = Path.Combine(contextPath, "events");
         EnsureDirectoryExists(eventsPath);
 
         // Create Indices directory

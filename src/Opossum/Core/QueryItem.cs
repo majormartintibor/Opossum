@@ -1,10 +1,17 @@
 namespace Opossum.Core;
 
 /// <summary>
-/// Represents a single item in a Query that filters events by EventType and/or Tags.
-/// Multiple types are combined with OR logic.
-/// Multiple tags are combined with AND logic.
+/// A single filter clause within a <see cref="Query"/>.
 /// </summary>
+/// <remarks>
+/// Within one <see cref="QueryItem"/>:
+/// <list type="bullet">
+///   <item><description><see cref="EventTypes"/> entries are combined with OR — an event matches if it has <em>any</em> of the listed types.</description></item>
+///   <item><description><see cref="Tags"/> entries are combined with AND — an event must carry <em>all</em> listed tags.</description></item>
+///   <item><description>When both <see cref="EventTypes"/> and <see cref="Tags"/> are present the two groups are AND-ed together.</description></item>
+/// </list>
+/// Multiple <see cref="QueryItem"/>s in a <see cref="Query"/> are combined with OR.
+/// </remarks>
 public class QueryItem
 {
     /// <summary>
