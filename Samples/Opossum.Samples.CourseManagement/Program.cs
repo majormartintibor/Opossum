@@ -62,12 +62,13 @@ builder.Services.AddOpossum(options =>
             ? Path.Combine("D:", "Database")              // Windows: D:\Database
             : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
     }
-});
-
+})
+// Add mediator for command/query handling
+.AddMediator()
 // ============================================================================
 // PROJECTION SYSTEM CONFIGURATION
 // ============================================================================
-builder.Services.AddProjections(options =>
+.AddProjections(options =>
 {
     // Bind from appsettings.json "Projections" section
     builder.Configuration.GetSection("Projections").Bind(options);
@@ -75,9 +76,6 @@ builder.Services.AddProjections(options =>
     // Assembly scanning must be done in code (not possible via JSON)
     options.ScanAssembly(typeof(Program).Assembly);
 });
-
-// Add mediator for command/query handling
-builder.Services.AddMediator();
 
 // Add Problem Details support (RFC 7807)
 builder.Services.AddProblemDetails();
