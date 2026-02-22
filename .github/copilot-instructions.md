@@ -16,6 +16,67 @@ It follows the DCB (Dynamic Consistency Boundaries) specification for event sour
 Use .NET 10 and C# 14
 Prefer using the newest language features
 
+## Code Style — .editorconfig is the Source of Truth
+
+The repository root contains an `.editorconfig` that is the single source of truth for all code style rules.
+Always follow it when generating or modifying code. Key rules to apply actively during code generation:
+
+### Collection expressions (C# 12+)
+```csharp
+// ✅
+int[] x = [1, 2, 3];
+List<string> names = [];
+// ❌
+int[] x = new int[] { 1, 2, 3 };
+List<string> names = new List<string>();
+```
+
+### Target-typed new (C# 9+)
+```csharp
+// ✅
+private readonly SemaphoreSlim _lock = new(1, 1);
+// ❌
+private readonly SemaphoreSlim _lock = new SemaphoreSlim(1, 1);
+```
+
+### Pattern matching (C# 8+)
+```csharp
+// ✅
+if (exception is AppendConditionFailedException ex) { }
+if (value is not null) { }
+// ❌
+if (exception is AppendConditionFailedException) { var ex = (AppendConditionFailedException)exception; }
+if (value != null) { }
+```
+
+### Switch expressions (C# 8+)
+```csharp
+// ✅
+var result = status switch { Status.Ok => "ok", _ => "fail" };
+// ❌
+string result; switch (status) { case Status.Ok: result = "ok"; break; ... }
+```
+
+### Null operators
+```csharp
+// ✅
+_field ??= new();
+value?.Method();
+_field = arg ?? throw new ArgumentNullException(nameof(arg));
+// ❌
+if (_field == null) _field = new();
+if (value != null) value.Method();
+```
+
+### Index & range operators (C# 8+)
+```csharp
+// ✅
+var last = arr[^1];
+var slice = arr[1..^1];
+// ❌
+var last = arr[arr.Length - 1];
+```
+
 ## Documentation
 
 All documentation files (*.md) must be placed in the `docs` folder at the solution root.

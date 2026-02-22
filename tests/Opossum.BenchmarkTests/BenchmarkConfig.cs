@@ -14,7 +14,7 @@ public class OpossumBenchmarkConfig : ManualConfig
 
         // Diagnosers - Memory allocations and ETW (Windows only)
         AddDiagnoser(MemoryDiagnoser.Default);
-        
+
         if (OperatingSystem.IsWindows())
         {
             // ETW profiler for detailed performance analysis on Windows

@@ -107,7 +107,7 @@ public class TagIndexThreadSafetyTests : IDisposable
         {
             var tag = new Tag { Key = key, Value = $"user-{i}" };
             var positions = await index.GetPositionsAsync(_testPath, tag);
-            
+
             Assert.Equal(positionsPerValue, positions.Length);
         }
     }
@@ -131,7 +131,7 @@ public class TagIndexThreadSafetyTests : IDisposable
 
         // Assert - Only one instance of the position should exist
         var positions = await index.GetPositionsAsync(_testPath, tag);
-        
+
         Assert.Single(positions);
         Assert.Equal(position, positions[0]);
     }

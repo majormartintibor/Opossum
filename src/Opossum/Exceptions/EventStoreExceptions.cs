@@ -218,7 +218,7 @@ public class ConcurrencyException : AppendConditionFailedException
     /// <param name="expectedSequence">The expected sequence position</param>
     /// <param name="actualSequence">The actual sequence position found</param>
     /// <param name="innerException">The exception that is the cause of the current exception</param>
-    public ConcurrencyException(string message, long expectedSequence, long actualSequence, Exception innerException) 
+    public ConcurrencyException(string message, long expectedSequence, long actualSequence, Exception innerException)
         : base(message, innerException)
     {
         ExpectedSequence = expectedSequence;
@@ -276,7 +276,7 @@ public class EventNotFoundException : EventStoreException
     /// <param name="message">The message that describes the error</param>
     /// <param name="queryDescription">Description of the query that was used</param>
     /// <param name="innerException">The exception that is the cause of the current exception</param>
-    public EventNotFoundException(string message, string queryDescription, Exception innerException) 
+    public EventNotFoundException(string message, string queryDescription, Exception innerException)
         : base(message, innerException)
     {
         QueryDescription = queryDescription;

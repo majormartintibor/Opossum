@@ -25,5 +25,5 @@ public class SeedingConfiguration
         CourseCount +   // CourseCreatedEvent
         (int)(StudentCount * 0.3) +  // ~30% tier upgrades
         (int)(CourseCount * 0.2) +   // ~20% capacity changes
-        (int)(StudentCount * 5);     // ~5 enrollments per student avg
+        StudentCount * 5;     // ~5 enrollments per student avg
 }

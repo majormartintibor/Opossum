@@ -63,12 +63,12 @@ public class ProjectionEndToEndTests : IDisposable
                 .ToDomainEvent()
                 .WithTag("orderId", orderId.ToString())
                 .Build(),
-            
+
             new E2EItemAddedEvent(orderId, "Product A", 99.99m)
                 .ToDomainEvent()
                 .WithTag("orderId", orderId.ToString())
                 .Build(),
-            
+
             new E2EItemAddedEvent(orderId, "Product B", 49.99m)
                 .ToDomainEvent()
                 .WithTag("orderId", orderId.ToString())
@@ -113,14 +113,14 @@ public class ProjectionEndToEndTests : IDisposable
                 .ToDomainEvent().WithTag("orderId", order1Id.ToString()).Build(),
             new E2EItemAddedEvent(order1Id, "Product A", 100m)
                 .ToDomainEvent().WithTag("orderId", order1Id.ToString()).Build(),
-            
+
             new E2EOrderCreatedEvent(order2Id, "Customer 2", "c2@test.com")
                 .ToDomainEvent().WithTag("orderId", order2Id.ToString()).Build(),
             new E2EItemAddedEvent(order2Id, "Product B", 200m)
                 .ToDomainEvent().WithTag("orderId", order2Id.ToString()).Build(),
             new E2EItemAddedEvent(order2Id, "Product C", 300m)
                 .ToDomainEvent().WithTag("orderId", order2Id.ToString()).Build(),
-            
+
             new E2EOrderCreatedEvent(order3Id, "Customer 3", "c3@test.com")
                 .ToDomainEvent().WithTag("orderId", order3Id.ToString()).Build(),
             new E2EItemAddedEvent(order3Id, "Product D", 50m)
@@ -277,12 +277,12 @@ public class ProjectionEndToEndTests : IDisposable
     {
         public string ProjectionName => "E2EOrders";
 
-        public string[] EventTypes => new[]
-        {
+        public string[] EventTypes =>
+        [
             nameof(E2EOrderCreatedEvent),
             nameof(E2EItemAddedEvent),
             nameof(E2EOrderCancelledEvent)
-        };
+        ];
 
         public string KeySelector(SequencedEvent evt)
         {
@@ -299,16 +299,21 @@ public class ProjectionEndToEndTests : IDisposable
                     created.CustomerEmail,
                     0m,
                     0,
-                    new List<E2EOrderItem>()),
+                    []),
 
                 E2EItemAddedEvent itemAdded when current != null => current with
                 {
                     TotalAmount = current.TotalAmount + itemAdded.Price,
                     ItemCount = current.ItemCount + 1,
-                    Items = current.Items.Concat(new[] 
-                    { 
-                        new E2EOrderItem(itemAdded.ProductName, itemAdded.Price) 
-                    }).ToList()
+                    Items =
+
+                    [
+                        .. current.Items,
+                        .. new[]
+                                {
+                                    new E2EOrderItem(itemAdded.ProductName, itemAdded.Price)
+                                },
+                    ]
                 },
 
                 E2EOrderCancelledEvent => null,

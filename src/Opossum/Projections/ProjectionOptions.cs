@@ -11,7 +11,7 @@ public sealed class ProjectionOptions
     /// How often the projection daemon polls for new events
     /// Default: 5 seconds
     /// </summary>
-    [Range(typeof(TimeSpan), "00:00:00.100", "01:00:00", 
+    [Range(typeof(TimeSpan), "00:00:00.100", "01:00:00",
         ErrorMessage = "PollingInterval must be between 100ms and 1 hour")]
     public TimeSpan PollingInterval { get; set; } = TimeSpan.FromSeconds(5);
 
@@ -50,13 +50,13 @@ public sealed class ProjectionOptions
     /// <summary>
     /// Assemblies to scan for projection definitions
     /// </summary>
-    public List<Assembly> ScanAssemblies { get; } = new();
+    public List<Assembly> ScanAssemblies { get; } = [];
 
     /// <summary>
     /// Discovered tag providers mapped by projection name.
     /// Populated during assembly scanning.
     /// </summary>
-    internal Dictionary<string, Type> TagProviders { get; } = new();
+    internal Dictionary<string, Type> TagProviders { get; } = [];
 
     /// <summary>
     /// Adds an assembly to scan for projection definitions

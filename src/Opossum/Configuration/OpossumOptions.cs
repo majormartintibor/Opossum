@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Opossum.Configuration;
 
@@ -99,7 +99,7 @@ public sealed class OpossumOptions
         // These are problematic for directory names regardless of OS:
         // / \ : * ? " < > | (path separators, wildcards, reserved on Windows)
         // \0 (null character, invalid everywhere)
-        char[] forbiddenChars = { '/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0' };
+        char[] forbiddenChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '\0'];
 
         // Check if name contains any forbidden characters
         return !name.Any(c => forbiddenChars.Contains(c));

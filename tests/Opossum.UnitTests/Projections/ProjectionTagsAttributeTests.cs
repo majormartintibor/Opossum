@@ -26,9 +26,9 @@ public class ProjectionTagsAttributeTests
     public void Constructor_WithNonTagProviderType_ThrowsArgumentException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => 
+        var exception = Assert.Throws<ArgumentException>(() =>
             new ProjectionTagsAttribute(typeof(string)));
-        
+
         Assert.Contains("must implement IProjectionTagProvider<TState>", exception.Message);
     }
 
@@ -36,9 +36,9 @@ public class ProjectionTagsAttributeTests
     public void Constructor_WithTagProviderInterface_ThrowsArgumentException()
     {
         // Act & Assert - Can't use the interface itself, must be implementation
-        var exception = Assert.Throws<ArgumentException>(() => 
+        var exception = Assert.Throws<ArgumentException>(() =>
             new ProjectionTagsAttribute(typeof(IProjectionTagProvider<TestState>)));
-        
+
         Assert.Contains("must implement IProjectionTagProvider<TState>", exception.Message);
     }
 

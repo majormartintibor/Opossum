@@ -224,7 +224,7 @@ public class JsonEventSerializerTests
         // Arrange
         var testEvent = new TestDomainEvent { Data = "test data" };
         var sequencedEvent = CreateTestEvent(1, "TestEvent", testEvent);
-        
+
         // Act
         var json = _serializer.Serialize(sequencedEvent);
         var deserialized = _serializer.Deserialize(json);
@@ -278,7 +278,7 @@ public class JsonEventSerializerTests
         Assert.Equal(original.Event.EventType, deserialized.Event.EventType);
         Assert.Equal(original.Event.Tags.Count, deserialized.Event.Tags.Count);
         Assert.Equal(original.Metadata.CorrelationId, deserialized.Metadata.CorrelationId);
-        
+
         var deserializedEvent = (TestDomainEvent)deserialized.Event.Event;
         Assert.Equal("complete", deserializedEvent.Data);
     }

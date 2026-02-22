@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Mediator;
 using Opossum.Projections;
 using Opossum.Samples.CourseManagement.Shared;
@@ -22,10 +22,10 @@ public sealed record GetStudentsShortInfoQuery(
 public sealed record GetStudentShortInfoCommand(Guid StudentId);
 
 public sealed record StudentShortInfo(
-    Guid StudentId, 
-    string FirstName, 
-    string LastName, 
-    string Email, 
+    Guid StudentId,
+    string FirstName,
+    string LastName,
+    string Email,
     Tier EnrollmentTier,
     int CurrentEnrollmentCount,
     int MaxEnrollmentCount)

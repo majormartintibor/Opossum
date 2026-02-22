@@ -1,9 +1,7 @@
-﻿using System.Net.Http.Json;
-using Microsoft.AspNetCore.Hosting;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Opossum.Configuration;
 using Opossum.Projections;
 
@@ -15,18 +13,17 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// </summary>
 public class IntegrationTestFixture : IDisposable
 {
-    private readonly string _testDatabasePath;
     private bool _disposed;
 
     public HttpClient Client { get; }
     public WebApplicationFactory<Program> Factory { get; }
-    public string TestDatabasePath => _testDatabasePath;
+    public string TestDatabasePath { get; }
 
     public IntegrationTestFixture()
     {
         // Create unique temporary folder for this test collection
-        _testDatabasePath = Path.Combine(Path.GetTempPath(), $"OpossumTests_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_testDatabasePath);
+        TestDatabasePath = Path.Combine(Path.GetTempPath(), $"OpossumTests_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(TestDatabasePath);
 
         // Create factory with configuration override
         // Uses ConfigureServices to ensure overrides happen AFTER configuration is built
@@ -47,7 +44,7 @@ public class IntegrationTestFixture : IDisposable
                     // Create new options with test database path
                     var testOptions = new OpossumOptions
                     {
-                        RootPath = _testDatabasePath
+                        RootPath = TestDatabasePath
                     };
 
                     // Add context from configuration
@@ -140,7 +137,7 @@ public class IntegrationTestFixture : IDisposable
         catch (Exception ex)
         {
             // Log cleanup failure but don't throw - tests already ran
-            Console.WriteLine($"Warning: Failed to cleanup test database at {_testDatabasePath}: {ex.Message}");
+            Console.WriteLine($"Warning: Failed to cleanup test database at {TestDatabasePath}: {ex.Message}");
         }
         finally
         {
@@ -151,23 +148,23 @@ public class IntegrationTestFixture : IDisposable
 
     private void CleanupDatabase()
     {
-        if (!Directory.Exists(_testDatabasePath))
+        if (!Directory.Exists(TestDatabasePath))
             return;
 
         try
         {
             // Try simple delete first
-            Directory.Delete(_testDatabasePath, recursive: true);
+            Directory.Delete(TestDatabasePath, recursive: true);
         }
         catch (IOException)
         {
             // If simple delete fails, try aggressive cleanup
-            TryAggressiveCleanup(_testDatabasePath);
+            TryAggressiveCleanup(TestDatabasePath);
         }
         catch (UnauthorizedAccessException)
         {
             // If access denied, try aggressive cleanup
-            TryAggressiveCleanup(_testDatabasePath);
+            TryAggressiveCleanup(TestDatabasePath);
         }
     }
 

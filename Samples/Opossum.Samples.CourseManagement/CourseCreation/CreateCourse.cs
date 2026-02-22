@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.Events;
@@ -18,9 +18,9 @@ public static class Endpoint
         {
             var courseId = Guid.NewGuid();
             var command = new CreateCourseCommand(courseId, request.Name, request.Description, request.MaxStudentCount);
-            
+
             var commandResult = await mediator.InvokeAsync<CommandResult>(command);
-            
+
             if (!commandResult.Success)
             {
                 return Results.BadRequest(commandResult.ErrorMessage);

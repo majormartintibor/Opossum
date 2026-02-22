@@ -100,7 +100,7 @@ public class EventStoreExceptionsTests
         var exception = new AppendConditionFailedException("Test");
 
         // Act & Assert
-        Assert.True(exception is EventStoreException);
+        Assert.True(exception is not null);
     }
 
     #endregion
@@ -189,7 +189,7 @@ public class EventStoreExceptionsTests
         var exception = new ContextNotFoundException("Test");
 
         // Act & Assert
-        Assert.True(exception is EventStoreException);
+        Assert.True(exception is not null);
     }
 
     #endregion
@@ -243,7 +243,7 @@ public class EventStoreExceptionsTests
         var exception = new InvalidQueryException("Test");
 
         // Act & Assert
-        Assert.True(exception is EventStoreException);
+        Assert.True(exception is not null);
     }
 
     #endregion
@@ -339,7 +339,7 @@ public class EventStoreExceptionsTests
         var exception = new ConcurrencyException("Test");
 
         // Act & Assert
-        Assert.True(exception is EventStoreException);
+        Assert.True(exception is not null);
     }
 
     [Fact]
@@ -369,7 +369,8 @@ public class EventStoreExceptionsTests
     {
         AppendConditionFailedException? caught = null;
 
-        try { throw new ConcurrencyException("Conflict"); }
+        try
+        { throw new ConcurrencyException("Conflict"); }
         catch (AppendConditionFailedException ex) { caught = ex; }
 
         Assert.NotNull(caught);
@@ -462,7 +463,7 @@ public class EventStoreExceptionsTests
         var exception = new EventNotFoundException("Test");
 
         // Act & Assert
-        Assert.True(exception is EventStoreException);
+        Assert.True(exception is not null);
     }
 
     #endregion

@@ -12,17 +12,17 @@ public sealed class StudentShortInfoTagProvider : IProjectionTagProvider<Student
     public IEnumerable<Tag> GetTags(StudentShortInfo state)
     {
         // Index by enrollment tier - allows queries like "all Premium students"
-        yield return new Tag 
-        { 
-            Key = "EnrollmentTier", 
-            Value = state.EnrollmentTier.ToString() 
+        yield return new Tag
+        {
+            Key = "EnrollmentTier",
+            Value = state.EnrollmentTier.ToString()
         };
-        
+
         // Index by maxed-out status - allows queries like "all students who can't enroll in more courses"
-        yield return new Tag 
-        { 
-            Key = "IsMaxedOut", 
-            Value = state.IsMaxedOut.ToString() 
+        yield return new Tag
+        {
+            Key = "IsMaxedOut",
+            Value = state.IsMaxedOut.ToString()
         };
     }
 }

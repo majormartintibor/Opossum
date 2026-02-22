@@ -1,4 +1,4 @@
-﻿namespace Opossum.Core;
+namespace Opossum.Core;
 
 /// <summary>
 /// Represents a query for filtering events from the event store.
@@ -42,7 +42,7 @@ public class Query
     /// Creates a query from a collection of query items.
     /// </summary>
     public static Query FromItems(params QueryItem[] items) => new()
-    { 
+    {
         QueryItems = [.. items]
     };
 
@@ -57,7 +57,7 @@ public class Query
     /// <summary>
     /// Creates a query that matches events with all of the specified tags.
     /// </summary>
-    public static Query FromTags(params Tag[] tags) => new Query
+    public static Query FromTags(params Tag[] tags) => new()
     {
         QueryItems = [new QueryItem { Tags = [.. tags] }]
     };

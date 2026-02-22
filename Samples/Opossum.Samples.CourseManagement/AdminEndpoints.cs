@@ -21,9 +21,9 @@ public static class AdminEndpoints
             [FromQuery] bool forceAll = false) =>
         {
             var result = await projectionManager.RebuildAllAsync(forceAll);
-            
-            return result.Success 
-                ? Results.Ok(result) 
+
+            return result.Success
+                ? Results.Ok(result)
                 : Results.Problem(
                     title: "Rebuild Failed",
                     detail: $"Failed to rebuild: {string.Join(", ", result.FailedProjections)}",
@@ -122,12 +122,12 @@ public static class AdminEndpoints
         {
             var projections = projectionManager.GetRegisteredProjections();
             var checkpoints = new Dictionary<string, long>();
-            
+
             foreach (var projection in projections)
             {
                 checkpoints[projection] = await projectionManager.GetCheckpointAsync(projection);
             }
-            
+
             return Results.Ok(checkpoints);
         })
         .WithSummary("Get all projection checkpoints")

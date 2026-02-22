@@ -223,7 +223,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     {
         // This test would require multi-context support in fixture
         // For now, testing within single context demonstrates locking works
-        
+
         // Arrange
         var context1Tag = new Tag { Key = "context", Value = "context1" };
         var context2Tag = new Tag { Key = "context", Value = "context2" };
@@ -265,7 +265,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     {
         // Arrange
         var eventCount = 100;
-        
+
         // Add events
         var addTasks = Enumerable.Range(0, eventCount)
             .Select(i => Task.Run(async () =>

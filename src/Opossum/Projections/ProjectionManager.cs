@@ -44,8 +44,8 @@ internal sealed class ProjectionManager : IProjectionManager
     };
 
     public ProjectionManager(
-        OpossumOptions options, 
-        IEventStore eventStore, 
+        OpossumOptions options,
+        IEventStore eventStore,
         IServiceProvider serviceProvider,
         ProjectionOptions projectionOptions,
         ILogger<ProjectionManager>? logger = null)
@@ -236,7 +236,8 @@ internal sealed class ProjectionManager : IProjectionManager
         }
         catch
         {
-            if (File.Exists(tempPath)) { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
+            if (File.Exists(tempPath))
+            { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
             throw;
         }
     }
@@ -247,7 +248,7 @@ internal sealed class ProjectionManager : IProjectionManager
     }
 
     public async Task<ProjectionRebuildResult> RebuildAllAsync(
-        bool forceRebuild = false, 
+        bool forceRebuild = false,
         CancellationToken cancellationToken = default)
     {
         var projections = GetRegisteredProjections();
@@ -281,7 +282,7 @@ internal sealed class ProjectionManager : IProjectionManager
     }
 
     public async Task<ProjectionRebuildResult> RebuildAsync(
-        string[] projectionNames, 
+        string[] projectionNames,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(projectionNames);
@@ -297,8 +298,8 @@ internal sealed class ProjectionManager : IProjectionManager
         }
 
         // Update rebuild status
-        UpdateRebuildStatus(isRebuilding: true, 
-            inProgress: [], 
+        UpdateRebuildStatus(isRebuilding: true,
+            inProgress: [],
             queued: [.. projectionNames]);
 
         var overallStopwatch = Stopwatch.StartNew();
@@ -367,8 +368,8 @@ internal sealed class ProjectionManager : IProjectionManager
                             ErrorMessage = ex.Message
                         });
 
-                        _logger.LogError(ex, 
-                            "Failed to rebuild projection '{ProjectionName}'", 
+                        _logger.LogError(ex,
+                            "Failed to rebuild projection '{ProjectionName}'",
                             projectionName);
                     }
                     finally
@@ -481,12 +482,12 @@ internal sealed class ProjectionManager : IProjectionManager
     /// <returns>Disposable that releases the lock when disposed</returns>
     /// <exception cref="InvalidOperationException">If projection is already being rebuilt or updated</exception>
     private async Task<IDisposable> AcquireProjectionLockAsync(
-        string projectionName, 
+        string projectionName,
         CancellationToken cancellationToken)
     {
         // Get or create a lock for this specific projection
         var projectionLock = _projectionLocks.GetOrAdd(
-            projectionName, 
+            projectionName,
             _ => new SemaphoreSlim(1, 1));
 
         // Fail-fast: Don't wait if already locked
@@ -543,7 +544,7 @@ internal sealed class ProjectionManager : IProjectionManager
         private readonly IEventStore? _eventStore;
 
         public ProjectionRegistration(
-            IProjectionDefinition<TState> definition, 
+            IProjectionDefinition<TState> definition,
             IProjectionStore<TState> store,
             IEventStore? eventStore = null)
         {
@@ -604,7 +605,7 @@ internal sealed class ProjectionManager : IProjectionManager
                 await fsStore.DeleteAllIndicesAsync().ConfigureAwait(false);
 
                 // Then delete projection files
-                var projectionPath = fsStore.GetType().GetField("_projectionPath", 
+                var projectionPath = fsStore.GetType().GetField("_projectionPath",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
                     ?.GetValue(fsStore) as string ?? "";
 

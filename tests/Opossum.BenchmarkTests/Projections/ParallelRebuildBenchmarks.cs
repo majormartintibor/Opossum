@@ -1,6 +1,3 @@
-using BenchmarkDotNet.Attributes;
-using Opossum.Core;
-using Opossum.DependencyInjection;
 using Opossum.Projections;
 
 namespace Opossum.BenchmarkTests.Projections;

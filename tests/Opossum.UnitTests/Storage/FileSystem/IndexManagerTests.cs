@@ -56,13 +56,13 @@ public class IndexManagerTests : IDisposable
         // Assert
         var tag1 = new Tag { Key = "Environment", Value = "Production" };
         var tag2 = new Tag { Key = "Region", Value = "US-West" };
-        
+
         Assert.True(_manager.TagIndexExists(_tempContextPath, tag1));
         Assert.True(_manager.TagIndexExists(_tempContextPath, tag2));
-        
+
         var positions1 = await _manager.GetPositionsByTagAsync(_tempContextPath, tag1);
         var positions2 = await _manager.GetPositionsByTagAsync(_tempContextPath, tag2);
-        
+
         Assert.Single(positions1);
         Assert.Single(positions2);
         Assert.Equal(1, positions1[0]);
@@ -244,13 +244,13 @@ public class IndexManagerTests : IDisposable
         // Arrange
         var tag1 = new Tag { Key = "Environment", Value = "Production" };
         var tag2 = new Tag { Key = "Environment", Value = "Development" };
-        
+
         var event1 = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "1" });
         event1.Event.Tags.Add(tag1);
-        
+
         var event2 = CreateTestEvent(2, "TestEvent", new TestDomainEvent { Data = "2" });
         event2.Event.Tags.Add(tag1);
-        
+
         var event3 = CreateTestEvent(3, "TestEvent", new TestDomainEvent { Data = "3" });
         event3.Event.Tags.Add(tag2);
 
@@ -309,13 +309,13 @@ public class IndexManagerTests : IDisposable
         // Arrange
         var tag1 = new Tag { Key = "Environment", Value = "Production" };
         var tag2 = new Tag { Key = "Region", Value = "US-West" };
-        
+
         var event1 = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "1" });
         event1.Event.Tags.Add(tag1);
-        
+
         var event2 = CreateTestEvent(2, "TestEvent", new TestDomainEvent { Data = "2" });
         event2.Event.Tags.Add(tag2);
-        
+
         var event3 = CreateTestEvent(3, "TestEvent", new TestDomainEvent { Data = "3" });
         event3.Event.Tags.Add(tag1);
 
@@ -336,7 +336,7 @@ public class IndexManagerTests : IDisposable
     {
         // Arrange
         var tag = new Tag { Key = "Environment", Value = "Production" };
-        
+
         var event1 = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "1" });
         event1.Event.Tags.Add(tag);
 
@@ -367,13 +367,13 @@ public class IndexManagerTests : IDisposable
         // Arrange
         var tag1 = new Tag { Key = "Environment", Value = "Production" };
         var tag2 = new Tag { Key = "Region", Value = "US-West" };
-        
+
         var event1 = CreateTestEvent(5, "TestEvent", new TestDomainEvent { Data = "5" });
         event1.Event.Tags.Add(tag1);
-        
+
         var event2 = CreateTestEvent(2, "TestEvent", new TestDomainEvent { Data = "2" });
         event2.Event.Tags.Add(tag2);
-        
+
         var event3 = CreateTestEvent(8, "TestEvent", new TestDomainEvent { Data = "8" });
         event3.Event.Tags.Add(tag1);
 
@@ -531,11 +531,11 @@ public class IndexManagerTests : IDisposable
         var prodTag = new Tag { Key = "Environment", Value = "Production" };
         var devTag = new Tag { Key = "Environment", Value = "Development" };
         var regionTag = new Tag { Key = "Region", Value = "US-West" };
-        
+
         var prodPositions = await _manager.GetPositionsByTagAsync(_tempContextPath, prodTag);
         var devPositions = await _manager.GetPositionsByTagAsync(_tempContextPath, devTag);
         var regionPositions = await _manager.GetPositionsByTagAsync(_tempContextPath, regionTag);
-        
+
         Assert.Equal([1, 2], prodPositions);
         Assert.Equal([3], devPositions);
         Assert.Equal([1], regionPositions);

@@ -1,4 +1,3 @@
-using Opossum;
 using Opossum.Core;
 using Opossum.Projections;
 using Opossum.Samples.CourseManagement.EnrollmentTier;
@@ -16,21 +15,16 @@ public sealed class StudentShortInfoProjection : IProjectionDefinition<StudentSh
 {
     public string ProjectionName => "StudentShortInfo";
 
-    public string[] EventTypes => new[]
-    {
+    public string[] EventTypes =>
+    [
         nameof(StudentRegisteredEvent),
         nameof(StudentSubscriptionUpdatedEvent),
         nameof(StudentEnrolledToCourseEvent)
-    };
+    ];
 
     public string KeySelector(SequencedEvent evt)
     {
-        var studentIdTag = evt.Event.Tags.FirstOrDefault(t => t.Key == "studentId");
-        
-        if (studentIdTag == null)
-        {
-            throw new InvalidOperationException($"Event {evt.Event.EventType} at position {evt.Position} is missing studentId tag");
-        }
+        var studentIdTag = evt.Event.Tags.FirstOrDefault(t => t.Key == "studentId") ?? throw new InvalidOperationException($"Event {evt.Event.EventType} at position {evt.Position} is missing studentId tag");
 
         return studentIdTag.Value;
     }

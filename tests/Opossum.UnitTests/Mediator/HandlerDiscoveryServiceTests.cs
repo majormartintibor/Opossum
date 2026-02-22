@@ -10,126 +10,126 @@ public class HandlerDiscoveryServiceTests
         // Arrange
         var discovery = new HandlerDiscoveryService();
         var assembly = typeof(HandlerDiscoveryServiceTests).Assembly;
-        
+
         // Act
         discovery.IncludeAssembly(assembly);
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
         Assert.NotEmpty(handlers);
     }
-    
+
     [Fact]
     public void IncludeAssembly_WithNull_ThrowsArgumentNullException()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
-        
+
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => 
+        Assert.Throws<ArgumentNullException>(() =>
             discovery.IncludeAssembly(null!));
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsHandlerWithHandlerSuffix()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(DiscoveryTestHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
+        var handler = handlers.FirstOrDefault(h =>
             h.HandlerType == typeof(DiscoveryTestHandler));
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsHandlerWithAttribute()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(NonConventionalHandlerName).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
+        var handler = handlers.FirstOrDefault(h =>
             h.HandlerType == typeof(NonConventionalHandlerName));
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsHandleMethod()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(HandleMethodHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
-            h.HandlerType == typeof(HandleMethodHandler) && 
+        var handler = handlers.FirstOrDefault(h =>
+            h.HandlerType == typeof(HandleMethodHandler) &&
             h.Method.Name == "Handle");
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsHandleAsyncMethod()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(HandleAsyncMethodHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
-            h.HandlerType == typeof(HandleAsyncMethodHandler) && 
+        var handler = handlers.FirstOrDefault(h =>
+            h.HandlerType == typeof(HandleAsyncMethodHandler) &&
             h.Method.Name == "HandleAsync");
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsConsumeMethod()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(ConsumeMethodHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
-            h.HandlerType == typeof(ConsumeMethodHandler) && 
+        var handler = handlers.FirstOrDefault(h =>
+            h.HandlerType == typeof(ConsumeMethodHandler) &&
             h.Method.Name == "Consume");
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsConsumeAsyncMethod()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(ConsumeAsyncMethodHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
-            h.HandlerType == typeof(ConsumeAsyncMethodHandler) && 
+        var handler = handlers.FirstOrDefault(h =>
+            h.HandlerType == typeof(ConsumeAsyncMethodHandler) &&
             h.Method.Name == "ConsumeAsync");
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_IgnoresInvalidMethodNames()
     {
@@ -142,28 +142,28 @@ public class HandlerDiscoveryServiceTests
 
         // Assert
         // Should not find handler because Process() is not a valid method name
-        var handler = handlers.FirstOrDefault(h => 
+        var handler = handlers.FirstOrDefault(h =>
             h.HandlerType == typeof(InvalidMethodProcessor) &&
             h.Method.Name == "Process");
         Assert.True(handler == default, "InvalidMethodProcessor with Process method should not be discovered");
     }
-    
+
     [Fact]
     public void DiscoverHandlers_IgnoresMethodsWithoutParameters()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(NoParameterHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
+        var handler = handlers.FirstOrDefault(h =>
             h.HandlerType == typeof(NoParameterHandler));
         Assert.True(handler == default, "NoParameterHandler should not be discovered");
     }
-    
+
     [Fact]
     public void DiscoverHandlers_IgnoresAbstractClasses()
     {
@@ -176,7 +176,7 @@ public class HandlerDiscoveryServiceTests
 
         // Assert
         // AbstractHandler should not be found because it's abstract (and not static/sealed)
-        var handler = handlers.FirstOrDefault(h => 
+        var handler = handlers.FirstOrDefault(h =>
             h.HandlerType == typeof(AbstractHandler));
         Assert.True(handler == default, "AbstractHandler should not be discovered");
 
@@ -185,24 +185,24 @@ public class HandlerDiscoveryServiceTests
             h.HandlerType == typeof(StaticMethodHandler));
         Assert.NotEqual(default, staticHandler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_FindsStaticMethods()
     {
         // Arrange
         var discovery = new HandlerDiscoveryService();
         discovery.IncludeAssembly(typeof(StaticMethodHandler).Assembly);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
-        var handler = handlers.FirstOrDefault(h => 
-            h.HandlerType == typeof(StaticMethodHandler) && 
+        var handler = handlers.FirstOrDefault(h =>
+            h.HandlerType == typeof(StaticMethodHandler) &&
             h.Method.IsStatic);
         Assert.NotEqual(default, handler);
     }
-    
+
     [Fact]
     public void DiscoverHandlers_WithMultipleAssemblies_FindsHandlersFromAll()
     {
@@ -210,13 +210,13 @@ public class HandlerDiscoveryServiceTests
         var discovery = new HandlerDiscoveryService();
         var assembly1 = typeof(DiscoveryTestHandler).Assembly;
         var assembly2 = typeof(HandlerDiscoveryServiceTests).Assembly;
-        
+
         discovery.IncludeAssembly(assembly1);
         discovery.IncludeAssembly(assembly2);
-        
+
         // Act
         var handlers = discovery.DiscoverHandlers();
-        
+
         // Assert
         Assert.NotEmpty(handlers);
     }

@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.Events;
@@ -55,7 +55,7 @@ public sealed class UpdateStudentSubscriptionCommandHandler()
             StudentId: command.StudentId,
             EnrollmentTier: command.EnrollmentTier)
             .ToDomainEvent()
-            .WithTag("studentId", command.StudentId.ToString())            
+            .WithTag("studentId", command.StudentId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
 
         await eventStore.AppendAsync(newEvent);

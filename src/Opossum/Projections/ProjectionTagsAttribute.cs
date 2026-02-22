@@ -37,18 +37,18 @@ public sealed class ProjectionTagsAttribute : Attribute
     public ProjectionTagsAttribute(Type tagProviderType)
     {
         ArgumentNullException.ThrowIfNull(tagProviderType);
-        
+
         // Validate that the type implements IProjectionTagProvider<>
-        var implementsInterface = tagProviderType.GetInterfaces().Any(i => 
+        var implementsInterface = tagProviderType.GetInterfaces().Any(i =>
             i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IProjectionTagProvider<>));
-        
+
         if (!implementsInterface)
         {
             throw new ArgumentException(
                 $"Type '{tagProviderType.FullName}' must implement IProjectionTagProvider<TState>",
                 nameof(tagProviderType));
         }
-        
+
         TagProviderType = tagProviderType;
     }
 }

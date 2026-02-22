@@ -1,4 +1,3 @@
-using Opossum.Core;
 using Opossum.Storage.FileSystem;
 
 namespace Opossum.UnitTests.Storage.FileSystem;

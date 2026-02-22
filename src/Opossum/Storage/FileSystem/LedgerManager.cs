@@ -1,5 +1,3 @@
-using System.Text.Json;
-
 namespace Opossum.Storage.FileSystem;
 
 /// <summary>
@@ -164,7 +162,9 @@ internal sealed class LedgerManager
             // Clean up temp file if something went wrong
             if (File.Exists(tempPath))
             {
-                try { File.Delete(tempPath); } catch { /* Ignore cleanup errors */ }
+                try
+                { File.Delete(tempPath); }
+                catch { /* Ignore cleanup errors */ }
             }
             throw;
         }
@@ -227,7 +227,7 @@ internal sealed class LedgerManager
                 EventCount = 0
             };
 
-            await File.WriteAllTextAsync(ledgerPath, 
+            await File.WriteAllTextAsync(ledgerPath,
                 JsonSerializer.Serialize(initialData, JsonOptions)).ConfigureAwait(false);
         }
 

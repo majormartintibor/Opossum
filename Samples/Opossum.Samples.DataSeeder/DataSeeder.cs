@@ -267,10 +267,10 @@ public class DataSeeder
             {
                 skippedDuplicates++;
                 // Remove this course from consideration for this student
-                availableCourses = availableCourses.Where(c => c.CourseId != course.CourseId).ToList();
+                availableCourses = [.. availableCourses.Where(c => c.CourseId != course.CourseId)];
                 if (availableCourses.Count == 0)
                 {
-                    availableCourses = _courses.ToList(); // Reset
+                    availableCourses = [.. _courses]; // Reset
                     availableStudents.Remove(student); // This student is done
                 }
                 continue; // Try again
@@ -412,16 +412,16 @@ public class DataSeeder
         {
             "Small" => new[] { "Advanced Poetry", "Latin Prose", "Music Theory", "Studio Art", "Philosophy Seminar",
                 "Creative Writing", "Ethics Debate", "Ancient Greek", "Jazz Ensemble", "Shakespeare Studies" },
-            "Medium" => new[] { "World History", "Chemistry", "Algebra II", "English Literature", "Biology",
-                "Spanish I", "Physics", "U.S. History", "Geometry", "French II", "Psychology", "Economics" },
-            "Large" => new[] { "Introduction to Computer Science", "Physical Education", "Health & Wellness",
-                "Public Speaking", "College Prep Math", "SAT Preparation" },
-            _ => new[] { "General Studies" }
+            "Medium" => [ "World History", "Chemistry", "Algebra II", "English Literature", "Biology",
+                "Spanish I", "Physics", "U.S. History", "Geometry", "French II", "Psychology", "Economics" ],
+            "Large" => [ "Introduction to Computer Science", "Physical Education", "Health & Wellness",
+                "Public Speaking", "College Prep Math", "SAT Preparation" ],
+            _ => ["General Studies"]
         };
 
         var subject = subjects[_random.Next(subjects.Length)];
         var level = _random.Next(1, 4); // Levels 1-3
-        
+
         return sizeCategory == "Large" ? subject : $"{subject} - Level {level}";
     }
 

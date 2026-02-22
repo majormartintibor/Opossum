@@ -17,7 +17,7 @@ public class QueryBenchmarks
     public void GlobalSetup()
     {
         _tempHelper = new TempFileSystemHelper("QueryBench");
-        
+
         // Create and populate store with 2K events (good middle ground)
         _storePath = CreateAndPopulateStore(2000);
     }
@@ -33,7 +33,7 @@ public class QueryBenchmarks
         var path = _tempHelper.CreateSubDirectory($"Store_{eventCount}Events");
         var options = new OpossumOptions { RootPath = path, FlushEventsImmediately = false };
         options.AddContext("BenchmarkContext");
-        
+
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
@@ -41,16 +41,16 @@ public class QueryBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         // Populate with events
         var events = BenchmarkDataGenerator.GenerateEvents(
-            eventCount, 
+            eventCount,
             tagCount: 5,
             eventTypes: ["OrderCreated", "OrderShipped", "OrderDelivered", "OrderCancelled", "PaymentProcessed"]);
-        
+
         // Batch append
         const int batchSize = 100;
         for (int i = 0; i < events.Count; i += batchSize)
@@ -58,7 +58,7 @@ public class QueryBenchmarks
             var batch = events.Skip(i).Take(batchSize).ToArray();
             store.AppendAsync(batch, null).GetAwaiter().GetResult();
         }
-        
+
         return path;
     }
 
@@ -177,8 +177,8 @@ public class QueryBenchmarks
 
         // Broad query - should match ~75% of events
         var query = Query.FromEventTypes([
-            "OrderCreated", 
-            "OrderShipped", 
+            "OrderCreated",
+            "OrderShipped",
             "OrderDelivered" // 3 out of 4 event types
         ]);
 

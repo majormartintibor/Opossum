@@ -28,8 +28,8 @@ public sealed record ProjectionRebuildResult
     /// <summary>
     /// List of projections that failed to rebuild.
     /// </summary>
-    public List<string> FailedProjections => 
-        Details.Where(d => !d.Success).Select(d => d.ProjectionName).ToList();
+    public List<string> FailedProjections =>
+        [.. Details.Where(d => !d.Success).Select(d => d.ProjectionName)];
 }
 
 /// <summary>

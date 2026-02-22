@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Opossum.Configuration;
 
 namespace Opossum.Projections;
@@ -208,7 +207,7 @@ public sealed class ProjectionInitializationService : IHostedService
                         .GetMethod(nameof(IProjectionManager.RegisterProjection))!
                         .MakeGenericMethod(stateType);
 
-                    registerMethod.Invoke(_projectionManager, new[] { definition });
+                    registerMethod.Invoke(_projectionManager, [definition]);
                 }
                 catch (Exception)
                 {

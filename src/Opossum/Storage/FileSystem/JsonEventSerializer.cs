@@ -47,12 +47,7 @@ internal sealed class JsonEventSerializer
             throw new ArgumentNullException(nameof(json), "JSON string cannot be null or empty");
         }
 
-        var sequencedEvent = JsonSerializer.Deserialize<SequencedEvent>(json, SerializerOptions);
-
-        if (sequencedEvent == null)
-        {
-            throw new JsonException("Failed to deserialize SequencedEvent - result was null");
-        }
+        var sequencedEvent = JsonSerializer.Deserialize<SequencedEvent>(json, SerializerOptions) ?? throw new JsonException("Failed to deserialize SequencedEvent - result was null");
 
         return sequencedEvent;
     }
@@ -113,16 +108,18 @@ internal sealed class JsonEventSerializer
         {
             // Extract just the type name and assembly name
             var parts = oldTypeName.Split(',');
-            if (parts.Length < 2) return null;
+            if (parts.Length < 2)
+                return null;
 
             var fullTypeName = parts[0].Trim();
             var assemblyName = parts[1].Trim();
 
             // Get the simple type name (last part after the last dot)
             var lastDotIndex = fullTypeName.LastIndexOf('.');
-            if (lastDotIndex == -1) return null;
+            if (lastDotIndex == -1)
+                return null;
 
-            var simpleTypeName = fullTypeName.Substring(lastDotIndex + 1);
+            var simpleTypeName = fullTypeName[(lastDotIndex + 1)..];
 
             // Try to find the type by scanning all loaded assemblies for types with matching simple name
             // This allows events to be moved between namespaces without breaking deserialization

@@ -27,7 +27,7 @@ public class ComposeProjectionsTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
             }
         };
 
@@ -85,7 +85,8 @@ public class ComposeProjectionsTests
         var allItems = new List<QueryItem>();
         foreach (var q in queries)
         {
-            if (q.QueryItems.Count == 0) return Query.All();
+            if (q.QueryItems.Count == 0)
+                return Query.All();
             allItems.AddRange(q.QueryItems);
         }
         return Query.FromItems([.. allItems]);
@@ -104,12 +105,12 @@ public class ComposeProjectionsTests
         var courseProjection = new DecisionProjection<bool>(
             initialState: false,
             query: Query.FromEventTypes(nameof(CourseCreatedEvent)),
-            apply: (_, evt) => evt.Event.Event is CourseCreatedEvent ? true : false);
+            apply: (_, evt) => evt.Event.Event is CourseCreatedEvent);
 
         var studentProjection = new DecisionProjection<bool>(
             initialState: false,
             query: Query.FromEventTypes(nameof(StudentRegisteredEvent)),
-            apply: (_, evt) => evt.Event.Event is StudentRegisteredEvent ? true : false);
+            apply: (_, evt) => evt.Event.Event is StudentRegisteredEvent);
 
         var events = new[]
         {
@@ -284,11 +285,11 @@ public class ComposeProjectionsTests
 
         var p1 = new DecisionProjection<bool>(false,
             Query.FromEventTypes(nameof(CourseCreatedEvent)),
-            (_, evt) => evt.Event.Event is CourseCreatedEvent ? true : false);
+            (_, evt) => evt.Event.Event is CourseCreatedEvent);
 
         var p2 = new DecisionProjection<bool>(false,
             Query.FromEventTypes(nameof(StudentRegisteredEvent)),
-            (_, evt) => evt.Event.Event is StudentRegisteredEvent ? true : false);
+            (_, evt) => evt.Event.Event is StudentRegisteredEvent);
 
         var p3 = new DecisionProjection<int>(0,
             Query.FromEventTypes(nameof(EnrolledEvent)),

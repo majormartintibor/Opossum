@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Opossum.Configuration;
 
 namespace Opossum.UnitTests.Configuration;
@@ -23,7 +22,7 @@ public sealed class OpossumOptionsValidationTests
     /// Linux: /tmp/Invalid\0Path (\0 null character is invalid)
     /// </summary>
     private static string GetPathWithInvalidCharacters() =>
-        OperatingSystem.IsWindows() 
+        OperatingSystem.IsWindows()
             ? "C:\\Invalid|Path"  // | is invalid on Windows
             : "/tmp/Invalid\0Path";  // \0 is invalid on Linux
 

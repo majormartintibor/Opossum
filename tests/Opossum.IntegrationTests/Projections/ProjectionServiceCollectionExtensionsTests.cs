@@ -20,7 +20,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
@@ -42,7 +42,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
@@ -71,7 +71,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
@@ -96,7 +96,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
@@ -116,7 +116,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
@@ -152,7 +152,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
@@ -188,7 +188,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
     private class E2ETestProjection : IProjectionDefinition<E2ETestState>
     {
         public string ProjectionName => "E2ETest";
-        public string[] EventTypes => new[] { "TestEvent" };
+        public string[] EventTypes => ["TestEvent"];
         public string KeySelector(Opossum.Core.SequencedEvent evt) => "key";
         public E2ETestState? Apply(E2ETestState? current, IEvent evt) => current;
     }

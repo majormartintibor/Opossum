@@ -8,7 +8,7 @@ namespace Opossum.Projections;
 /// before calling Apply.
 /// </summary>
 /// <typeparam name="TState">The projection state type</typeparam>
-public interface IProjectionWithRelatedEvents<TState> : IProjectionDefinition<TState> 
+public interface IProjectionWithRelatedEvents<TState> : IProjectionDefinition<TState>
     where TState : class
 {
     /// <summary>

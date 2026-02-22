@@ -22,7 +22,7 @@ public class BuildProjectionsTests
                     created.Email,
                     0),
 
-                StudentEnrolledEvent _ when current != null =>
+                StudentEnrolledEvent when current != null =>
                     current with { CourseCount = current.CourseCount + 1 },
 
                 StudentNameChangedEvent nameChanged when current != null =>
@@ -88,7 +88,7 @@ public class BuildProjectionsTests
 
         // Assert
         Assert.Equal(2, projections.Count);
-        
+
         var alice = projections.First(p => p.StudentId == student1Id);
         Assert.Equal("Alice", alice.Name);
         Assert.Equal(1, alice.CourseCount);
@@ -334,10 +334,10 @@ public class BuildProjectionsTests
                     created.Name,
                     created.Email,
                     0),
-                
+
                 StudentEnrolledEvent _ when current != null =>
                     current with { CourseCount = current.CourseCount + 1 },
-                
+
                 _ => current!
             }
         ).ToList();

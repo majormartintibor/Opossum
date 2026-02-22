@@ -24,7 +24,7 @@ public class BuildDecisionModelTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
             }
         };
 
@@ -130,7 +130,7 @@ public class BuildDecisionModelTests
         var projection = new DecisionProjection<bool>(
             initialState: false,
             query: Query.FromEventTypes(nameof(CourseCreatedEvent)),
-            apply: (_, evt) => evt.Event.Event is CourseCreatedEvent ? true : false);
+            apply: (_, evt) => evt.Event.Event is CourseCreatedEvent);
 
         var evt = MakeEvent(new CourseCreatedEvent(courseId, 30), position: 7);
         var model = BuildFromEvents(projection, [evt]);

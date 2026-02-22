@@ -96,7 +96,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
 
         // Assert - Only one instance of the position should exist
         var positions = await index.GetPositionsAsync(_testPath, eventType);
-        
+
         Assert.Single(positions);
         Assert.Equal(position, positions[0]);
     }
@@ -187,11 +187,11 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
 
         Assert.Equal(totalPositions, positions.Length);
         Assert.Equal(positions.OrderBy(x => x), Enumerable.Range(1, totalPositions).Select(i => (long)i).OrderBy(x => x));
-        
+
         // Verify file integrity - should be valid JSON
         var indexFilePath = Path.Combine(_testPath, "EventType", "StressTestEvent.json");
         Assert.True(File.Exists(indexFilePath));
-        
+
         var json = await File.ReadAllTextAsync(indexFilePath);
         Assert.NotEmpty(json);
         Assert.Contains("\"Positions\"", json);
@@ -203,14 +203,14 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
         // Arrange
         var index = new EventTypeIndex();
         var eventType = "TestEvent";
-        
+
         // Add some valid positions first
         await index.AddPositionAsync(_testPath, eventType, 1);
         await index.AddPositionAsync(_testPath, eventType, 2);
 
         // Act - Try to add invalid positions concurrently along with valid ones
         var tasks = new List<Task>();
-        
+
         for (int i = 3; i <= 10; i++)
         {
             var position = i;

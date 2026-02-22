@@ -11,12 +11,12 @@ public class MessageHandlerAttributeTests
         var attribute = typeof(AttributeTestHandler)
             .GetCustomAttributes(typeof(MessageHandlerAttribute), false)
             .FirstOrDefault();
-        
+
         // Assert
         Assert.NotNull(attribute);
         Assert.IsType<MessageHandlerAttribute>(attribute);
     }
-    
+
     [Fact]
     public void Attribute_IsNotInherited()
     {
@@ -33,18 +33,18 @@ public class MessageHandlerAttributeTests
         Assert.NotNull(baseAttribute);
         Assert.Null(derivedAttribute);
     }
-    
+
     [Fact]
     public void Attribute_AllowsOnlyOneInstance()
     {
         // Arrange
         var attributes = typeof(AttributeTestHandler)
             .GetCustomAttributes(typeof(MessageHandlerAttribute), false);
-        
+
         // Assert
         Assert.Single(attributes);
     }
-    
+
     [Fact]
     public void Attribute_CanOnlyBeAppliedToClasses()
     {
@@ -53,7 +53,7 @@ public class MessageHandlerAttributeTests
 
         // Arrange & Act
         var attributeUsage = (AttributeUsageAttribute?)Attribute.GetCustomAttribute(
-            typeof(MessageHandlerAttribute), 
+            typeof(MessageHandlerAttribute),
             typeof(AttributeUsageAttribute));
 
         // Assert

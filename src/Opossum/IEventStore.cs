@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 
 namespace Opossum;
 

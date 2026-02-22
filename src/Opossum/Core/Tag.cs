@@ -1,4 +1,4 @@
-﻿namespace Opossum.Core;
+namespace Opossum.Core;
 
 public class Tag
 {

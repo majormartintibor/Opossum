@@ -14,19 +14,19 @@ public class MediatorIntegrationTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result = await mediator.InvokeAsync<IntegrationUserResponse>(
             new GetIntegrationUserQuery(1));
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(1, result.UserId);
         Assert.Equal("Test User", result.Name);
     }
-    
+
     [Fact]
     public async Task EndToEnd_CommandWithDependencies_ProcessesSuccessfully()
     {
@@ -35,19 +35,19 @@ public class MediatorIntegrationTests
         services.AddSingleton<IIntegrationRepository, IntegrationRepository>();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result = await mediator.InvokeAsync<IntegrationOrderResult>(
             new CreateIntegrationOrderCommand("PROD-123", 5));
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.NotNull(result.OrderId);
         Assert.Equal(5, result.Quantity);
     }
-    
+
     [Fact]
     public async Task EndToEnd_AsyncHandlerWithLogging_ExecutesSuccessfully()
     {
@@ -56,19 +56,19 @@ public class MediatorIntegrationTests
         services.AddLogging();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result = await mediator.InvokeAsync<IntegrationProcessResult>(
             new ProcessIntegrationDataCommand("test-data"));
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.Equal("test-data processed", result.Message);
     }
-    
+
     [Fact]
     public async Task EndToEnd_StaticHandler_ExecutesCorrectly()
     {
@@ -76,19 +76,19 @@ public class MediatorIntegrationTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result = await mediator.InvokeAsync<IntegrationCalculationResult>(
             new CalculateIntegrationQuery(10, 20));
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(30, result.Sum);
         Assert.Equal(200, result.Product);
     }
-    
+
     [Fact]
     public async Task EndToEnd_WithCancellation_CancelsOperation()
     {
@@ -96,18 +96,18 @@ public class MediatorIntegrationTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         using var cts = new CancellationTokenSource();
         cts.CancelAfter(TimeSpan.FromMilliseconds(50));
-        
+
         // Act & Assert
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             mediator.InvokeAsync<IntegrationLongResult>(
-                new LongRunningIntegrationCommand(), 
+                new LongRunningIntegrationCommand(),
                 cts.Token));
     }
-    
+
     [Fact]
     public async Task EndToEnd_MultipleHandlers_AllWorkIndependently()
     {
@@ -115,23 +115,23 @@ public class MediatorIntegrationTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result1 = await mediator.InvokeAsync<IntegrationUserResponse>(
             new GetIntegrationUserQuery(1));
         var result2 = await mediator.InvokeAsync<IntegrationCalculationResult>(
             new CalculateIntegrationQuery(5, 10));
-        
+
         // Assert
         Assert.NotNull(result1);
         Assert.Equal(1, result1.UserId);
-        
+
         Assert.NotNull(result2);
         Assert.Equal(15, result2.Sum);
     }
-    
+
     [Fact]
     public async Task EndToEnd_HandlerThrowsException_PropagatesException()
     {
@@ -139,17 +139,17 @@ public class MediatorIntegrationTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             mediator.InvokeAsync<IntegrationErrorResult>(
                 new ThrowingIntegrationCommand()));
-        
+
         Assert.Equal("Integration test error", exception.Message);
     }
-    
+
     [Fact]
     public async Task EndToEnd_ComplexScenario_WithMultipleDependencies()
     {
@@ -160,13 +160,13 @@ public class MediatorIntegrationTests
         services.AddLogging();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result = await mediator.InvokeAsync<IntegrationComplexResult>(
             new ComplexIntegrationCommand("test", 100));
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.True(result.IsValid);
@@ -265,10 +265,10 @@ public class ComplexIntegrationCommandHandler
         ILogger<ComplexIntegrationCommandHandler> logger)
     {
         logger.LogInformation("Handling complex command");
-        
+
         var isValid = validator.Validate(command.Data);
         var processed = await repository.ProcessAsync(command.Data, command.Value);
-        
+
         return new IntegrationComplexResult(isValid, processed);
     }
 }
@@ -286,7 +286,7 @@ public class IntegrationRepository : IIntegrationRepository
     {
         return Task.FromResult(Guid.NewGuid().ToString());
     }
-    
+
     public Task<string> ProcessAsync(string data, int value)
     {
         return Task.FromResult($"{data}-{value}");

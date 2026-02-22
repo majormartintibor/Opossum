@@ -13,7 +13,7 @@ public class OpossumFixture : IDisposable
 {
     private readonly ServiceProvider _serviceProvider;
     private readonly string _baseStoragePath;
-    private readonly List<string> _testStoragePaths = new();
+    private readonly List<string> _testStoragePaths = [];
     private readonly object _pathLock = new();
 
     public IMediator Mediator { get; }

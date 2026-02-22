@@ -1,9 +1,7 @@
-﻿namespace Opossum.Core;
+namespace Opossum.Core;
 
 public class DomainEvent
 {
-    private string? _eventType;
-
     /// <summary>
     /// The event type name used for indexing and querying.
     /// When not set explicitly, defaults to the simple class name of the inner <see cref="Event"/>
@@ -19,8 +17,8 @@ public class DomainEvent
     /// </remarks>
     public string EventType
     {
-        get => _eventType ?? (Event?.GetType().Name ?? string.Empty);
-        set => _eventType = value;
+        get => field ?? (Event?.GetType().Name ?? string.Empty);
+        set;
     }
 
     public required IEvent Event { get; set; }

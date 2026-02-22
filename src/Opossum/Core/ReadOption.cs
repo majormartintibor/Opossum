@@ -1,4 +1,4 @@
-﻿namespace Opossum.Core;
+namespace Opossum.Core;
 
 /// <summary>
 /// Options for reading events from the event store

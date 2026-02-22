@@ -1,4 +1,4 @@
-﻿namespace Opossum.Core;
+namespace Opossum.Core;
 
 /// <summary>
 /// Specifies an optimistic concurrency guard evaluated atomically during <see cref="IEventStore.AppendAsync"/>.

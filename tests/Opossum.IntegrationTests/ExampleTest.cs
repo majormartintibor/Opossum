@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
 using Opossum.IntegrationTests.Fixtures;
@@ -63,9 +63,9 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
         Assert.Equal(courseId, typedEvent.CourseId);
 
         // Assert - Event has proper tags
-        Assert.Contains(enrollmentEvent.Event.Tags, 
+        Assert.Contains(enrollmentEvent.Event.Tags,
             t => t.Key == "courseId" && t.Value == courseId.ToString());
-        Assert.Contains(enrollmentEvent.Event.Tags, 
+        Assert.Contains(enrollmentEvent.Event.Tags,
             t => t.Key == "studentId" && t.Value == studentId.ToString());
 
         // Assert - Aggregate can be built from course events

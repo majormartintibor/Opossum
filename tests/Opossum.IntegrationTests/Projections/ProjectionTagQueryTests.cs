@@ -91,8 +91,8 @@ public class ProjectionTagQueryTests : IDisposable
 
         // Tier=Professional → 4 matches (large index, comes first in query)
         // Status=Active     → 2 matches (small index, comes second in query)
-        var proj1 = new TestProjection { Id = "1", Status = "Active",   Tier = "Professional" }; // matches both
-        var proj2 = new TestProjection { Id = "2", Status = "Active",   Tier = "Basic" };         // Active only
+        var proj1 = new TestProjection { Id = "1", Status = "Active", Tier = "Professional" }; // matches both
+        var proj2 = new TestProjection { Id = "2", Status = "Active", Tier = "Basic" };         // Active only
         var proj3 = new TestProjection { Id = "3", Status = "Inactive", Tier = "Professional" };  // Professional only
         var proj4 = new TestProjection { Id = "4", Status = "Inactive", Tier = "Professional" };  // Professional only
         var proj5 = new TestProjection { Id = "5", Status = "Inactive", Tier = "Professional" };  // Professional only

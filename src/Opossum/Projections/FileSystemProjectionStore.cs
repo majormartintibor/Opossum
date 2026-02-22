@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Opossum.Configuration;
 using Opossum.Core;
 
@@ -15,12 +14,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     private readonly ProjectionTagIndex _tagIndex;
     private readonly ProjectionMetadataIndex _metadataIndex;
     private readonly IProjectionTagProvider<TState>? _tagProvider;
-    private readonly Dictionary<string, List<Tag>> _projectionTags = new();
+    private readonly Dictionary<string, List<Tag>> _projectionTags = [];
 
     // Rebuild mode: state changes are buffered in memory; disk writes are deferred to CommitRebuildAsync.
     // Guarded by the per-projection lock held in ProjectionManager.RebuildAsync — not a concurrent field.
     private bool _rebuildMode;
-    private readonly Dictionary<string, TState?> _rebuildStateBuffer = new();
+    private readonly Dictionary<string, TState?> _rebuildStateBuffer = [];
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -29,7 +28,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     };
 
     public FileSystemProjectionStore(
-        OpossumOptions options, 
+        OpossumOptions options,
         string projectionName,
         IProjectionTagProvider<TState>? tagProvider = null)
     {
@@ -93,14 +92,14 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         // Ensure directory exists (might not exist for new projection types during rebuild)
         if (!Directory.Exists(_projectionPath))
         {
-            return Array.Empty<TState>();
+            return [];
         }
 
         var files = Directory.GetFiles(_projectionPath, "*.json");
 
         if (files.Length == 0)
         {
-            return Array.Empty<TState>();
+            return [];
         }
 
         // For small sets, sequential read is more efficient
@@ -175,14 +174,14 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         if (_tagProvider == null)
         {
             // No tag provider configured - fall back to GetAllAsync with filter
-            return Array.Empty<TState>();
+            return [];
         }
 
         var keys = await _tagIndex.GetProjectionKeysByTagAsync(_projectionPath, tag).ConfigureAwait(false);
 
         if (keys.Length == 0)
         {
-            return Array.Empty<TState>();
+            return [];
         }
 
         // For small sets, sequential read is more efficient
@@ -227,13 +226,13 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         var tagArray = tags.ToArray();
         if (tagArray.Length == 0)
         {
-            return Array.Empty<TState>();
+            return [];
         }
 
         if (_tagProvider == null)
         {
             // No tag provider configured - return empty
-            return Array.Empty<TState>();
+            return [];
         }
 
         if (tagArray.Length == 1)
@@ -246,7 +245,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
         if (keys.Length == 0)
         {
-            return Array.Empty<TState>();
+            return [];
         }
 
         // For small sets, sequential read is more efficient
@@ -308,7 +307,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         {
             try
             {
-                newTags = _tagProvider.GetTags(state).ToList();
+                newTags = [.. _tagProvider.GetTags(state)];
             }
             catch (Exception ex)
             {
@@ -335,7 +334,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
                     var existingWrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(existingJson, _jsonOptions);
                     if (existingWrapper?.Data != null)
                     {
-                        _projectionTags[key] = _tagProvider!.GetTags(existingWrapper.Data).ToList();
+                        _projectionTags[key] = [.. _tagProvider!.GetTags(existingWrapper.Data)];
                     }
                 }
                 catch

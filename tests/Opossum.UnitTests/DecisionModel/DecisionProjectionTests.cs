@@ -22,7 +22,7 @@ public class DecisionProjectionTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
             }
         };
 
@@ -133,7 +133,7 @@ public class DecisionProjectionTests
         var projection = new DecisionProjection<bool>(
             initialState: false,
             query: AnyQuery(),
-            apply: (state, evt) => evt.Event.Event is TestEvent ? true : state);
+            apply: (state, evt) => evt.Event.Event is TestEvent || state);
 
         var result = projection.Apply(false, MakeSequencedEvent(new OtherEvent(99)));
 
@@ -219,9 +219,7 @@ public class DecisionProjectionTests
                     EventTypes = ["CourseCreated"],
                     Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
                 }),
-                apply: (state, evt) => evt.Event.Event is TestEvent { Name: "created" }
-                    ? true
-                    : state);
+                apply: (state, evt) => evt.Event.Event is TestEvent { Name: "created" } || state);
 
         var id = Guid.NewGuid();
         var projection = CourseExists(id);

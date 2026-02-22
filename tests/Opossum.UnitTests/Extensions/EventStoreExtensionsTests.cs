@@ -49,10 +49,10 @@ public class EventStoreExtensionsTests
         // Arrange
         var stub = new EventStoreStub();
         var newEvent = CreateTestEvent(1);
-        var appendCondition = new AppendCondition 
-        { 
+        var appendCondition = new AppendCondition
+        {
             FailIfEventsMatch = Query.All(),
-            AfterSequencePosition = 10 
+            AfterSequencePosition = 10
         };
 
         // Act
@@ -587,10 +587,10 @@ public class EventStoreExtensionsTests
         // Arrange
         var stub = new EventStoreStub();
         var @event = new TestEventData { Id = Guid.NewGuid() };
-        var condition = new AppendCondition 
-        { 
+        var condition = new AppendCondition
+        {
             FailIfEventsMatch = Query.All(),
-            AfterSequencePosition = 10 
+            AfterSequencePosition = 10
         };
 
         // Act
@@ -731,7 +731,7 @@ public class EventStoreExtensionsTests
         // Arrange
         var stub = new EventStoreStub
         {
-            EventsToReturn = new[] { CreateSequencedEvent(1), CreateSequencedEvent(2) }
+            EventsToReturn = [CreateSequencedEvent(1), CreateSequencedEvent(2)]
         };
         var singleAppendEvent = CreateTestEvent(1);
         var arrayAppendEvents = new[] { CreateTestEvent(1), CreateTestEvent(2) };

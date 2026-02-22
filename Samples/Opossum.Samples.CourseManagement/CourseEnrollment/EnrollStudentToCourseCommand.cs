@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.DecisionModel;
 using Opossum.Exceptions;
 using Opossum.Extensions;

@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Mediator;
 
 namespace Opossum.Samples.CourseManagement.CourseEnrollment;

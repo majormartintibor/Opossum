@@ -125,6 +125,7 @@
     <Project Path="Samples/Opossum.Samples.DataSeeder/Opossum.Samples.DataSeeder.csproj" Id="d2fb5b4e-cee3-48f1-b61e-9db18a950231" />
   </Folder>
   <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
     <File Path=".gitignore" />
     <File Path="CHANGELOG.md" />`r`n    <File Path="CONTRIBUTING.md" />
     <File Path="Directory.Packages.props" />

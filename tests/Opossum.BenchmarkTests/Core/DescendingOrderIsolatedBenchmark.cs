@@ -20,12 +20,12 @@ public class DescendingOrderIsolatedBenchmark
     public void GlobalSetup()
     {
         _tempHelper = new TempFileSystemHelper("DescendingIsolated");
-        
+
         // Create and populate store ONCE (not per iteration)
         var storePath = _tempHelper.CreateSubDirectory("TestStore");
         var options = new OpossumOptions { RootPath = storePath, FlushEventsImmediately = false };
         options.AddContext("BenchmarkContext");
-        
+
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
@@ -33,16 +33,16 @@ public class DescendingOrderIsolatedBenchmark
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         _serviceProvider = services.BuildServiceProvider();
         _store = _serviceProvider.GetRequiredService<IEventStore>();
-        
+
         // Populate with 500 events (same as QueryBenchmarks)
         var events = BenchmarkDataGenerator.GenerateEvents(
             500,
             tagCount: 2,
             eventTypes: ["OrderCreated", "OrderShipped"]);
-        
+
         // Batch append for efficiency
         const int batchSize = 50;
         for (int i = 0; i < events.Count; i += batchSize)
@@ -50,7 +50,7 @@ public class DescendingOrderIsolatedBenchmark
             var batch = events.Skip(i).Take(batchSize).ToArray();
             _store.AppendAsync(batch, null).GetAwaiter().GetResult();
         }
-        
+
         // Create query (same as QueryBenchmarks)
         _testQuery = Query.FromEventTypes(["OrderCreated", "OrderShipped"]);
     }

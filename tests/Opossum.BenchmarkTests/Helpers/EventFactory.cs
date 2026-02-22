@@ -45,7 +45,7 @@ public static class EventFactory
                 {
                     Id = Guid.NewGuid(),
                     Data = new string('X', 900), // ~900 bytes
-                    Values = Enumerable.Range(1, 10).ToArray()
+                    Values = [.. Enumerable.Range(1, 10)]
                 },
                 Tags = BenchmarkDataGenerator.GenerateTags(3)
             },
@@ -71,9 +71,7 @@ public static class EventFactory
                 {
                     Id = Guid.NewGuid(),
                     LargeData = new string('Y', 9500), // ~9.5KB
-                    Items = Enumerable.Range(1, 50)
-                        .Select(i => new DataItem { Id = i, Name = $"Item_{i}", Value = i * 100 })
-                        .ToList()
+                    Items = [.. Enumerable.Range(1, 50).Select(i => new DataItem { Id = i, Name = $"Item_{i}", Value = i * 100 })]
                 },
                 Tags = BenchmarkDataGenerator.GenerateTags(5)
             },

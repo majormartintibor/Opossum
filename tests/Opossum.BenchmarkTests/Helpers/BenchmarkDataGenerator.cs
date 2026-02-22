@@ -58,7 +58,7 @@ public static class BenchmarkDataGenerator
         var tags = new List<Tag>(count);
         var tagKeys = new[] { "Region", "Environment", "Tenant", "UserId", "OrderId", "ProductId", "CategoryId", "Priority", "Status", "Version" };
         var tagValues = new[] { "US-West", "Production", "Tenant123", "User456", "Order789", "Product001", "Category-A", "High", "Active", "v1.0" };
-        
+
         for (int i = 0; i < count && i < tagKeys.Length; i++)
         {
             tags.Add(new Tag
@@ -67,7 +67,7 @@ public static class BenchmarkDataGenerator
                 Value = tagValues[_random.Next(tagValues.Length)]
             });
         }
-        
+
         return tags;
     }
 
@@ -120,11 +120,10 @@ public static class BenchmarkDataGenerator
     {
         var events = GenerateEvents(100, maxTagsPerEvent);
         var allTags = events.SelectMany(e => e.Event.Tags).Distinct().ToList();
-        
-        return allTags
+
+        return [.. allTags
             .OrderBy(_ => _random.Next())
-            .Take(Math.Min(count, allTags.Count))
-            .ToArray();
+            .Take(Math.Min(count, allTags.Count))];
     }
 }
 

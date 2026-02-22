@@ -1,6 +1,4 @@
 using Opossum.Core;
-using System.Collections.Concurrent;
-using System.Text.Json;
 
 namespace Opossum.Projections;
 
@@ -44,11 +42,11 @@ internal sealed class ProjectionTagIndex
             if (File.Exists(indexFile))
             {
                 var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
-                keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? new HashSet<string>();
+                keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? [];
             }
             else
             {
-                keys = new HashSet<string>();
+                keys = [];
             }
 
             // Add new key (HashSet ensures no duplicates)
@@ -64,7 +62,8 @@ internal sealed class ProjectionTagIndex
             }
             catch
             {
-                if (File.Exists(tempFile)) { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
+                if (File.Exists(tempFile))
+                { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
                 throw;
             }
         }
@@ -102,7 +101,7 @@ internal sealed class ProjectionTagIndex
         try
         {
             var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
-            var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? new HashSet<string>();
+            var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? [];
 
             if (keys.Remove(projectionKey))
             {
@@ -118,7 +117,8 @@ internal sealed class ProjectionTagIndex
                     }
                     catch
                     {
-                        if (File.Exists(tempFile)) { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
+                        if (File.Exists(tempFile))
+                        { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
                         throw;
                     }
                 }
@@ -152,7 +152,7 @@ internal sealed class ProjectionTagIndex
 
         if (!File.Exists(indexFile))
         {
-            return Array.Empty<string>();
+            return [];
         }
 
         // No lock needed for reads: writes use atomic file moves (temp+rename), so readers
@@ -161,12 +161,12 @@ internal sealed class ProjectionTagIndex
         {
             var json = await File.ReadAllTextAsync(indexFile).ConfigureAwait(false);
             var keys = JsonSerializer.Deserialize<HashSet<string>>(json, _jsonOptions) ?? [];
-            return keys.ToArray();
+            return [.. keys];
         }
         catch (JsonException)
         {
             // Corrupted index file — treat as empty; will be corrected on next write
-            return Array.Empty<string>();
+            return [];
         }
     }
 
@@ -185,7 +185,7 @@ internal sealed class ProjectionTagIndex
         var tagArray = tags.ToArray();
         if (tagArray.Length == 0)
         {
-            return Array.Empty<string>();
+            return [];
         }
 
         if (tagArray.Length == 1)
@@ -201,9 +201,9 @@ internal sealed class ProjectionTagIndex
             if (keys.Length == 0)
             {
                 // If any tag returns no results, intersection is empty
-                return Array.Empty<string>();
+                return [];
             }
-            keySets.Add(new HashSet<string>(keys));
+            keySets.Add([.. keys]);
         }
 
         // Find intersection (AND logic)
@@ -215,11 +215,11 @@ internal sealed class ProjectionTagIndex
             result.IntersectWith(set);
             if (result.Count == 0)
             {
-                return Array.Empty<string>();
+                return [];
             }
         }
 
-        return result.ToArray();
+        return [.. result];
     }
 
     /// <summary>

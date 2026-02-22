@@ -30,7 +30,8 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
 
         if (Directory.Exists(_baseTempPath))
         {
-            try { Directory.Delete(_baseTempPath, recursive: true); }
+            try
+            { Directory.Delete(_baseTempPath, recursive: true); }
             catch { /* ignore cleanup errors */ }
         }
     }
@@ -68,7 +69,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
                 EventTypes = [nameof(CourseCreatedEvent)],
                 Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
             }),
-            apply: (_, evt) => evt.Event.Event is CourseCreatedEvent ? true : false);
+            apply: (_, evt) => evt.Event.Event is CourseCreatedEvent);
 
     private static IDecisionProjection<int> EnrollmentCountProjection(Guid courseId) =>
         new DecisionProjection<int>(
@@ -456,7 +457,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
                 EventTypes = [nameof(StudentEnrolledEvent)],
                 Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
             }),
-            apply: (_, evt) => evt.Event.Event is StudentEnrolledEvent ? true : false);
+            apply: (_, evt) => evt.Event.Event is StudentEnrolledEvent);
 
         await store.AppendAsync(
             new CourseCreatedEvent(courseId, 30)

@@ -13,21 +13,16 @@ public sealed class CourseShortInfoProjection : IProjectionDefinition<CourseShor
 {
     public string ProjectionName => "CourseShortInfo";
 
-    public string[] EventTypes => new[]
-    {
+    public string[] EventTypes =>
+    [
         nameof(CourseCreatedEvent),
         nameof(CourseStudentLimitModifiedEvent),
         nameof(StudentEnrolledToCourseEvent)
-    };
+    ];
 
     public string KeySelector(SequencedEvent evt)
     {
-        var courseIdTag = evt.Event.Tags.FirstOrDefault(t => t.Key == "courseId");
-        
-        if (courseIdTag == null)
-        {
-            throw new InvalidOperationException($"Event {evt.Event.EventType} at position {evt.Position} is missing courseId tag");
-        }
+        var courseIdTag = evt.Event.Tags.FirstOrDefault(t => t.Key == "courseId") ?? throw new InvalidOperationException($"Event {evt.Event.EventType} at position {evt.Position} is missing courseId tag");
 
         return courseIdTag.Value;
     }

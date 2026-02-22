@@ -1,6 +1,3 @@
-using System.Collections.Concurrent;
-using System.Text.Json;
-
 namespace Opossum.Projections;
 
 /// <summary>
@@ -238,7 +235,8 @@ internal sealed class ProjectionMetadataIndex
         }
         catch
         {
-            if (File.Exists(tempPath)) { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
+            if (File.Exists(tempPath))
+            { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
             throw;
         }
     }

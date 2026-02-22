@@ -382,7 +382,7 @@ public static class EventStoreExtensions
             .GroupBy(keySelector)
             .Select(eventGroup => eventGroup.Aggregate(
                 seed: (TProjection?)null,
-                func: (current, seqEvent) => applyEvent((IEvent)seqEvent.Event.Event, current)
+                func: (current, seqEvent) => applyEvent(seqEvent.Event.Event, current)
             ))
             .Where(projection => projection != null)
             .Cast<TProjection>();

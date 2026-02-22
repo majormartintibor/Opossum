@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Opossum.Mediator;
 
 /// <summary>
@@ -11,22 +9,22 @@ public sealed class ReflectionMessageHandler : IMessageHandler
     private readonly MethodInfo _method;
     private readonly bool _isStatic;
     private readonly ParameterInfo[] _parameters;
-    
+
     public Type MessageType { get; }
-    
+
     public ReflectionMessageHandler(Type handlerType, MethodInfo method)
     {
         _handlerType = handlerType ?? throw new ArgumentNullException(nameof(handlerType));
         _method = method ?? throw new ArgumentNullException(nameof(method));
         _isStatic = method.IsStatic;
         _parameters = method.GetParameters();
-        
+
         MessageType = _parameters[0].ParameterType;
     }
-    
+
     public async Task<object?> HandleAsync(
-        object message, 
-        IServiceProvider serviceProvider, 
+        object message,
+        IServiceProvider serviceProvider,
         CancellationToken cancellation)
     {
         // Prepare handler instance
@@ -35,16 +33,16 @@ public sealed class ReflectionMessageHandler : IMessageHandler
         {
             handlerInstance = ActivatorUtilities.CreateInstance(serviceProvider, _handlerType);
         }
-        
+
         // Prepare method arguments
         var args = new object?[_parameters.Length];
         args[0] = message;
-        
+
         // Resolve dependencies for additional parameters
         for (int i = 1; i < _parameters.Length; i++)
         {
             var paramType = _parameters[i].ParameterType;
-            
+
             // Check if it's a CancellationToken
             if (paramType == typeof(CancellationToken))
             {
@@ -78,7 +76,7 @@ public sealed class ReflectionMessageHandler : IMessageHandler
             await task.ConfigureAwait(false);
 
             // Get the result from Task<T>
-            if (_method.ReturnType.IsGenericType && 
+            if (_method.ReturnType.IsGenericType &&
                 _method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
             {
                 var resultProperty = _method.ReturnType.GetProperty("Result");
@@ -87,7 +85,7 @@ public sealed class ReflectionMessageHandler : IMessageHandler
 
             return null;
         }
-        
+
         return result;
     }
 }

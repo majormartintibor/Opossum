@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Extensions;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.Events;

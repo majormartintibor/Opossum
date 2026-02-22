@@ -1,5 +1,4 @@
 using Opossum.Core;
-using System.Text.Json;
 
 namespace Opossum.Storage.FileSystem;
 
@@ -77,7 +76,7 @@ internal class TagIndex
         }
 
         var positions = await ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
-        return positions.ToArray();
+        return [.. positions];
     }
 
     /// <summary>

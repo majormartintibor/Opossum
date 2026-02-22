@@ -1,4 +1,4 @@
-﻿namespace Opossum;
+namespace Opossum;
 
 public interface IEvent
 {

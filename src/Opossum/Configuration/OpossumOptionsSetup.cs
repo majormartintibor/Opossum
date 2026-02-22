@@ -1,4 +1,4 @@
-﻿namespace Opossum.Configuration;
+namespace Opossum.Configuration;
 
 public sealed class OpossumOptionsSetup : IConfigureOptions<OpossumOptions>, IValidateOptions<OpossumOptions>
 {

@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Opossum.Samples.CourseManagement.Shared;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]

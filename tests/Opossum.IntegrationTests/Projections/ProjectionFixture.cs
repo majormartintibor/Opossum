@@ -10,18 +10,17 @@ namespace Opossum.IntegrationTests.Projections;
 public class ProjectionFixture : IDisposable
 {
     private readonly ServiceProvider _serviceProvider;
-    private readonly string _testStoragePath;
 
     public IEventStore EventStore { get; }
     public IProjectionManager ProjectionManager { get; }
     public OpossumOptions OpossumOptions { get; }
     public ProjectionOptions ProjectionOptions { get; }
-    public string TestStoragePath => _testStoragePath;
+    public string TestStoragePath { get; }
 
     public ProjectionFixture()
     {
         // Create unique temp directory for this test run
-        _testStoragePath = Path.Combine(
+        TestStoragePath = Path.Combine(
             Path.GetTempPath(),
             "OpossumProjectionTests",
             Guid.NewGuid().ToString());
@@ -31,7 +30,7 @@ public class ProjectionFixture : IDisposable
         // Configure Opossum with test storage path
         services.AddOpossum(options =>
         {
-            options.RootPath = _testStoragePath;
+            options.RootPath = TestStoragePath;
             options.AddContext("TestContext");
         });
 
@@ -68,11 +67,11 @@ public class ProjectionFixture : IDisposable
         _serviceProvider?.Dispose();
 
         // Clean up test storage
-        if (Directory.Exists(_testStoragePath))
+        if (Directory.Exists(TestStoragePath))
         {
             try
             {
-                Directory.Delete(_testStoragePath, recursive: true);
+                Directory.Delete(TestStoragePath, recursive: true);
             }
             catch
             {

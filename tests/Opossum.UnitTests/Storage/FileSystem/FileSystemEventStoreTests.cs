@@ -155,7 +155,7 @@ public class FileSystemEventStoreTests : IDisposable
         // Arrange
         var beforeAppend = DateTimeOffset.UtcNow;
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
-        Assert.Equal(default(DateTimeOffset), events[0].Metadata.Timestamp); // Not set
+        Assert.Equal(default, events[0].Metadata.Timestamp); // Not set
 
         // Act
         await _store.AppendAsync(events, null);
@@ -164,7 +164,7 @@ public class FileSystemEventStoreTests : IDisposable
         var afterAppend = DateTimeOffset.UtcNow;
         var result = await _store.ReadAsync(Query.All(), null);
         Assert.Single(result);
-        Assert.NotEqual(default(DateTimeOffset), result[0].Metadata.Timestamp);
+        Assert.NotEqual(default, result[0].Metadata.Timestamp);
         Assert.True(result[0].Metadata.Timestamp >= beforeAppend);
         Assert.True(result[0].Metadata.Timestamp <= afterAppend);
     }
@@ -386,7 +386,7 @@ public class FileSystemEventStoreTests : IDisposable
             FailIfEventsMatch = Query.FromEventTypes("ConflictingEvent")
         };
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
-        
+
         await Assert.ThrowsAsync<ConcurrencyException>(
             () => _store.AppendAsync(newEvents, condition));
     }
@@ -427,7 +427,7 @@ public class FileSystemEventStoreTests : IDisposable
             FailIfEventsMatch = Query.FromTags(new Tag { Key = "Status", Value = "Pending" })
         };
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
-        
+
         await Assert.ThrowsAsync<ConcurrencyException>(
             () => _store.AppendAsync(newEvents, condition));
     }
@@ -473,7 +473,7 @@ public class FileSystemEventStoreTests : IDisposable
         event3.Event.Tags.Add(new Tag { Key = "Environment", Value = "Development" });
 
         // Act - Append in batches
-        await _store.AppendAsync(new[] { event1 }, null);
+        await _store.AppendAsync([event1], null);
         await _store.AppendAsync([event2, event3], null);
 
         // Assert - read back to verify positions
@@ -586,7 +586,7 @@ public class FileSystemEventStoreTests : IDisposable
         try
         {
             // Act & Assert
-            Assert.True(options.FlushEventsImmediately, 
+            Assert.True(options.FlushEventsImmediately,
                 "Default FlushEventsImmediately should be true for production safety");
 
             var store = new FileSystemEventStore(options);
@@ -700,7 +700,7 @@ public class FileSystemEventStoreTests : IDisposable
 
         // Performance assertion - should be faster with batched reading
         // Note: This is a sanity check, not a precise benchmark
-        Assert.True(sw.ElapsedMilliseconds < 5000, 
+        Assert.True(sw.ElapsedMilliseconds < 5000,
             $"Query.All() for 1000 events took {sw.ElapsedMilliseconds}ms, expected <5000ms");
     }
 

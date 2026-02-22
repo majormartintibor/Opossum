@@ -125,7 +125,7 @@ public class OpossumOptionsTests
         options.AddContext("CourseManagement");
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => 
+        var exception = Assert.Throws<InvalidOperationException>(() =>
             options.AddContext("CourseManagement"));
         Assert.Contains("already been added", exception.Message);
     }
@@ -138,7 +138,7 @@ public class OpossumOptionsTests
         options.AddContext("CourseManagement");
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() => 
+        var exception = Assert.Throws<InvalidOperationException>(() =>
             options.AddContext("coursemanagement"));
         Assert.Contains("already been added", exception.Message);
     }
@@ -147,10 +147,11 @@ public class OpossumOptionsTests
     public void RootPath_CanBeSet()
     {
         // Arrange
-        var options = new OpossumOptions();
-
-        // Act
-        options.RootPath = "/custom/path/to/store";
+        var options = new OpossumOptions
+        {
+            // Act
+            RootPath = "/custom/path/to/store"
+        };
 
         // Assert
         Assert.Equal("/custom/path/to/store", options.RootPath);
@@ -160,10 +161,11 @@ public class OpossumOptionsTests
     public void RootPath_CanBeSetToRelativePath()
     {
         // Arrange
-        var options = new OpossumOptions();
-
-        // Act
-        options.RootPath = "./data/events";
+        var options = new OpossumOptions
+        {
+            // Act
+            RootPath = "./data/events"
+        };
 
         // Assert
         Assert.Equal("./data/events", options.RootPath);
@@ -219,10 +221,11 @@ public class OpossumOptionsTests
     public void FlushEventsImmediately_CanBeSetToFalse()
     {
         // Arrange
-        var options = new OpossumOptions();
-
-        // Act
-        options.FlushEventsImmediately = false;
+        var options = new OpossumOptions
+        {
+            // Act
+            FlushEventsImmediately = false
+        };
 
         // Assert
         Assert.False(options.FlushEventsImmediately);
@@ -249,7 +252,7 @@ public class OpossumOptionsTests
 
         // Assert
         // Default should be true to prevent data loss in production
-        Assert.True(options.FlushEventsImmediately, 
+        Assert.True(options.FlushEventsImmediately,
             "FlushEventsImmediately should default to true for production safety");
     }
 }

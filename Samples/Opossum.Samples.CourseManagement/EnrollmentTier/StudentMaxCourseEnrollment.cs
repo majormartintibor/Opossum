@@ -1,4 +1,4 @@
-﻿namespace Opossum.Samples.CourseManagement.EnrollmentTier;
+namespace Opossum.Samples.CourseManagement.EnrollmentTier;
 
 public static class StudentMaxCourseEnrollment
 {

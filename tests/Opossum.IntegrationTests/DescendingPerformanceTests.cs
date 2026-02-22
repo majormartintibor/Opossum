@@ -19,7 +19,7 @@ public class DescendingPerformanceTests : IDisposable
             FlushEventsImmediately = false
         };
         _options.AddContext("TestContext");
-        
+
         _store = new FileSystemEventStore(_options);
     }
 
@@ -56,7 +56,7 @@ public class DescendingPerformanceTests : IDisposable
                 Metadata = new Metadata()
             };
         }
-        
+
         await _store.AppendAsync(events, null);
 
         // Act - Measure ascending query
@@ -75,8 +75,8 @@ public class DescendingPerformanceTests : IDisposable
         // Our fix reversed positions BEFORE reading, so overhead should be minimal
         // We allow up to 2x overhead (mostly from array reversal of positions)
         var ratio = (double)descendingTime / ascendingTime;
-        
-        Assert.True(ratio < 2.0, 
+
+        Assert.True(ratio < 2.0,
             $"Descending took {descendingTime}ms vs Ascending {ascendingTime}ms (ratio: {ratio:F2}x). " +
             $"Expected <2x overhead with the fix applied.");
 

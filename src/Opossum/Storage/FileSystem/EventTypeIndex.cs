@@ -1,6 +1,3 @@
-using Opossum.Core;
-using System.Text.Json;
-
 namespace Opossum.Storage.FileSystem;
 
 /// <summary>
@@ -75,7 +72,7 @@ internal class EventTypeIndex
         }
 
         var positions = await ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
-        return positions.ToArray();
+        return [.. positions];
     }
 
     /// <summary>

@@ -410,7 +410,7 @@ public record OrderSummaryState
     public Guid CustomerId { get; init; }
     public string CustomerName { get; init; } = string.Empty;
     public string CustomerTier { get; init; } = string.Empty;
-    public List<OrderItemInfo> Items { get; init; } = new();
+    public List<OrderItemInfo> Items { get; init; } = [];
     public decimal TotalAmount { get; init; }
 }
 
@@ -467,13 +467,8 @@ public class OrderSummaryProjection : IProjectionWithRelatedEvents<OrderSummaryS
         var customerEvent = relatedEvents
             .Select(e => e.Event.Event)
             .OfType<CustomerCreatedEvent>()
-            .FirstOrDefault();
-
-        if (customerEvent == null)
-        {
-            throw new InvalidOperationException(
+            .FirstOrDefault() ?? throw new InvalidOperationException(
                 $"Cannot create order: Customer {evt.CustomerId} not found");
-        }
 
         return new OrderSummaryState
         {
@@ -481,7 +476,7 @@ public class OrderSummaryProjection : IProjectionWithRelatedEvents<OrderSummaryS
             CustomerId = evt.CustomerId,
             CustomerName = customerEvent.Name,
             CustomerTier = customerEvent.Tier,
-            Items = new(),
+            Items = [],
             TotalAmount = 0
         };
     }
@@ -491,13 +486,8 @@ public class OrderSummaryProjection : IProjectionWithRelatedEvents<OrderSummaryS
         var productEvent = relatedEvents
             .Select(e => e.Event.Event)
             .OfType<ProductCreatedEvent>()
-            .FirstOrDefault();
-
-        if (productEvent == null)
-        {
-            throw new InvalidOperationException(
+            .FirstOrDefault() ?? throw new InvalidOperationException(
                 $"Cannot add item: Product {evt.ProductId} not found");
-        }
 
         var newItem = new OrderItemInfo
         {

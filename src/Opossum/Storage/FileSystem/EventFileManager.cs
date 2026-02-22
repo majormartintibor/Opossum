@@ -68,7 +68,9 @@ internal sealed class EventFileManager
             // Cleanup temp file on error
             if (File.Exists(tempPath))
             {
-                try { File.Delete(tempPath); } catch { /* Ignore cleanup errors */ }
+                try
+                { File.Delete(tempPath); }
+                catch { /* Ignore cleanup errors */ }
             }
             throw;
         }

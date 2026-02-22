@@ -76,7 +76,7 @@ public class LedgerManagerTests : IDisposable
         var contextPath = Path.Combine(_testDirectory, "CorruptContext");
         Directory.CreateDirectory(contextPath);
         var ledgerPath = Path.Combine(contextPath, ".ledger");
-        
+
         // Write corrupt JSON
         await File.WriteAllTextAsync(ledgerPath, "{ this is not valid JSON }");
 
@@ -94,7 +94,7 @@ public class LedgerManagerTests : IDisposable
         var contextPath = Path.Combine(_testDirectory, "EmptyLedgerContext");
         Directory.CreateDirectory(contextPath);
         var ledgerPath = Path.Combine(contextPath, ".ledger");
-        
+
         // Create empty file
         await File.WriteAllTextAsync(ledgerPath, "");
 
@@ -304,7 +304,7 @@ public class LedgerManagerTests : IDisposable
 
         // Try to acquire lock again - should succeed
         await using var secondLock = await _ledgerManager.AcquireLockAsync(contextPath);
-        
+
         // Assert
         Assert.NotNull(secondLock);
     }
@@ -393,7 +393,7 @@ public class LedgerManagerTests : IDisposable
 
         // Update to position 1
         await _ledgerManager.UpdateSequencePositionAsync(contextPath, 1);
-        
+
         // Next should be 2
         var pos2 = await _ledgerManager.GetNextSequencePositionAsync(contextPath);
         Assert.Equal(2, pos2);

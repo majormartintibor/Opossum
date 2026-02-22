@@ -5,22 +5,22 @@ namespace Opossum.BenchmarkTests.Helpers;
 /// </summary>
 public class TempFileSystemHelper : IDisposable
 {
-    private readonly string _tempPath;
     private bool _disposed;
 
     public TempFileSystemHelper(string prefix = "BenchmarkTemp")
     {
-        _tempPath = Path.Combine(Path.GetTempPath(), $"{prefix}_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(_tempPath);
+        TempPath = Path.Combine(Path.GetTempPath(), $"{prefix}_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(TempPath);
     }
 
-    public string TempPath => _tempPath;
+    public string TempPath { get; }
 
     public void Dispose()
     {
-        if (_disposed) return;
-        
-        CleanupWithRetry(_tempPath);
+        if (_disposed)
+            return;
+
+        CleanupWithRetry(TempPath);
         _disposed = true;
     }
 
@@ -29,7 +29,8 @@ public class TempFileSystemHelper : IDisposable
     /// </summary>
     private static void CleanupWithRetry(string path, int maxRetries = 5)
     {
-        if (!Directory.Exists(path)) return;
+        if (!Directory.Exists(path))
+            return;
 
         for (int i = 0; i < maxRetries; i++)
         {
@@ -66,7 +67,7 @@ public class TempFileSystemHelper : IDisposable
     /// </summary>
     public string CreateSubDirectory(string name)
     {
-        var subPath = Path.Combine(_tempPath, name);
+        var subPath = Path.Combine(TempPath, name);
         Directory.CreateDirectory(subPath);
         return subPath;
     }
@@ -76,6 +77,6 @@ public class TempFileSystemHelper : IDisposable
     /// </summary>
     public string GetFilePath(string fileName)
     {
-        return Path.Combine(_tempPath, fileName);
+        return Path.Combine(TempPath, fileName);
     }
 }

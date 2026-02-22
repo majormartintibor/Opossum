@@ -114,7 +114,7 @@ public class DiagnosticTests
 
         // Checkpoints should be >= 0 (will be > 0 if fixture seeding completed and auto-rebuild ran)
         // This verifies projections are working correctly
-        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint >= 0, 
+        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint >= 0,
             $"Checkpoint should be >= 0, got {checkpoint}"));
     }
 }

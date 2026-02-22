@@ -37,7 +37,7 @@ public class StorageInitializerTests : IDisposable
     public void Constructor_WithNullOptions_ThrowsArgumentNullException()
     {
         // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => 
+        var exception = Assert.Throws<ArgumentNullException>(() =>
             new StorageInitializer(null!));
         Assert.Equal("options", exception.ParamName);
     }
@@ -339,7 +339,7 @@ public class StorageInitializerTests : IDisposable
         // Assert
         var contextPath = Path.Combine(_testRootPath, "CourseManagement");
         var directories = Directory.GetDirectories(contextPath, "*", SearchOption.AllDirectories);
-        
+
         // Expected: Events, Indices, Indices/EventType, Indices/Tags = 4 directories
         Assert.Equal(4, directories.Length);
     }
@@ -358,7 +358,7 @@ public class StorageInitializerTests : IDisposable
         // Assert
         var contextPath = Path.Combine(_testRootPath, "CourseManagement");
         var files = Directory.GetFiles(contextPath, "*", SearchOption.TopDirectoryOnly);
-        
+
         // Should only have .ledger file at context level
         Assert.Single(files);
         Assert.Equal(".ledger", Path.GetFileName(files[0]));

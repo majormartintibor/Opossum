@@ -113,7 +113,7 @@ public class ParallelRebuildTests : IDisposable
 
         // Act - Rebuild only projection1 and projection3
         var result = await _projectionManager.RebuildAsync(
-            new[] { "TestProjection1", "TestProjection3" });
+            ["TestProjection1", "TestProjection3"]);
 
         // Assert
         Assert.Equal(2, result.TotalRebuilt);
@@ -128,7 +128,7 @@ public class ParallelRebuildTests : IDisposable
     public async Task RebuildAsync_WithEmptyArray_ReturnsEmptyResult()
     {
         // Act
-        var result = await _projectionManager.RebuildAsync(Array.Empty<string>());
+        var result = await _projectionManager.RebuildAsync([]);
 
         // Assert
         Assert.Equal(0, result.TotalRebuilt);
@@ -167,8 +167,7 @@ public class ParallelRebuildTests : IDisposable
         // Add some events using the extension method
         var stream1Events = new List<NewEvent>
         {
-            new NewEvent
-            {
+            new() {
                 Event = new DomainEvent
                 {
                     EventType = nameof(TestEvent1),
@@ -185,8 +184,7 @@ public class ParallelRebuildTests : IDisposable
 
         var stream2Events = new List<NewEvent>
         {
-            new NewEvent
-            {
+            new() {
                 Event = new DomainEvent
                 {
                     EventType = nameof(TestEvent1),
@@ -205,7 +203,7 @@ public class ParallelRebuildTests : IDisposable
         await _eventStore.AppendAsync([.. stream2Events], null);
 
         // Act
-        var result = await _projectionManager.RebuildAsync(new[] { "TestProjection1" });
+        var result = await _projectionManager.RebuildAsync(["TestProjection1"]);
 
         // Assert
         Assert.Single(result.Details);
@@ -248,7 +246,7 @@ public class ParallelRebuildTests : IDisposable
     private sealed class TestProjection1 : IProjectionDefinition<TestState>
     {
         public string ProjectionName => "TestProjection1";
-        public string[] EventTypes => new[] { nameof(TestEvent1) };
+        public string[] EventTypes => [nameof(TestEvent1)];
 
         public string KeySelector(SequencedEvent evt) => "key1";
 
@@ -263,7 +261,7 @@ public class ParallelRebuildTests : IDisposable
     private sealed class TestProjection2 : IProjectionDefinition<TestState>
     {
         public string ProjectionName => "TestProjection2";
-        public string[] EventTypes => new[] { nameof(TestEvent2) };
+        public string[] EventTypes => [nameof(TestEvent2)];
 
         public string KeySelector(SequencedEvent evt) => "key2";
 
@@ -278,7 +276,7 @@ public class ParallelRebuildTests : IDisposable
     private sealed class TestProjection3 : IProjectionDefinition<TestState>
     {
         public string ProjectionName => "TestProjection3";
-        public string[] EventTypes => new[] { nameof(TestEvent3) };
+        public string[] EventTypes => [nameof(TestEvent3)];
 
         public string KeySelector(SequencedEvent evt) => "key3";
 

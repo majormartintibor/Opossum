@@ -72,7 +72,7 @@ internal sealed class ProjectionDaemon : BackgroundService
 
         // Use the new RebuildAllAsync method (only rebuilds missing projections)
         var result = await _projectionManager.RebuildAllAsync(
-            forceRebuild: false, 
+            forceRebuild: false,
             cancellationToken).ConfigureAwait(false);
 
         if (result.TotalRebuilt == 0)
@@ -133,7 +133,7 @@ internal sealed class ProjectionDaemon : BackgroundService
             return;
         }
 
-        _logger.LogDebug("Processing {EventCount} new events from position {MinPosition}", 
+        _logger.LogDebug("Processing {EventCount} new events from position {MinPosition}",
             newEvents.Length, minCheckpoint + 1);
 
         // Process in batches

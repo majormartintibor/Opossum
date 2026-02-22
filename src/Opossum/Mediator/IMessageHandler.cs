@@ -9,7 +9,7 @@ public interface IMessageHandler
     /// The type of message this handler processes
     /// </summary>
     Type MessageType { get; }
-    
+
     /// <summary>
     /// Execute the handler logic
     /// </summary>

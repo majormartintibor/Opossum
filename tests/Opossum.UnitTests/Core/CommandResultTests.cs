@@ -223,7 +223,7 @@ public class CommandResultTests
 
         // Assert
         Assert.True(result.Success);
-        Assert.Equal(default(int), result.Value);
+        Assert.Equal(default, result.Value);
         Assert.Null(result.ErrorMessage);
     }
 
@@ -260,7 +260,7 @@ public class CommandResultTests
         CommandResult<List<string>> ExecuteQuery(bool shouldSucceed)
         {
             if (shouldSucceed)
-                return CommandResult<List<string>>.Ok(new List<string> { "Result1", "Result2" });
+                return CommandResult<List<string>>.Ok(["Result1", "Result2"]);
             else
                 return CommandResult<List<string>>.Fail("Query execution failed");
         }

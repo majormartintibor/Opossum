@@ -34,21 +34,16 @@ public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<Stud
 {
     public string ProjectionName => "StudentDetails";
 
-    public string[] EventTypes => new[]
-    {
+    public string[] EventTypes =>
+    [
         nameof(StudentRegisteredEvent),
         nameof(StudentSubscriptionUpdatedEvent),
         nameof(StudentEnrolledToCourseEvent)
-    };
+    ];
 
     public string KeySelector(SequencedEvent evt)
     {
-        var studentIdTag = evt.Event.Tags.FirstOrDefault(t => t.Key == "studentId");
-
-        if (studentIdTag == null)
-        {
-            throw new InvalidOperationException($"Event {evt.Event.EventType} at position {evt.Position} is missing studentId tag");
-        }
+        var studentIdTag = evt.Event.Tags.FirstOrDefault(t => t.Key == "studentId") ?? throw new InvalidOperationException($"Event {evt.Event.EventType} at position {evt.Position} is missing studentId tag");
 
         return studentIdTag.Value;
     }
@@ -80,7 +75,7 @@ public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<Stud
                 EnrollmentTier: Tier.Basic,
                 MaxEnrollmentCount: StudentMaxCourseEnrollment.GetMaxCoursesAllowed(Tier.Basic),
                 CurrentEnrollmentCount: 0,
-                EnrolledCourses: new List<EnrolledCourseInfo>()),
+                EnrolledCourses: []),
 
             StudentSubscriptionUpdatedEvent updated when current != null =>
                 current with
@@ -97,8 +92,8 @@ public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<Stud
     }
 
     private static StudentDetails ApplyStudentEnrolled(
-        StudentDetails current, 
-        StudentEnrolledToCourseEvent evt, 
+        StudentDetails current,
+        StudentEnrolledToCourseEvent evt,
         SequencedEvent[] relatedEvents)
     {
         // Check if course already in list (idempotency)
@@ -109,15 +104,9 @@ public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<Stud
         var courseCreated = relatedEvents
             .Select(e => e.Event.Event)
             .OfType<CourseCreatedEvent>()
-            .FirstOrDefault(c => c.CourseId == evt.CourseId);
-
-        if (courseCreated == null)
-        {
-            // Should not happen if framework loaded related events correctly
-            throw new InvalidOperationException(
+            .FirstOrDefault(c => c.CourseId == evt.CourseId) ?? throw new InvalidOperationException(
                 $"Could not find CourseCreatedEvent for course {evt.CourseId}. " +
                 "This indicates a framework issue with loading related events.");
-        }
 
         var courseInfo = new EnrolledCourseInfo(
             CourseId: evt.CourseId,

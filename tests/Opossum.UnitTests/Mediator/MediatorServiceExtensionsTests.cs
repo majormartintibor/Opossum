@@ -9,16 +9,16 @@ public class MediatorServiceExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
-        
+
         // Act
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         // Assert
         var mediator = provider.GetService<IMediator>();
         Assert.NotNull(mediator);
     }
-    
+
     [Fact]
     public void AddMediator_RegistersAsSingleton()
     {
@@ -26,35 +26,35 @@ public class MediatorServiceExtensionsTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         // Act
         var mediator1 = provider.GetRequiredService<IMediator>();
         var mediator2 = provider.GetRequiredService<IMediator>();
-        
+
         // Assert
         Assert.Same(mediator1, mediator2);
     }
-    
+
     [Fact]
     public void AddMediator_WithOptions_IncludesAdditionalAssemblies()
     {
         // Arrange
         var services = new ServiceCollection();
         var additionalAssembly = typeof(MediatorServiceExtensionsTests).Assembly;
-        
+
         // Act
         services.AddMediator(options =>
         {
             options.Assemblies.Add(additionalAssembly);
         });
-        
+
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Assert
         Assert.NotNull(mediator);
     }
-    
+
     [Fact]
     public async Task AddMediator_RegistersHandlersFromCallingAssembly()
     {
@@ -62,18 +62,18 @@ public class MediatorServiceExtensionsTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var message = new ExtensionTestMessage(42);
-        
+
         // Act
         var result = await mediator.InvokeAsync<ExtensionTestResponse>(message);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(42, result.Value);
     }
-    
+
     [Fact]
     public void AddMediator_RegistersHandlersCorrectly()
     {
@@ -92,7 +92,7 @@ public class MediatorServiceExtensionsTests
         var mediator2 = provider.GetRequiredService<IMediator>();
         Assert.Same(mediator, mediator2);
     }
-    
+
     [Fact]
     public async Task AddMediator_WithMultipleAssemblies_DiscoversAllHandlers()
     {
@@ -102,19 +102,19 @@ public class MediatorServiceExtensionsTests
         {
             options.Assemblies.Add(typeof(MediatorServiceExtensionsTests).Assembly);
         });
-        
+
         var provider = services.BuildServiceProvider();
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act
         var result = await mediator.InvokeAsync<ExtensionTestResponse>(
             new ExtensionTestMessage(123));
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(123, result.Value);
     }
-    
+
     [Fact]
     public void AddMediator_WithNullConfigure_DoesNotThrow()
     {

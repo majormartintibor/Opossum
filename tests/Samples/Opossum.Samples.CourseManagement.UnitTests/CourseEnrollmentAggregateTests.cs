@@ -18,7 +18,7 @@ public class CourseEnrollmentProjectionTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
             }
         };
 

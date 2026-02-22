@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Opossum.Projections;
 
 namespace Opossum.UnitTests.Projections;

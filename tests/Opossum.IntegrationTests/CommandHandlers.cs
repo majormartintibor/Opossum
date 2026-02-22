@@ -93,7 +93,7 @@ public class EnrollStudentToCourseCommandHandler
 
             // Step 2: Validate business rules
             // Check if student is already enrolled in this specific course
-            var isAlreadyEnrolled = events.Any(e => 
+            var isAlreadyEnrolled = events.Any(e =>
                 e.Event.EventType == nameof(StudentEnrolledToCourseEvent) &&
                 e.Event.Event is StudentEnrolledToCourseEvent enrollEvent &&
                 enrollEvent.CourseId == command.CourseId &&

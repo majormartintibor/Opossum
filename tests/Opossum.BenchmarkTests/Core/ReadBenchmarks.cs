@@ -23,7 +23,7 @@ public class ReadBenchmarks
     public void GlobalSetup()
     {
         _tempHelper = new TempFileSystemHelper("ReadBench");
-        
+
         // Create stores with different event counts (once per benchmark run)
         _store100Path = CreateAndPopulateStore(100);
         _store1KPath = CreateAndPopulateStore(1000);
@@ -47,7 +47,7 @@ public class ReadBenchmarks
             FlushEventsImmediately = false
         };
         options.AddContext("BenchmarkContext");
-        
+
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
@@ -55,7 +55,7 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         _serviceProvider = services.BuildServiceProvider();
         _store = _serviceProvider.GetRequiredService<IEventStore>();
     }
@@ -75,7 +75,7 @@ public class ReadBenchmarks
         var path = _tempHelper.CreateSubDirectory($"Store_{eventCount}Events");
         var options = new OpossumOptions { RootPath = path, FlushEventsImmediately = false };
         options.AddContext("BenchmarkContext");
-        
+
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
@@ -83,16 +83,16 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         // Populate with events (4 event types cycling)
         var events = BenchmarkDataGenerator.GenerateEvents(
-            eventCount, 
+            eventCount,
             tagCount: 3,
             eventTypes: ["OrderCreated", "OrderShipped", "OrderDelivered", "OrderCancelled"]);
-        
+
         // Batch append for efficiency
         const int batchSize = 100;
         for (int i = 0; i < events.Count; i += batchSize)
@@ -100,7 +100,7 @@ public class ReadBenchmarks
             var batch = events.Skip(i).Take(batchSize).ToArray();
             store.AppendAsync(batch, null).GetAwaiter().GetResult();
         }
-        
+
         return path;
     }
 
@@ -122,10 +122,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromEventTypes(["OrderCreated"]);
         var results = await store.ReadAsync(query, null);
     }
@@ -143,10 +143,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromEventTypes(["OrderCreated"]);
         var results = await store.ReadAsync(query, null);
     }
@@ -164,10 +164,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromEventTypes(["OrderCreated"]);
         var results = await store.ReadAsync(query, null);
     }
@@ -189,10 +189,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromEventTypes(["OrderCreated", "OrderShipped", "OrderDelivered"]);
         var results = await store.ReadAsync(query, null);
     }
@@ -214,10 +214,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromTags([new Tag { Key = "Region", Value = "US-West" }]);
         var results = await store.ReadAsync(query, null);
     }
@@ -235,10 +235,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromTags([new Tag { Key = "Region", Value = "US-West" }]);
         var results = await store.ReadAsync(query, null);
     }
@@ -256,10 +256,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromTags([new Tag { Key = "Region", Value = "US-West" }]);
         var results = await store.ReadAsync(query, null);
     }
@@ -281,10 +281,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.FromTags([
             new Tag { Key = "Region", Value = "US-West" },
             new Tag { Key = "Environment", Value = "Production" }
@@ -309,10 +309,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.All();
         var results = await store.ReadAsync(query, null);
     }
@@ -330,10 +330,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.All();
         var results = await store.ReadAsync(query, null);
     }
@@ -351,10 +351,10 @@ public class ReadBenchmarks
             opt.FlushEventsImmediately = false;
             opt.AddContext("BenchmarkContext");
         });
-        
+
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
-        
+
         var query = Query.All();
         var results = await store.ReadAsync(query, null);
     }

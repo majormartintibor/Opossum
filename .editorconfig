@@ -1,0 +1,400 @@
+# .editorconfig — Opossum Project
+# Enforces modern C# 14 / .NET 10 language features and project coding standards.
+# https://editorconfig.org | https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/
+
+root = true
+
+# ============================================================
+# ALL FILES
+# ============================================================
+[*]
+charset                  = utf-8
+end_of_line              = crlf
+indent_style             = space
+trim_trailing_whitespace = true
+insert_final_newline     = true
+
+# ============================================================
+# MARKDOWN
+# ============================================================
+[*.md]
+trim_trailing_whitespace = false
+
+# ============================================================
+# XML / PROJECT FILES
+# ============================================================
+[*.{xml,csproj,props,targets,slnx,config,json,yml,yaml}]
+indent_size = 2
+
+# ============================================================
+# C# FILES
+# ============================================================
+[*.cs]
+indent_size = 4
+tab_width   = 4
+
+# ------------------------------------------------------------
+# FILE-SCOPED NAMESPACES (C# 10+)
+# ✅ namespace Opossum.Foo;  ❌ namespace Opossum.Foo { }
+# ------------------------------------------------------------
+csharp_style_namespace_declarations                 = file_scoped:warning
+dotnet_diagnostic.IDE0161.severity                  = warning
+
+# ------------------------------------------------------------
+# COLLECTION EXPRESSIONS (C# 12+)
+# ✅ int[] x = [1, 2, 3];   ❌ new int[] { 1, 2, 3 }
+# ✅ List<int> x = [];      ❌ new List<int>()
+# ✅ ImmutableArray<int> x = [1, 2];
+# ------------------------------------------------------------
+dotnet_style_prefer_collection_expression           = when_types_loosely_match:warning
+dotnet_diagnostic.IDE0300.severity                  = warning   # array → []
+dotnet_diagnostic.IDE0301.severity                  = warning   # empty  → []
+dotnet_diagnostic.IDE0302.severity                  = warning   # stackalloc → []
+dotnet_diagnostic.IDE0303.severity                  = warning   # ImmutableArray.Create() → []
+dotnet_diagnostic.IDE0304.severity                  = warning   # builder → []
+dotnet_diagnostic.IDE0305.severity                  = warning   # fluent Add chain → []
+
+# ------------------------------------------------------------
+# TARGET-TYPED NEW (C# 9+)
+# ✅ MyType x = new();   ❌ MyType x = new MyType();
+# ------------------------------------------------------------
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+dotnet_diagnostic.IDE0090.severity                           = warning
+
+# ------------------------------------------------------------
+# PRIMARY CONSTRUCTORS (C# 12+)
+# ✅ public class Foo(IBar bar) { }
+# ------------------------------------------------------------
+csharp_style_prefer_primary_constructors = true:suggestion
+dotnet_diagnostic.IDE0290.severity       = suggestion
+
+# ------------------------------------------------------------
+# PATTERN MATCHING (C# 8+)
+# ✅ if (x is Foo f)   ❌ if (x is Foo) { var f = (Foo)x; }
+# ✅ if (x is not null)
+# ✅ if (x is { Prop: var p })
+# ------------------------------------------------------------
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check  = true:warning
+csharp_style_prefer_not_pattern                        = true:warning
+csharp_style_prefer_pattern_matching                   = true:suggestion
+csharp_style_prefer_extended_property_pattern          = true:suggestion
+dotnet_diagnostic.IDE0019.severity                     = warning   # 'is' + cast → pattern
+dotnet_diagnostic.IDE0038.severity                     = warning   # 'as' + null check → pattern
+dotnet_diagnostic.IDE0083.severity                     = warning   # prefer 'not' pattern
+dotnet_diagnostic.IDE0170.severity                     = suggestion # extended property pattern
+
+# ------------------------------------------------------------
+# SWITCH EXPRESSIONS (C# 8+)
+# ✅ x switch { ... }   ❌ switch (x) { case ...: ... }
+# ------------------------------------------------------------
+csharp_style_prefer_switch_expression = true:warning
+dotnet_diagnostic.IDE0066.severity    = warning
+
+# ------------------------------------------------------------
+# INDEX & RANGE OPERATORS (C# 8+)
+# ✅ arr[^1]     ❌ arr[arr.Length - 1]
+# ✅ arr[1..^1]  ❌ arr.Skip(1).Take(arr.Length - 2)
+# ------------------------------------------------------------
+csharp_style_prefer_index_operator = true:warning
+csharp_style_prefer_range_operator = true:warning
+dotnet_diagnostic.IDE0056.severity  = warning
+dotnet_diagnostic.IDE0057.severity  = warning
+
+# ------------------------------------------------------------
+# NULL HANDLING
+# ✅ x ??= new();        ❌ if (x == null) x = new();
+# ✅ x?.Method();        ❌ if (x != null) x.Method();
+# ✅ if (x is null)      ❌ if (x == null) / object.ReferenceEquals(x, null)
+# ✅ x ?? fallback       ❌ x != null ? x : fallback
+# ------------------------------------------------------------
+dotnet_style_coalesce_expression                                   = true:warning
+dotnet_style_null_propagation                                      = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method  = true:warning
+dotnet_style_prefer_compound_assignment                            = true:warning
+csharp_style_prefer_null_check_over_type_check                     = true:warning
+dotnet_diagnostic.IDE0029.severity                                 = warning   # ?? coalescing
+dotnet_diagnostic.IDE0030.severity                                 = warning   # ?? coalescing (nullable)
+dotnet_diagnostic.IDE0031.severity                                 = warning   # ?. null propagation
+dotnet_diagnostic.IDE0041.severity                                 = warning   # 'is null' over == null
+dotnet_diagnostic.IDE0054.severity                                 = warning   # compound assignment
+dotnet_diagnostic.IDE0074.severity                                 = warning   # ??= assignment
+dotnet_diagnostic.IDE0150.severity                                 = warning   # null check over type check
+
+# ------------------------------------------------------------
+# THROW EXPRESSIONS (C# 7+)
+# ✅ _field = value ?? throw new ArgumentNullException(...);
+# ------------------------------------------------------------
+csharp_style_throw_expressions = true:warning
+dotnet_diagnostic.IDE0016.severity = warning
+
+# ------------------------------------------------------------
+# INLINE OUT VARIABLE DECLARATION (C# 7+)
+# ✅ int.TryParse(s, out var n)   ❌ int n; int.TryParse(s, out n)
+# ------------------------------------------------------------
+csharp_style_inlined_variable_declaration = true:warning
+dotnet_diagnostic.IDE0018.severity        = warning
+
+# ------------------------------------------------------------
+# DECONSTRUCTION (C# 7+)
+# ✅ var (a, b) = tuple;   ❌ var a = tuple.Item1; var b = tuple.Item2;
+# ------------------------------------------------------------
+csharp_style_deconstructed_variable_declaration = true:suggestion
+dotnet_diagnostic.IDE0042.severity              = suggestion
+
+# ------------------------------------------------------------
+# TUPLE NAMES
+# ✅ tuple.Name   ❌ tuple.Item1
+# ------------------------------------------------------------
+dotnet_style_explicit_tuple_names      = true:warning
+dotnet_style_prefer_inferred_tuple_names = true:suggestion
+dotnet_diagnostic.IDE0033.severity     = warning
+dotnet_diagnostic.IDE0037.severity     = suggestion
+
+# ------------------------------------------------------------
+# CONDITIONAL DELEGATE CALL (C# 6+)
+# ✅ handler?.Invoke()   ❌ if (handler != null) handler()
+# ------------------------------------------------------------
+csharp_style_conditional_delegate_call = true:warning
+dotnet_diagnostic.IDE1005.severity     = warning
+
+# ------------------------------------------------------------
+# SIMPLIFIED DEFAULT EXPRESSION (C# 7.1+)
+# ✅ default   ❌ default(T)
+# ------------------------------------------------------------
+csharp_prefer_simple_default_expression = true:warning
+dotnet_diagnostic.IDE0034.severity      = warning
+
+# ------------------------------------------------------------
+# SIMPLIFIED BOOLEAN EXPRESSIONS
+# ✅ x   ❌ x == true
+# ------------------------------------------------------------
+dotnet_style_prefer_simplified_boolean_expressions = true:warning
+dotnet_diagnostic.IDE0075.severity                 = warning
+
+# ------------------------------------------------------------
+# USING DECLARATIONS (C# 8+)
+# ✅ using var x = ...;   ❌ using (var x = ...) { }
+# ------------------------------------------------------------
+csharp_prefer_simple_using_statement = true:suggestion
+dotnet_diagnostic.IDE0063.severity   = suggestion
+
+# ------------------------------------------------------------
+# OBJECT & COLLECTION INITIALIZERS
+# ✅ new Foo { X = 1 }     ❌ var f = new Foo(); f.X = 1;
+# ✅ new List<int> { 1 }   ❌ var l = new List<int>(); l.Add(1);
+# (The [] collection expression rules above supersede these for
+#  new-expression cases, but initializers still apply to object init)
+# ------------------------------------------------------------
+dotnet_style_object_initializer     = true:warning
+dotnet_style_collection_initializer = true:warning
+dotnet_diagnostic.IDE0017.severity  = warning
+dotnet_diagnostic.IDE0028.severity  = warning
+
+# ------------------------------------------------------------
+# AUTO-PROPERTIES
+# ✅ public int X { get; }   ❌ private int _x; public int X => _x;
+# ------------------------------------------------------------
+dotnet_style_prefer_auto_properties = true:warning
+dotnet_diagnostic.IDE0032.severity  = warning
+
+# ------------------------------------------------------------
+# READ-ONLY FIELDS
+# ✅ private readonly int _x;
+# ------------------------------------------------------------
+dotnet_style_readonly_field        = true:warning
+dotnet_diagnostic.IDE0044.severity = warning
+
+# ------------------------------------------------------------
+# ACCESSIBILITY MODIFIERS — always explicit
+# ✅ private void Foo()   ❌ void Foo()
+# ------------------------------------------------------------
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+dotnet_diagnostic.IDE0040.severity           = warning
+
+# ------------------------------------------------------------
+# EXPRESSION-BODIED MEMBERS
+# ------------------------------------------------------------
+csharp_style_expression_bodied_properties      = true:suggestion
+csharp_style_expression_bodied_indexers        = true:suggestion
+csharp_style_expression_bodied_accessors       = true:suggestion
+csharp_style_expression_bodied_lambdas         = true:suggestion
+csharp_style_expression_bodied_methods         = when_on_single_line:suggestion
+csharp_style_expression_bodied_operators       = when_on_single_line:suggestion
+csharp_style_expression_bodied_local_functions = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors    = false:silent
+
+# ------------------------------------------------------------
+# STRING INTERPOLATION
+# ✅ $"{x}"  (simplify redundant .ToString(), etc.)
+# ------------------------------------------------------------
+dotnet_diagnostic.IDE0071.severity = suggestion
+
+# ------------------------------------------------------------
+# LOCAL FUNCTIONS OVER ANONYMOUS FUNCTIONS
+# ✅ static local function   ❌ Func<> lambda assigned to variable
+# ------------------------------------------------------------
+csharp_style_prefer_local_over_anonymous_function  = true:suggestion
+csharp_style_prefer_static_local_function          = true:suggestion
+dotnet_diagnostic.IDE0039.severity                 = suggestion
+dotnet_diagnostic.IDE0062.severity                 = suggestion
+
+# ------------------------------------------------------------
+# RAW STRING LITERALS (C# 11+)
+# ✅ """raw string"""
+# ------------------------------------------------------------
+csharp_style_prefer_raw_string_literal = true:suggestion
+
+# ------------------------------------------------------------
+# UTF-8 STRING LITERALS (C# 11+)
+# ✅ "text"u8
+# ------------------------------------------------------------
+csharp_style_prefer_utf8_string_literals = true:suggestion
+
+# ------------------------------------------------------------
+# VAR USAGE
+# Explicit types for built-ins; var when type is apparent
+# ------------------------------------------------------------
+csharp_style_var_for_built_in_types   = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere             = false:silent
+
+# ------------------------------------------------------------
+# REMOVE UNNECESSARY CODE
+# ------------------------------------------------------------
+dotnet_diagnostic.IDE0004.severity = warning   # Remove unnecessary cast
+dotnet_diagnostic.IDE0005.severity = warning   # Remove unnecessary using/import
+dotnet_diagnostic.IDE0060.severity = warning   # Remove unused parameter
+dotnet_diagnostic.IDE0079.severity = warning   # Remove unnecessary suppression
+dotnet_diagnostic.IDE0100.severity = warning   # Remove unnecessary equality operator
+dotnet_diagnostic.IDE0110.severity = warning   # Remove unnecessary discard
+
+# ------------------------------------------------------------
+# NULLABLE REFERENCE TYPES — warnings as errors for library code
+# ------------------------------------------------------------
+dotnet_diagnostic.CS8600.severity = warning   # Null assigned to non-nullable
+dotnet_diagnostic.CS8601.severity = warning   # Possible null reference assignment
+dotnet_diagnostic.CS8602.severity = warning   # Dereference of possible null
+dotnet_diagnostic.CS8603.severity = warning   # Possible null return
+dotnet_diagnostic.CS8604.severity = warning   # Possible null argument
+dotnet_diagnostic.CS8618.severity = warning   # Non-nullable field uninitialized
+dotnet_diagnostic.CS8625.severity = warning   # Null literal to non-nullable type
+
+# ============================================================
+# FORMATTING RULES
+# ============================================================
+
+# --- New lines ---
+csharp_new_line_before_open_brace                          = all
+csharp_new_line_before_else                                = true
+csharp_new_line_before_catch                               = true
+csharp_new_line_before_finally                             = true
+csharp_new_line_before_members_in_object_initializers      = true
+csharp_new_line_before_members_in_anonymous_types          = true
+csharp_new_line_between_query_expression_clauses           = true
+
+# --- Indentation ---
+csharp_indent_case_contents                  = true
+csharp_indent_switch_labels                  = true
+csharp_indent_labels                         = flush_left
+csharp_indent_block_contents                 = true
+csharp_indent_braces                         = false
+csharp_indent_case_contents_when_block       = true
+
+# --- Spacing ---
+csharp_space_after_cast                                                   = false
+csharp_space_after_keywords_in_control_flow_statements                   = true
+csharp_space_between_method_declaration_parameter_list_parentheses       = false
+csharp_space_between_method_call_parameter_list_parentheses              = false
+csharp_space_between_parentheses                                          = false
+csharp_space_before_colon_in_inheritance_clause                           = true
+csharp_space_after_colon_in_inheritance_clause                            = true
+csharp_space_around_binary_operators                                      = before_and_after
+csharp_space_between_method_declaration_empty_parameter_list_parentheses = false
+csharp_space_between_method_call_name_and_opening_parenthesis            = false
+csharp_space_between_method_call_empty_parameter_list_parentheses        = false
+csharp_space_after_comma                                                  = true
+csharp_space_after_dot                                                    = false
+csharp_space_after_semicolon_in_for_statement                             = true
+csharp_space_before_comma                                                 = false
+csharp_space_before_dot                                                   = false
+csharp_space_before_open_square_bracket                                   = false
+csharp_space_before_semicolon_in_for_statement                            = false
+csharp_space_between_empty_square_brackets                                = false
+csharp_space_between_square_brackets                                      = false
+
+# --- Wrapping ---
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks     = true
+
+# ============================================================
+# NAMING CONVENTIONS
+# ============================================================
+
+# Async methods must be suffixed with Async
+dotnet_naming_rule.async_methods_end_in_async.symbols   = async_method_symbols
+dotnet_naming_rule.async_methods_end_in_async.style     = async_suffix_style
+dotnet_naming_rule.async_methods_end_in_async.severity  = warning
+
+dotnet_naming_symbols.async_method_symbols.applicable_kinds        = method
+dotnet_naming_symbols.async_method_symbols.applicable_accessibilities = *
+dotnet_naming_symbols.async_method_symbols.required_modifiers      = async
+
+dotnet_naming_style.async_suffix_style.required_suffix  = Async
+dotnet_naming_style.async_suffix_style.capitalization   = pascal_case
+
+# Interfaces must be prefixed with I
+dotnet_naming_rule.interfaces_start_with_i.symbols   = interface_symbols
+dotnet_naming_rule.interfaces_start_with_i.style     = interface_prefix_style
+dotnet_naming_rule.interfaces_start_with_i.severity  = warning
+
+dotnet_naming_symbols.interface_symbols.applicable_kinds           = interface
+dotnet_naming_symbols.interface_symbols.applicable_accessibilities = *
+
+dotnet_naming_style.interface_prefix_style.required_prefix = I
+dotnet_naming_style.interface_prefix_style.capitalization  = pascal_case
+
+# Private / protected fields → _camelCase
+dotnet_naming_rule.private_fields_underscore.symbols   = private_field_symbols
+dotnet_naming_rule.private_fields_underscore.style     = underscore_camel_style
+dotnet_naming_rule.private_fields_underscore.severity  = warning
+
+dotnet_naming_symbols.private_field_symbols.applicable_kinds           = field
+dotnet_naming_symbols.private_field_symbols.applicable_accessibilities = private, protected, private_protected
+
+dotnet_naming_style.underscore_camel_style.required_prefix = _
+dotnet_naming_style.underscore_camel_style.capitalization  = camel_case
+
+# Constants → PascalCase
+dotnet_naming_rule.constants_pascal.symbols   = constant_symbols
+dotnet_naming_rule.constants_pascal.style     = pascal_case_style
+dotnet_naming_rule.constants_pascal.severity  = warning
+
+dotnet_naming_symbols.constant_symbols.applicable_kinds       = field
+dotnet_naming_symbols.constant_symbols.required_modifiers     = const
+
+dotnet_naming_style.pascal_case_style.capitalization = pascal_case
+
+# Type parameters → TPascalCase
+dotnet_naming_rule.type_params_t_prefix.symbols   = type_param_symbols
+dotnet_naming_rule.type_params_t_prefix.style     = t_prefix_style
+dotnet_naming_rule.type_params_t_prefix.severity  = suggestion
+
+dotnet_naming_symbols.type_param_symbols.applicable_kinds = type_parameter
+
+dotnet_naming_style.t_prefix_style.required_prefix = T
+dotnet_naming_style.t_prefix_style.capitalization  = pascal_case
+
+# ============================================================
+# PROJECT-SPECIFIC OVERRIDES
+# ============================================================
+
+# --- Test projects: relax a few rules that are awkward in tests ---
+[tests/**/*.cs]
+dotnet_diagnostic.IDE0060.severity = none    # Unused params fine in test helpers
+dotnet_diagnostic.CS8618.severity  = none    # Uninitialized fields fine in test fixtures
+dotnet_diagnostic.IDE0290.severity = none    # Primary constructors less useful in test classes
+
+# --- Sample application: same modern-C# rules, but no library-specific concerns ---
+[Samples/**/*.cs]
+dotnet_diagnostic.IDE0290.severity = suggestion

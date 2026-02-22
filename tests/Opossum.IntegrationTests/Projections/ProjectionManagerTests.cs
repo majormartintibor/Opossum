@@ -145,7 +145,7 @@ public class ProjectionManagerTests : IClassFixture<ProjectionFixture>
             .WithTag("orderId", orderId.ToString())
             .Build();
 
-        await _fixture.EventStore.AppendAsync(new[] { createEvent }, null);
+        await _fixture.EventStore.AppendAsync([createEvent], null);
 
         // Register projection and rebuild
         var projectionName = $"Orders_{Guid.NewGuid()}";
@@ -233,12 +233,12 @@ public class ProjectionManagerTests : IClassFixture<ProjectionFixture>
     {
         public string ProjectionName => "TestOrders";
 
-        public string[] EventTypes => new[]
-        {
+        public string[] EventTypes =>
+        [
             nameof(OrderCreatedEvent),
             nameof(ItemAddedEvent),
             nameof(OrderCancelledEvent)
-        };
+        ];
 
         public string KeySelector(SequencedEvent evt)
         {
@@ -271,21 +271,19 @@ public class ProjectionManagerTests : IClassFixture<ProjectionFixture>
 
     private class TestOrderProjectionWithName : IProjectionDefinition<OrderSummaryState>
     {
-        private readonly string _name;
-
         public TestOrderProjectionWithName(string name)
         {
-            _name = name;
+            ProjectionName = name;
         }
 
-        public string ProjectionName => _name;
+        public string ProjectionName { get; }
 
-        public string[] EventTypes => new[]
-        {
+        public string[] EventTypes =>
+        [
             nameof(OrderCreatedEvent),
             nameof(ItemAddedEvent),
             nameof(OrderCancelledEvent)
-        };
+        ];
 
         public string KeySelector(SequencedEvent evt)
         {

@@ -10,7 +10,7 @@ public class ProjectionDefinitionTests
     {
         // Arrange
         var projection = new TestOrderProjection();
-        
+
         // Act & Assert
         Assert.Equal("OrderSummary", projection.ProjectionName);
         Assert.Equal(3, projection.EventTypes.Length);
@@ -126,10 +126,10 @@ public class ProjectionDefinitionTests
             {
                 EventType = evt.GetType().Name,
                 Event = evt,
-                Tags = new List<Tag>
-                {
+                Tags =
+                [
                     new Tag { Key = "orderId", Value = orderId.ToString() }
-                }
+                ]
             },
             Metadata = new Metadata()
         };
@@ -141,12 +141,12 @@ public class ProjectionDefinitionTests
     {
         public string ProjectionName => "OrderSummary";
 
-        public string[] EventTypes => new[]
-        {
+        public string[] EventTypes =>
+        [
             "OrderCreated",
             "ItemAdded",
             "OrderCancelled"
-        };
+        ];
 
         public string KeySelector(SequencedEvent evt)
         {

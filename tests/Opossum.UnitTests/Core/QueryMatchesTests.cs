@@ -18,7 +18,7 @@ public class QueryMatchesTests
             {
                 EventType = eventType,
                 Event = new TestEvent(),
-                Tags = tags.Select(t => new Tag { Key = t.Key, Value = t.Value }).ToList()
+                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
             }
         };
 

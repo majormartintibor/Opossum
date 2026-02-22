@@ -1,4 +1,4 @@
-﻿namespace Opossum.Core;
+namespace Opossum.Core;
 
 /// <summary>
 /// Represents a single item in a Query that filters events by EventType and/or Tags.

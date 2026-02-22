@@ -1,4 +1,4 @@
-﻿using Opossum.Core;
+using Opossum.Core;
 using Opossum.Configuration;
 using Opossum.Exceptions;
 
@@ -224,16 +224,16 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         {
             var typePositionsArray = await _indexManager.GetPositionsByEventTypesAsync(
                 contextPath,
-                queryItem.EventTypes.ToArray()).ConfigureAwait(false);
+                [.. queryItem.EventTypes]).ConfigureAwait(false);
 
-            eventTypePositions = new HashSet<long>(typePositionsArray);
+            eventTypePositions = [.. typePositionsArray];
         }
 
         // Get positions by Tags (AND logic within Tags)
         if (queryItem.Tags != null && queryItem.Tags.Count > 0)
         {
             // For AND logic, we need to intersect all tag positions
-            List<long[]> tagPositionSets = new();
+            List<long[]> tagPositionSets = [];
 
             foreach (var tag in queryItem.Tags)
             {
@@ -244,7 +244,7 @@ internal class FileSystemEventStore : IEventStore, IDisposable
             if (tagPositionSets.Count > 0)
             {
                 // Start with first tag's positions
-                tagPositions = new HashSet<long>(tagPositionSets[0]);
+                tagPositions = [.. tagPositionSets[0]];
 
                 // Intersect with all other tags (AND logic)
                 for (int i = 1; i < tagPositionSets.Count; i++)
@@ -259,15 +259,15 @@ internal class FileSystemEventStore : IEventStore, IDisposable
         {
             // Intersection: must match both EventType AND Tags
             eventTypePositions.IntersectWith(tagPositions);
-            return eventTypePositions.ToArray();
+            return [.. eventTypePositions];
         }
         else if (eventTypePositions != null)
         {
-            return eventTypePositions.ToArray();
+            return [.. eventTypePositions];
         }
         else if (tagPositions != null)
         {
-            return tagPositions.ToArray();
+            return [.. tagPositions];
         }
 
         // No constraints specified in this QueryItem

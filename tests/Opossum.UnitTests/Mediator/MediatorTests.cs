@@ -12,18 +12,18 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var query = new MediatorTestQuery(42);
 
         // Act
         var result = await mediator.InvokeAsync<MediatorTestResponse>(query);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(42, result.Value);
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithNullMessage_ThrowsArgumentNullException()
     {
@@ -31,14 +31,14 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
-        
+
         // Act & Assert
-        await Assert.ThrowsAsync<ArgumentNullException>(() => 
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
             mediator.InvokeAsync<MediatorTestResponse>(null!));
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithNoHandler_ThrowsInvalidOperationException()
     {
@@ -46,18 +46,18 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var query = new UnhandledQuery();
-        
+
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             mediator.InvokeAsync<MediatorTestResponse>(query));
-        
+
         Assert.Contains("No handler registered", exception.Message);
         Assert.Contains(nameof(UnhandledQuery), exception.Message);
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithWrongResponseType_ThrowsInvalidOperationException()
     {
@@ -65,19 +65,19 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var query = new MediatorTestQuery(42);
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => 
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             mediator.InvokeAsync<WrongResponse>(query));
-        
+
         Assert.Contains("Handler returned type", exception.Message);
         Assert.Contains(nameof(MediatorTestResponse), exception.Message);
         Assert.Contains(nameof(WrongResponse), exception.Message);
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithCancellationToken_PassesCancellationToHandler()
     {
@@ -85,18 +85,18 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        
+
         var command = new CancellableCommand();
-        
+
         // Act & Assert
-        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => 
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             mediator.InvokeAsync<CancellableResponse>(command, cts.Token));
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithTimeout_CancelsAfterTimeout()
     {
@@ -104,17 +104,17 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var command = new SlowCommand();
-        
+
         // Act & Assert
-        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => 
+        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
             mediator.InvokeAsync<SlowResponse>(
-                command, 
+                command,
                 timeout: TimeSpan.FromMilliseconds(10)));
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithAsyncHandler_ReturnsResponse()
     {
@@ -122,18 +122,18 @@ public class MediatorTests
         var services = new ServiceCollection();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var command = new AsyncCommand(100);
-        
+
         // Act
         var result = await mediator.InvokeAsync<AsyncResponse>(command);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal(100, result.ProcessedValue);
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithDependencyInjection_ResolvesDependencies()
     {
@@ -142,18 +142,18 @@ public class MediatorTests
         services.AddSingleton<ITestService, TestService>();
         services.AddMediator();
         var provider = services.BuildServiceProvider();
-        
+
         var mediator = provider.GetRequiredService<IMediator>();
         var command = new CommandWithDependencies("test");
-        
+
         // Act
         var result = await mediator.InvokeAsync<DependencyResponse>(command);
-        
+
         // Assert
         Assert.NotNull(result);
         Assert.Equal("test-processed", result.Result);
     }
-    
+
     [Fact]
     public async Task InvokeAsync_WithStaticHandler_ExecutesSuccessfully()
     {

@@ -11,7 +11,7 @@ internal sealed record ProjectionWithMetadata<TState>
     /// The actual projection data/state.
     /// </summary>
     public required TState Data { get; init; }
-    
+
     /// <summary>
     /// Metadata about the projection lifecycle.
     /// </summary>

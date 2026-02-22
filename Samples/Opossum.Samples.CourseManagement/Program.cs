@@ -50,7 +50,7 @@ builder.Services.AddOpossum(options =>
     if (string.IsNullOrWhiteSpace(options.RootPath))
     {
         // No path configured - use platform default
-        options.RootPath = OperatingSystem.IsWindows() 
+        options.RootPath = OperatingSystem.IsWindows()
             ? Path.Combine("D:", "Database")              // Windows: D:\Database
             : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
     }
@@ -58,7 +58,7 @@ builder.Services.AddOpossum(options =>
     {
         // Path is not rooted (e.g., Windows drive letter on Linux)
         // Replace with platform default
-        options.RootPath = OperatingSystem.IsWindows() 
+        options.RootPath = OperatingSystem.IsWindows()
             ? Path.Combine("D:", "Database")              // Windows: D:\Database
             : Path.Combine(Path.GetTempPath(), "OpossumData");  // Linux: /tmp/OpossumData (no root needed)
     }

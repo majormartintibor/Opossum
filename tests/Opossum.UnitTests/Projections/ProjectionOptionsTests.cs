@@ -36,10 +36,11 @@ public class ProjectionOptionsTests
     public void BatchSize_CanBeSet()
     {
         // Arrange
-        var options = new ProjectionOptions();
-
-        // Act
-        options.BatchSize = 500;
+        var options = new ProjectionOptions
+        {
+            // Act
+            BatchSize = 500
+        };
 
         // Assert
         Assert.Equal(500, options.BatchSize);
@@ -49,10 +50,11 @@ public class ProjectionOptionsTests
     public void EnableAutoRebuild_CanBeSet()
     {
         // Arrange
-        var options = new ProjectionOptions();
-
-        // Act
-        options.EnableAutoRebuild = false;
+        var options = new ProjectionOptions
+        {
+            // Act
+            EnableAutoRebuild = false
+        };
 
         // Assert
         Assert.False(options.EnableAutoRebuild);
@@ -149,10 +151,11 @@ public class ProjectionOptionsTests
     public void MaxConcurrentRebuilds_CanBeSetToOne_ForSequentialRebuild()
     {
         // Arrange
-        var options = new ProjectionOptions();
-
-        // Act
-        options.MaxConcurrentRebuilds = 1;
+        var options = new ProjectionOptions
+        {
+            // Act
+            MaxConcurrentRebuilds = 1
+        };
 
         // Assert
         Assert.Equal(1, options.MaxConcurrentRebuilds);

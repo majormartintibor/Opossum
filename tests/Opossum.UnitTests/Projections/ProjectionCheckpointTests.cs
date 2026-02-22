@@ -22,10 +22,11 @@ public class ProjectionCheckpointTests
     public void ProjectionName_CanBeSet()
     {
         // Arrange
-        var checkpoint = new ProjectionCheckpoint();
-
-        // Act
-        checkpoint.ProjectionName = "TestProjection";
+        var checkpoint = new ProjectionCheckpoint
+        {
+            // Act
+            ProjectionName = "TestProjection"
+        };
 
         // Assert
         Assert.Equal("TestProjection", checkpoint.ProjectionName);
@@ -35,10 +36,11 @@ public class ProjectionCheckpointTests
     public void LastProcessedPosition_CanBeSet()
     {
         // Arrange
-        var checkpoint = new ProjectionCheckpoint();
-
-        // Act
-        checkpoint.LastProcessedPosition = 12345;
+        var checkpoint = new ProjectionCheckpoint
+        {
+            // Act
+            LastProcessedPosition = 12345
+        };
 
         // Assert
         Assert.Equal(12345, checkpoint.LastProcessedPosition);
@@ -62,10 +64,11 @@ public class ProjectionCheckpointTests
     public void TotalEventsProcessed_CanBeSet()
     {
         // Arrange
-        var checkpoint = new ProjectionCheckpoint();
-
-        // Act
-        checkpoint.TotalEventsProcessed = 99999;
+        var checkpoint = new ProjectionCheckpoint
+        {
+            // Act
+            TotalEventsProcessed = 99999
+        };
 
         // Assert
         Assert.Equal(99999, checkpoint.TotalEventsProcessed);

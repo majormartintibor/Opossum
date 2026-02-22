@@ -42,7 +42,8 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
         _serviceProvider.Dispose();
         if (Directory.Exists(_tempPath))
         {
-            try { Directory.Delete(_tempPath, recursive: true); }
+            try
+            { Directory.Delete(_tempPath, recursive: true); }
             catch { /* ignore cleanup errors */ }
         }
     }

@@ -54,7 +54,7 @@ public class ProjectionDefinitionAttributeTests
     private class TestProjection : IProjectionDefinition<TestState>
     {
         public string ProjectionName => "Test";
-        public string[] EventTypes => new[] { "TestEvent" };
+        public string[] EventTypes => ["TestEvent"];
         public string KeySelector(Opossum.Core.SequencedEvent evt) => "key";
         public TestState? Apply(TestState? current, IEvent evt) => current;
     }

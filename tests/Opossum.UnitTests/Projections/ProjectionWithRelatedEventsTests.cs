@@ -112,7 +112,7 @@ public class ProjectionWithRelatedEventsTests
         var evt = new TestEvent("updated");
 
         // Act
-        var newState = projection.Apply(existingState, evt, Array.Empty<SequencedEvent>());
+        var newState = projection.Apply(existingState, evt, []);
 
         // Assert
         Assert.NotNull(newState);
@@ -239,12 +239,7 @@ public class TestProjectionWithRelatedEvents : IProjectionWithRelatedEvents<Test
             .OrderByDescending(e => e.Position)
             .Select(e => e.Event.Event)
             .OfType<RelatedEvent>()
-            .FirstOrDefault();
-
-        if (relatedEvent == null)
-        {
-            throw new InvalidOperationException("Related event not found");
-        }
+            .FirstOrDefault() ?? throw new InvalidOperationException("Related event not found");
 
         return new TestState
         {

@@ -1,5 +1,4 @@
 using Opossum.BenchmarkTests.Helpers;
-using Opossum.Core;
 
 namespace Opossum.BenchmarkTests.Projections;
 
@@ -335,7 +334,7 @@ public class ProjectionRebuildBenchmarks
                 case StudentEnrolledEvent enrolled:
                     if (!projection.Enrollments.ContainsKey(enrolled.StudentId))
                     {
-                        projection.Enrollments[enrolled.StudentId] = new List<EnrollmentProjection>();
+                        projection.Enrollments[enrolled.StudentId] = [];
                     }
                     projection.Enrollments[enrolled.StudentId].Add(new EnrollmentProjection
                     {
@@ -375,9 +374,9 @@ public class ProjectionRebuildBenchmarks
 
     private class ComplexProjection
     {
-        public Dictionary<Guid, StudentProjection> Students { get; } = new();
-        public Dictionary<Guid, List<EnrollmentProjection>> Enrollments { get; } = new();
-        public Dictionary<Guid, int> Grades { get; } = new();
+        public Dictionary<Guid, StudentProjection> Students { get; } = [];
+        public Dictionary<Guid, List<EnrollmentProjection>> Enrollments { get; } = [];
+        public Dictionary<Guid, int> Grades { get; } = [];
     }
 
     // ========================================================================

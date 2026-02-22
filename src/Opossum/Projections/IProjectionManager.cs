@@ -32,7 +32,7 @@ public interface IProjectionManager
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Rebuild result summary</returns>
     Task<ProjectionRebuildResult> RebuildAllAsync(
-        bool forceRebuild = false, 
+        bool forceRebuild = false,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -43,7 +43,7 @@ public interface IProjectionManager
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Rebuild result summary</returns>
     Task<ProjectionRebuildResult> RebuildAsync(
-        string[] projectionNames, 
+        string[] projectionNames,
         CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -106,7 +106,7 @@ public class AppendBenchmarks
     public async Task BatchAppend_10Events_NoFlush()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(10, tagCount: 2);
-        await _store.AppendAsync(events.ToArray(), null);
+        await _store.AppendAsync([.. events], null);
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ public class AppendBenchmarks
         var store = sp.GetRequiredService<IEventStore>();
 
         var events = BenchmarkDataGenerator.GenerateEvents(10, tagCount: 2);
-        await store.AppendAsync(events.ToArray(), null);
+        await store.AppendAsync([.. events], null);
     }
 
     // ========================================================================
@@ -149,7 +149,7 @@ public class AppendBenchmarks
     public async Task BatchAppend_2Events_NoFlush()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(2, tagCount: 2);
-        await _store.AppendAsync(events.ToArray(), null);
+        await _store.AppendAsync([.. events], null);
     }
 
     /// <summary>
@@ -159,7 +159,7 @@ public class AppendBenchmarks
     public async Task BatchAppend_5Events_NoFlush()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(5, tagCount: 2);
-        await _store.AppendAsync(events.ToArray(), null);
+        await _store.AppendAsync([.. events], null);
     }
 
     /// <summary>
@@ -169,7 +169,7 @@ public class AppendBenchmarks
     public async Task BatchAppend_20Events_NoFlush()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(20, tagCount: 2);
-        await _store.AppendAsync(events.ToArray(), null);
+        await _store.AppendAsync([.. events], null);
     }
 
     /// <summary>
@@ -179,7 +179,7 @@ public class AppendBenchmarks
     public async Task BatchAppend_50Events_NoFlush()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(50, tagCount: 2);
-        await _store.AppendAsync(events.ToArray(), null);
+        await _store.AppendAsync([.. events], null);
     }
 
     /// <summary>
@@ -189,7 +189,7 @@ public class AppendBenchmarks
     public async Task BatchAppend_100Events_NoFlush()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(100, tagCount: 2);
-        await _store.AppendAsync(events.ToArray(), null);
+        await _store.AppendAsync([.. events], null);
     }
 
     // ========================================================================

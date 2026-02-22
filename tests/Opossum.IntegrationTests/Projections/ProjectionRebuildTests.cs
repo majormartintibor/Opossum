@@ -150,7 +150,7 @@ public class ProjectionRebuildTests : IDisposable
 
         // Assert - All accounts should be built
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
-        
+
         for (int i = 0; i < accountIds.Count; i++)
         {
             var account = await store.GetAsync(accountIds[i].ToString());
@@ -275,7 +275,7 @@ public class ProjectionRebuildTests : IDisposable
             .Build();
 
         await _eventStore.AppendAsync([createEvent], null);
-        await _eventStore.AppendAsync(depositEvents.ToArray(), null);
+        await _eventStore.AppendAsync([.. depositEvents], null);
 
         // Act - Rebuild (should process in batches)
         await _projectionManager.RebuildAsync("AccountBalance");

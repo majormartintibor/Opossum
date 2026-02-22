@@ -57,9 +57,9 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var studentEvents = await eventStore.ReadAsync(studentQuery);
         var courseEvents = await eventStore.ReadAsync(courseQuery);
 
-        Assert.Contains(studentEvents, e => 
+        Assert.Contains(studentEvents, e =>
             ((StudentRegisteredEvent)e.Event.Event).StudentId == studentId);
-        Assert.Contains(courseEvents, e => 
+        Assert.Contains(courseEvents, e =>
             ((CourseCreated)e.Event.Event).CourseId == courseId);
     }
 
@@ -226,12 +226,12 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         );
 
         var events = await eventStore.ReadAsync(query);
-        
+
         // Should only have 1 enrollment event (not 2)
         // The second attempt should either:
         // - Fail due to concurrency check
         // - Succeed but be recognized as already enrolled (business logic)
-        Assert.True(events.Length <= 1, 
+        Assert.True(events.Length <= 1,
             $"Expected at most 1 enrollment event, but found {events.Length}");
     }
 

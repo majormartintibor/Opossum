@@ -71,7 +71,7 @@ public class AdminEndpointTests
         var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
         Assert.Equal(4, checkpoints.Count);
-        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint > 0, 
+        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint > 0,
             $"All checkpoints should be > 0 after processing seeded events"));
 
         // Wait for checkpoint persistence
@@ -130,7 +130,7 @@ public class AdminEndpointTests
         // Assert - Verify rebuild response
         var rebuildResult = await rebuildResponse.Content.ReadFromJsonAsync<dynamic>();
         Assert.NotNull(rebuildResult);
-        
+
         // Get updated checkpoints
         var updatedCheckpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
         updatedCheckpointsResponse.EnsureSuccessStatusCode();
@@ -185,10 +185,10 @@ public class AdminEndpointTests
 
         var checkpoints = await response.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
-        
+
         // Sample app has 4 projections
         Assert.True(checkpoints.Count >= 4, $"Expected at least 4 projections, got {checkpoints.Count}");
-        
+
         // Verify expected projections exist
         Assert.Contains("CourseDetails", checkpoints.Keys);
         Assert.Contains("CourseShortInfo", checkpoints.Keys);
@@ -223,9 +223,9 @@ public class AdminEndpointTests
 
         foreach (var projection in initialCheckpoints.Keys)
         {
-            Assert.True(updatedCheckpoints.ContainsKey(projection), 
+            Assert.True(updatedCheckpoints.ContainsKey(projection),
                 $"Projection {projection} should still exist after rebuild");
-            Assert.True(updatedCheckpoints[projection] >= 0, 
+            Assert.True(updatedCheckpoints[projection] >= 0,
                 $"Checkpoint for {projection} should be >= 0");
         }
     }
@@ -255,15 +255,15 @@ public class AdminEndpointTests
 
         // Act & Assert - All endpoints should be accessible
         var rebuildResponse = await _client.PostAsync("/admin/projections/rebuild", null);
-        Assert.True(rebuildResponse.IsSuccessStatusCode, 
+        Assert.True(rebuildResponse.IsSuccessStatusCode,
             "Rebuild endpoint should be accessible (WARNING: Add auth in production!)");
 
         var statusResponse = await _client.GetAsync("/admin/projections/status");
-        Assert.True(statusResponse.IsSuccessStatusCode, 
+        Assert.True(statusResponse.IsSuccessStatusCode,
             "Status endpoint should be accessible");
 
         var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
-        Assert.True(checkpointsResponse.IsSuccessStatusCode, 
+        Assert.True(checkpointsResponse.IsSuccessStatusCode,
             "Checkpoints endpoint should be accessible");
     }
 
