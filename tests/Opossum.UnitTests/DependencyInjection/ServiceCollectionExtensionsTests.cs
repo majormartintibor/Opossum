@@ -213,7 +213,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         Assert.True(Directory.Exists(_testRootPath));
         Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement")));
         Assert.True(File.Exists(Path.Combine(_testRootPath, "CourseManagement", ".ledger")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Events")));
+        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "events")));
         Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Indices", "EventType")));
         Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Indices", "Tags")));
     }

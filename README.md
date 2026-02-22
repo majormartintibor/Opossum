@@ -1046,32 +1046,32 @@ See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) fo
 
 ### Typical Throughput
 
-**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-02-12):**
+**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-02-22):**
 
 | Operation | Throughput | Notes |
 |-----------|-----------|-------|
 | **Append (FlushImmediately = true)** | ~100 events/sec | Limited by disk flush (~10ms per event on SSD) |
 | **Append (FlushImmediately = false)** | ~220 events/sec | OS page cache only (testing mode - data loss risk) |
-| **Tag query (high selectivity)** | ~500 μs | Index-based, excellent for targeted queries |
+| **Tag query (high selectivity)** | ~590 μs | Index-based, excellent for targeted queries |
 | **Tag query (1K events)** | ~10 ms | Sub-linear scaling |
-| **Read by EventType (10K events)** | ~227 ms | Index-based |
-| **Projection rebuild** | ~15,000 events/sec | Parallel rebuilding available (2x speedup) |
-| **Incremental projection update** | ~9-10 μs | 611x faster than full rebuild |
+| **Read by EventType (10K events)** | ~211 ms | Index-based |
+| **Projection rebuild** | ~15,000 events/sec | Batched I/O (see rebuild note below) |
+| **Incremental projection update** | ~10 μs | ~500x faster than full rebuild |
 
 ### Query Performance by Selectivity
 
 | Selectivity | 10K Events | Performance |
 |------------|-----------|-------------|
-| **High** (few matches) | 513 μs | ⭐ Excellent - tag index highly effective |
-| **Medium** (moderate matches) | 5.2 ms | ✅ Good - typical use case |
-| **Low** (many matches) | 134 ms | ⚠️ Expected - must deserialize many events |
+| **High** (few matches) | ~590 μs | ⭐ Excellent - tag index highly effective |
+| **Medium** (moderate matches) | ~5.5 ms | ✅ Good - typical use case |
+| **Low** (many matches) | ~111 ms | ⚠️ Expected - must deserialize many events |
 
 ### Optimization Tips
 
 ✅ **Use SSDs** - Flush operations are much faster (10ms vs 50ms+ on HDD)  
-✅ **Use tag-based queries** - 500μs for high selectivity vs 5ms for broader queries  
-✅ **Enable parallel projection rebuilding** - 2x speedup on multi-core CPUs  
-✅ **Use incremental projection updates** - 611x faster than full rebuild  
+✅ **Use tag-based queries** - ~590μs for high selectivity vs ~5.5ms for broader queries  
+✅ **Enable parallel projection rebuilding** - `MaxConcurrentRebuilds` config; note: after the rebuild I/O optimization, sequential and parallel complete in similar time (~370ms for 4 projections) — the disk bottleneck is gone  
+✅ **Use incremental projection updates** - ~500x faster than full rebuild  
 ✅ **Optimize query selectivity** - More specific tags = faster queries  
 ⚠️ **Avoid Query.All() for large datasets** - Use projections for read models instead  
 ⚠️ **Use `FlushEventsImmediately = false`** for testing only (data loss risk on power failure)
@@ -1099,7 +1099,9 @@ Opossum is designed for **single-server deployments**:
 
 **Beyond these limits?** Consider cloud-based event stores (EventStoreDB, Azure Event Hubs).
 
-**Detailed benchmarks:** See `docs/benchmarking/results/20260212/ANALYSIS.md`
+**Detailed benchmarks:** See `docs/benchmarking/results/20260222/`
+
+> **Rebuild performance note:** The projection rebuild I/O optimisation reduced the 4-projection sequential rebuild from **5.5 s → 370 ms (~15×)** and memory from **85.9 MB → 21.5 MB (~4×)**. As a consequence, the parallel-over-sequential speedup collapsed to near-parity — the disk I/O bottleneck that made parallelism valuable was eliminated. See `CHANGELOG.md` for the full benchmark comparison.
 
 ---
 

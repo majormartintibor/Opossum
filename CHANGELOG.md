@@ -87,6 +87,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `SequencedEvent`, `DomainEvent`, `QueryItem`, and `IEventStore.AppendAsync` now have full
   IntelliSense documentation including remarks, parameter descriptions, and exception docs.
 
+### Benchmarks
+
+Benchmark run `20260222` compared against the `20260212` pre-release baseline:
+
+| Suite | 20260212 | 20260222 | Δ |
+|---|---:|---:|---|
+| ParallelRebuild — sequential (4 projections) | 5.51 s | 370 ms | **~15× faster** |
+| ParallelRebuild — memory (sequential) | 85.9 MB | 21.5 MB | **~4× less** |
+| ParallelRebuild — parallel vs sequential | 2.0× faster | ≈1.0× parity | I/O bottleneck eliminated |
+| ProjectionRebuild — 250 events | 18.7 ms | 17.0 ms | −9% |
+| Read — EventType scan (10K events) | 226 ms | 211 ms | −7% |
+| Query — low selectivity (many matches) | 134 ms | 111 ms | −17% |
+| Append — single event (no flush) | 4.54 ms | 4.76 ms | ≈ noise |
+
+The **parallel rebuild advantage has narrowed to near-parity**: the rebuild I/O optimisation
+reduced disk operations from O(events) to O(unique keys), cutting the 4-projection sequential
+rebuild from 5.5 s to 370 ms and eliminating the bottleneck that previously made parallelism
+valuable. Rebuilding four projections sequentially is now faster than the old *parallel* run
+at 2.7 s.
+
+The O(1) `HashSet` event-type matching and cached `Path.GetInvalidFileNameChars()` changes
+target the live **projection-polling hot path** (`ProcessNewEventsAsync`); their benefit is not
+captured by these one-shot rebuild or read benchmark suites.
+
+Raw results: `docs/benchmarking/results/20260222/`
+
 ## [0.2.0-preview.1] - 2026-02-21
 
 ### Performance
