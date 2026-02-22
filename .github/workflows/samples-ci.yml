@@ -10,7 +10,7 @@ on:
       - 'src/**'  # Samples depend on core library
   pull_request:
     branches:
-      - main
+      - master
     paths:
       - 'Samples/**'
       - 'tests/Samples/**'

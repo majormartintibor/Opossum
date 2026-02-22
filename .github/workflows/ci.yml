@@ -6,7 +6,7 @@ on:
       - '**'  # Run on all branches
   pull_request:
     branches:
-      - main  # Run on PRs to main
+      - master  # Run on PRs to master
 
 jobs:
   build-and-test:
