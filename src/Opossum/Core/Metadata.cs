@@ -1,10 +1,12 @@
 namespace Opossum.Core;
 
-public class Metadata
+/// <summary>Infrastructure metadata attached to an event at append time.</summary>
+public record Metadata
 {
-    public DateTimeOffset Timestamp { get; set; }
-    public Guid? CorrelationId { get; set; }
-    public Guid? CausationId { get; set; }
-    public Guid? OperationId { get; set; }
-    public Guid? UserId { get; set; }
+    /// <summary>UTC timestamp assigned by the store when the event was appended. Set explicitly on <see cref="NewEvent"/> to record when the domain fact occurred.</summary>
+    public DateTimeOffset Timestamp { get; init; }
+    public Guid? CorrelationId { get; init; }
+    public Guid? CausationId { get; init; }
+    public Guid? OperationId { get; init; }
+    public Guid? UserId { get; init; }
 }

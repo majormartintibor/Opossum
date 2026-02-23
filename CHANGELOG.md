@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.0-preview.1] - Unreleased
 
 ### Added
+- **`IEventStoreMaintenance.AddTagsAsync`** — new public interface that exposes additive-only
+  tag migration. Retroactively adds tags to all stored events of a given event type; any tag
+  whose key already exists on an event is silently skipped, so existing data is never modified
+  or deleted. The tag index is updated atomically per-event under the append lock. Returns a
+  `TagMigrationResult(TagsAdded, EventsProcessed)` summary. Registered in DI alongside
+  `IEventStore` (same singleton instance).
+- `TagMigrationResult` record — carries the outcome of an `AddTagsAsync` call.
 - Multi-context support — `AppendAsync` and `ReadAsync` gain an optional `context` parameter;
   each registered context gets its own `SemaphoreSlim` to avoid unnecessary serialisation
   of appends to unrelated contexts.
@@ -27,12 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `IAsyncEnumerable<SequencedEvent>`. Callers that need a full array use `.ToArrayAsync()`.
 - **Breaking: `Tag` and `QueryItem` are now immutable `record` types** — construction syntax
   changes; existing positional or property-init call sites are unaffected.
+- **Breaking: `Metadata`, `DomainEvent`, and `SequencedEvent` are now immutable `record` types** —
+  all properties are `init`-only; use `with` expressions to derive modified copies.
 - `ProjectionManager.RebuildAsync` and `ProjectionDaemon` adopt `await foreach` streaming,
   eliminating the "load all events then iterate" allocation pattern on large event logs.
 
 ### Fixed
 - Metadata mutation side-effect in `AppendAsync` — the store no longer mutates the caller's
-  `NewEvent` instances while assigning derived metadata fields.
+  `NewEvent` instances while assigning derived metadata fields (`Timestamp`).
 
 ### Removed
 - `docs/limitations/mvp-single-context.md` — limitation no longer applies; replaced by a

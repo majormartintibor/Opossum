@@ -26,7 +26,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     {
         // Arrange
         var index = new TagIndex();
-        var tag = new Tag { Key = "userId", Value = "user-123" };
+        var tag = new Tag("userId", "user-123");
         var concurrentCount = 100;
 
         // Act - Add 100 positions concurrently to same tag
@@ -56,7 +56,7 @@ public class TagIndexThreadSafetyTests : IDisposable
         var tasks = new List<Task>();
         for (int tagIndex = 0; tagIndex < tagCount; tagIndex++)
         {
-            var tag = new Tag { Key = "entityId", Value = $"entity-{tagIndex}" };
+            var tag = new Tag("entityId", $"entity-{tagIndex}");
             for (int position = 1; position <= positionsPerTag; position++)
             {
                 var pos = position;
@@ -70,7 +70,7 @@ public class TagIndexThreadSafetyTests : IDisposable
         // Assert - Each tag should have all its positions
         for (int i = 0; i < tagCount; i++)
         {
-            var tag = new Tag { Key = "entityId", Value = $"entity-{i}" };
+            var tag = new Tag("entityId", $"entity-{i}");
             var positions = await index.GetPositionsAsync(_testPath, tag);
 
             Assert.Equal(positionsPerTag, positions.Length);
@@ -91,7 +91,7 @@ public class TagIndexThreadSafetyTests : IDisposable
         var tasks = new List<Task>();
         for (int valueIndex = 0; valueIndex < valueCount; valueIndex++)
         {
-            var tag = new Tag { Key = key, Value = $"user-{valueIndex}" };
+            var tag = new Tag(key, $"user-{valueIndex}");
             for (int position = 1; position <= positionsPerValue; position++)
             {
                 var pos = position;
@@ -105,7 +105,7 @@ public class TagIndexThreadSafetyTests : IDisposable
         // Assert - Each tag value should have its own positions
         for (int i = 0; i < valueCount; i++)
         {
-            var tag = new Tag { Key = key, Value = $"user-{i}" };
+            var tag = new Tag(key, $"user-{i}");
             var positions = await index.GetPositionsAsync(_testPath, tag);
 
             Assert.Equal(positionsPerValue, positions.Length);
@@ -117,7 +117,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     {
         // Arrange
         var index = new TagIndex();
-        var tag = new Tag { Key = "orderId", Value = "order-123" };
+        var tag = new Tag("orderId", "order-123");
         var position = 42L;
         var attemptCount = 50;
 
@@ -141,7 +141,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     {
         // Arrange
         var index = new TagIndex();
-        var tag = new Tag { Key = "testKey", Value = "testValue" };
+        var tag = new Tag("testKey", "testValue");
         var writeCount = 50;  // Reduced from 100 for more realistic testing
         var readCount = 10;   // Reduced from 50 to lower file contention
 
@@ -205,10 +205,10 @@ public class TagIndexThreadSafetyTests : IDisposable
         var index = new TagIndex();
         var tags = new[]
         {
-            new Tag { Key = "userId", Value = "user-1" },
-            new Tag { Key = "userId", Value = "user-2" },
-            new Tag { Key = "orderId", Value = "order-1" },
-            new Tag { Key = "productId", Value = "product-1" }
+            new Tag("userId", "user-1"),
+            new Tag("userId", "user-2"),
+            new Tag("orderId", "order-1"),
+            new Tag("productId", "product-1")
         };
         var positionsPerTag = 250;
 
@@ -240,10 +240,10 @@ public class TagIndexThreadSafetyTests : IDisposable
         var index = new TagIndex();
         var specialTags = new[]
         {
-            new Tag { Key = "email", Value = "user@example.com" },
-            new Tag { Key = "path", Value = "/api/v1/users" },
-            new Tag { Key = "query", Value = "name=John&age=30" },
-            new Tag { Key = "special", Value = "test:value;data" }
+            new Tag("email", "user@example.com"),
+            new Tag("path", "/api/v1/users"),
+            new Tag("query", "name=John&age=30"),
+            new Tag("special", "test:value;data")
         };
         var positionsPerTag = 10;
 
@@ -269,7 +269,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     {
         // Arrange
         var index = new TagIndex();
-        var tag = new Tag { Key = "optionalField", Value = null! };
+        var tag = new Tag("optionalField", null!);
         var positionCount = 50;
 
         // Act - Add positions concurrently with null tag value

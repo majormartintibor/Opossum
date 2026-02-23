@@ -207,10 +207,10 @@ public class AppendBenchmarks
         var studentId = Guid.NewGuid();
 
         var evt = BenchmarkDataGenerator.GenerateEvents(1, tagCount: 0)[0];
-        evt.Event.Tags.Add(new Tag { Key = "studentEmail", Value = email });
+        evt.Event = evt.Event with { Tags = [new Tag("studentEmail", email)] };
 
         // DCB condition: Fail if any event with this email already exists
-        var validationQuery = Query.FromTags([new Tag { Key = "studentEmail", Value = email }]);
+        var validationQuery = Query.FromTags([new Tag("studentEmail", email)]);
         var condition = new AppendCondition { FailIfEventsMatch = validationQuery };
 
         await _store.AppendAsync([evt], condition);

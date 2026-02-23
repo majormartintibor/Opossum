@@ -12,15 +12,15 @@ namespace Opossum.Core;
 /// </list>
 /// Multiple <see cref="QueryItem"/>s in a <see cref="Query"/> are combined with OR.
 /// </remarks>
-public class QueryItem
+public record QueryItem
 {
     /// <summary>
     /// Event types to match. An event matches if it has ANY of these types (OR logic).
     /// </summary>
-    public List<string> EventTypes { get; set; } = [];
+    public IReadOnlyList<string> EventTypes { get; init; } = [];
 
     /// <summary>
     /// Tags to match. An event matches if it has ALL of these tags (AND logic).
     /// </summary>
-    public List<Tag> Tags { get; set; } = [];
+    public IReadOnlyList<Tag> Tags { get; init; } = [];
 }

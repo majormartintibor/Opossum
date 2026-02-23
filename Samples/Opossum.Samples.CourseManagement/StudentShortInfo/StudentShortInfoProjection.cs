@@ -29,9 +29,9 @@ public sealed class StudentShortInfoProjection : IProjectionDefinition<StudentSh
         return studentIdTag.Value;
     }
 
-    public StudentShortInfo? Apply(StudentShortInfo? current, IEvent evt)
+    public StudentShortInfo? Apply(StudentShortInfo? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             StudentRegisteredEvent registered => new StudentShortInfo(
                 StudentId: registered.StudentId,

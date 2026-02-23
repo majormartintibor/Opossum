@@ -41,7 +41,7 @@ public sealed class UpdateStudentSubscriptionCommandHandler()
         var studentExistsQuery = Query.FromItems(
                 new QueryItem
                 {
-                    Tags = [new Tag { Key = "studentId", Value = command.StudentId.ToString() }],
+                    Tags = [new Tag("studentId", command.StudentId.ToString())],
                     EventTypes = [nameof(StudentRegisteredEvent)]
                 });
 

@@ -40,7 +40,7 @@ public sealed class ModifyCourseStudentLimitCommandHandler()
         var courseExistsQuery = Query.FromItems(
                 new QueryItem
                 {
-                    Tags = [new Tag { Key = "courseId", Value = command.CourseId.ToString() }],
+                    Tags = [new Tag("courseId", command.CourseId.ToString())],
                     EventTypes = [nameof(CourseCreatedEvent)]
                 });
 

@@ -67,7 +67,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
             query: Query.FromItems(new QueryItem
             {
                 EventTypes = [nameof(CourseCreatedEvent)],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             }),
             apply: (_, evt) => evt.Event.Event is CourseCreatedEvent);
 
@@ -77,7 +77,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
             query: Query.FromItems(new QueryItem
             {
                 EventTypes = [nameof(StudentEnrolledEvent)],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             }),
             apply: (count, evt) => evt.Event.Event is StudentEnrolledEvent ? count + 1 : count);
 
@@ -455,7 +455,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
             query: Query.FromItems(new QueryItem
             {
                 EventTypes = [nameof(StudentEnrolledEvent)],
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+                Tags = [new Tag("studentId", studentId.ToString())]
             }),
             apply: (_, evt) => evt.Event.Event is StudentEnrolledEvent);
 

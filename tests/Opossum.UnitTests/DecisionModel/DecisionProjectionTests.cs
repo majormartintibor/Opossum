@@ -22,7 +22,7 @@ public class DecisionProjectionTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
+                Tags = [.. tags.Select(t => new Tag(t.Key, t.Value))]
             }
         };
 
@@ -217,7 +217,7 @@ public class DecisionProjectionTests
                 query: Query.FromItems(new QueryItem
                 {
                     EventTypes = ["CourseCreated"],
-                    Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                    Tags = [new Tag("courseId", courseId.ToString())]
                 }),
                 apply: (state, evt) => evt.Event.Event is TestEvent { Name: "created" } || state);
 
@@ -237,7 +237,7 @@ public class DecisionProjectionTests
         static IDecisionProjection<bool> CourseExists(Guid courseId) =>
             new DecisionProjection<bool>(
                 initialState: false,
-                query: Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() }),
+                query: Query.FromTags(new Tag("courseId", courseId.ToString())),
                 apply: (s, _) => s);
 
         var id1 = Guid.NewGuid();

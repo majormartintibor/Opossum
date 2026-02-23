@@ -27,7 +27,7 @@ public class ComposeProjectionsTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
+                Tags = [.. tags.Select(t => new Tag(t.Key, t.Value))]
             }
         };
 
@@ -163,7 +163,7 @@ public class ComposeProjectionsTests
             query: Query.FromItems(new QueryItem
             {
                 EventTypes = [nameof(EnrolledEvent)],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             }),
             apply: (count, _) => count + 1);
 
@@ -172,7 +172,7 @@ public class ComposeProjectionsTests
             query: Query.FromItems(new QueryItem
             {
                 EventTypes = [nameof(EnrolledEvent)],
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+                Tags = [new Tag("studentId", studentId.ToString())]
             }),
             apply: (count, _) => count + 1);
 

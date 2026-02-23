@@ -43,7 +43,7 @@ public class ProjectionTagQueryTests : IDisposable
         await store.SaveAsync("3", proj3);
 
         // Act - Query for Active status
-        var results = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Active" });
+        var results = await store.QueryByTagAsync(new Tag("Status", "Active"));
 
         // Assert
         Assert.Equal(2, results.Count);
@@ -69,8 +69,8 @@ public class ProjectionTagQueryTests : IDisposable
         // Act - Query for Active AND Premium
         var tags = new[]
         {
-            new Tag { Key = "Status", Value = "Active" },
-            new Tag { Key = "Tier", Value = "Premium" }
+            new Tag("Status", "Active"),
+            new Tag("Tier", "Premium")
         };
         var results = await store.QueryByTagsAsync(tags);
 
@@ -106,8 +106,8 @@ public class ProjectionTagQueryTests : IDisposable
         // Act - Tier filter produces 4 results (large), Status filter produces 2 results (small)
         var tags = new[]
         {
-            new Tag { Key = "Tier",   Value = "Professional" },
-            new Tag { Key = "Status", Value = "Active" },
+            new Tag("Tier",   "Professional"),
+            new Tag("Status", "Active"),
         };
         var results = await store.QueryByTagsAsync(tags);
 
@@ -127,7 +127,7 @@ public class ProjectionTagQueryTests : IDisposable
         await store.SaveAsync("1", proj1);
 
         // Act - Query with different case
-        var results = await store.QueryByTagAsync(new Tag { Key = "status", Value = "active" });
+        var results = await store.QueryByTagAsync(new Tag("status", "active"));
 
         // Assert - Should find it (case-insensitive)
         Assert.Single(results);
@@ -149,17 +149,17 @@ public class ProjectionTagQueryTests : IDisposable
         await store.SaveAsync("1", proj1);
 
         // Assert - Should be in new indices
-        var activeResults = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Active" });
+        var activeResults = await store.QueryByTagAsync(new Tag("Status", "Active"));
         Assert.Single(activeResults);
 
-        var premiumResults = await store.QueryByTagAsync(new Tag { Key = "Tier", Value = "Premium" });
+        var premiumResults = await store.QueryByTagAsync(new Tag("Tier", "Premium"));
         Assert.Single(premiumResults);
 
         // Should NOT be in old indices
-        var pendingResults = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Pending" });
+        var pendingResults = await store.QueryByTagAsync(new Tag("Status", "Pending"));
         Assert.Empty(pendingResults);
 
-        var basicResults = await store.QueryByTagAsync(new Tag { Key = "Tier", Value = "Basic" });
+        var basicResults = await store.QueryByTagAsync(new Tag("Tier", "Basic"));
         Assert.Empty(basicResults);
     }
 
@@ -188,14 +188,14 @@ public class ProjectionTagQueryTests : IDisposable
         // Assert – query via a third store instance (independent read) so we test pure index state
         var store3 = new FileSystemProjectionStore<TestProjection>(_options, "Enrollment", tagProvider);
 
-        var professional = await store3.QueryByTagAsync(new Tag { Key = "Tier", Value = "Professional" });
+        var professional = await store3.QueryByTagAsync(new Tag("Tier", "Professional"));
         Assert.Single(professional);
         Assert.Equal("student-1", professional[0].Id);
 
-        var standard = await store3.QueryByTagAsync(new Tag { Key = "Tier", Value = "Standard" });
+        var standard = await store3.QueryByTagAsync(new Tag("Tier", "Standard"));
         Assert.Empty(standard); // must be removed from Standard index
 
-        var basic = await store3.QueryByTagAsync(new Tag { Key = "Tier", Value = "Basic" });
+        var basic = await store3.QueryByTagAsync(new Tag("Tier", "Basic"));
         Assert.Empty(basic); // must be removed from Basic index
     }
 
@@ -213,7 +213,7 @@ public class ProjectionTagQueryTests : IDisposable
         await store.DeleteAsync("1");
 
         // Assert - Should no longer be in indices
-        var results = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Active" });
+        var results = await store.QueryByTagAsync(new Tag("Status", "Active"));
         Assert.Empty(results);
     }
 
@@ -227,7 +227,7 @@ public class ProjectionTagQueryTests : IDisposable
         await store.SaveAsync("1", proj1);
 
         // Act
-        var results = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Active" });
+        var results = await store.QueryByTagAsync(new Tag("Status", "Active"));
 
         // Assert - No tag provider = no indices = empty result
         Assert.Empty(results);
@@ -249,7 +249,7 @@ public class ProjectionTagQueryTests : IDisposable
         await store.DeleteAllIndicesAsync();
 
         // Assert - Indices should be gone
-        var results = await store.QueryByTagAsync(new Tag { Key = "Status", Value = "Active" });
+        var results = await store.QueryByTagAsync(new Tag("Status", "Active"));
         Assert.Empty(results);
 
         // But projections should still exist
@@ -269,8 +269,8 @@ public class ProjectionTagQueryTests : IDisposable
     {
         public IEnumerable<Tag> GetTags(TestProjection state)
         {
-            yield return new Tag { Key = "Status", Value = state.Status };
-            yield return new Tag { Key = "Tier", Value = state.Tier };
+            yield return new Tag("Status", state.Status);
+            yield return new Tag("Tier", state.Tier);
         }
     }
 }

@@ -581,8 +581,8 @@ internal sealed partial class ProjectionManager : IProjectionManager
             // Check if this projection needs related events
             if (_definition is IProjectionWithRelatedEvents<TState> multiStreamProjection)
             {
-                // Get related events query
-                var relatedQuery = multiStreamProjection.GetRelatedEventsQuery(evt.Event.Event);
+                // Get related events query — full SequencedEvent available for key/tag/metadata access
+                var relatedQuery = multiStreamProjection.GetRelatedEventsQuery(evt);
                 SequencedEvent[] relatedEvents = [];
 
                 // Load related events if query is provided
@@ -591,13 +591,13 @@ internal sealed partial class ProjectionManager : IProjectionManager
                     relatedEvents = await _eventStore.ReadAsync(relatedQuery, null).ConfigureAwait(false);
                 }
 
-                // Apply with related events
-                updated = multiStreamProjection.Apply(current, evt.Event.Event, relatedEvents);
+                // Apply with related events — full SequencedEvent passed directly
+                updated = multiStreamProjection.Apply(current, evt, relatedEvents);
             }
             else
             {
-                // Regular projection - apply without related events
-                updated = _definition.Apply(current, evt.Event.Event);
+                // Regular projection — full SequencedEvent passed directly
+                updated = _definition.Apply(current, evt);
             }
 
             if (updated == null)

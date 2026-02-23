@@ -27,9 +27,9 @@ public sealed class CourseShortInfoProjection : IProjectionDefinition<CourseShor
         return courseIdTag.Value;
     }
 
-    public CourseShortInfo? Apply(CourseShortInfo? current, IEvent evt)
+    public CourseShortInfo? Apply(CourseShortInfo? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             CourseCreatedEvent created => new CourseShortInfo(
                 CourseId: created.CourseId,

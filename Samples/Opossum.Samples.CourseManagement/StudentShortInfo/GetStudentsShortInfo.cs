@@ -102,12 +102,12 @@ public sealed class GetStudentsShortInfoCommandHandler()
 
         if (query.TierFilter.HasValue)
         {
-            tags.Add(new Tag { Key = "EnrollmentTier", Value = query.TierFilter.Value.ToString() });
+            tags.Add(new Tag("EnrollmentTier", query.TierFilter.Value.ToString()));
         }
 
         if (query.IsMaxedOut.HasValue)
         {
-            tags.Add(new Tag { Key = "IsMaxedOut", Value = query.IsMaxedOut.Value.ToString() });
+            tags.Add(new Tag("IsMaxedOut", query.IsMaxedOut.Value.ToString()));
         }
 
         // Use tag indices if filters are specified, otherwise get all

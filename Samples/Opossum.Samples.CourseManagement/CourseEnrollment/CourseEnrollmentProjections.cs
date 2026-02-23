@@ -52,7 +52,7 @@ public static class CourseEnrollmentProjections
                     nameof(CourseStudentLimitModifiedEvent),
                     nameof(StudentEnrolledToCourseEvent)
                 ],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event switch
             {
@@ -80,7 +80,7 @@ public static class CourseEnrollmentProjections
                     nameof(StudentSubscriptionUpdatedEvent),
                     nameof(StudentEnrolledToCourseEvent)
                 ],
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+                Tags = [new Tag("studentId", studentId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event switch
             {
@@ -106,8 +106,8 @@ public static class CourseEnrollmentProjections
                 EventTypes = [nameof(StudentEnrolledToCourseEvent)],
                 Tags =
                 [
-                    new Tag { Key = "courseId", Value = courseId.ToString() },
-                    new Tag { Key = "studentId", Value = studentId.ToString() }
+                    new Tag("courseId", courseId.ToString()),
+                    new Tag("studentId", studentId.ToString())
                 ]
             }),
             apply: (_, _) => true);

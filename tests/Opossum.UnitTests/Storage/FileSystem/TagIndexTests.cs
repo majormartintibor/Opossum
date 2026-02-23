@@ -30,7 +30,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_CreatesIndexFile()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -43,7 +43,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_CreatesIndexDirectory()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -57,7 +57,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_AddsPosition()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -72,7 +72,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_AddsMultiplePositions()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -89,7 +89,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_IgnoresDuplicatePositions()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -106,7 +106,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithNullIndexPath_ThrowsArgumentNullException()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -125,7 +125,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithNullTagKey_ThrowsArgumentNullException()
     {
         // Arrange
-        var tag = new Tag { Key = null!, Value = "Production" };
+        var tag = new Tag(null!, "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -136,7 +136,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithEmptyTagKey_ThrowsArgumentException()
     {
         // Arrange
-        var tag = new Tag { Key = "", Value = "Production" };
+        var tag = new Tag("", "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -147,7 +147,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithWhitespaceTagKey_ThrowsArgumentException()
     {
         // Arrange
-        var tag = new Tag { Key = "   ", Value = "Production" };
+        var tag = new Tag("   ", "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -158,7 +158,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithZeroPosition_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
@@ -169,7 +169,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
@@ -180,7 +180,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithNullTagValue_WorksCorrectly()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = null! };
+        var tag = new Tag("Status", null!);
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -198,7 +198,7 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_WithNonExistentIndex_ReturnsEmptyArray()
     {
         // Arrange
-        var tag = new Tag { Key = "NonExistent", Value = "Value" };
+        var tag = new Tag("NonExistent", "Value");
 
         // Act
         var positions = await _index.GetPositionsAsync(_tempIndexPath, tag);
@@ -212,7 +212,7 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_ReturnsPositionsInSortedOrder()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
         await _index.AddPositionAsync(_tempIndexPath, tag, 10);
         await _index.AddPositionAsync(_tempIndexPath, tag, 2);
         await _index.AddPositionAsync(_tempIndexPath, tag, 7);
@@ -228,8 +228,8 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_WithMultipleTags_ReturnsCorrectPositions()
     {
         // Arrange
-        var tagA = new Tag { Key = "Environment", Value = "Production" };
-        var tagB = new Tag { Key = "Environment", Value = "Development" };
+        var tagA = new Tag("Environment", "Production");
+        var tagB = new Tag("Environment", "Development");
         await _index.AddPositionAsync(_tempIndexPath, tagA, 1);
         await _index.AddPositionAsync(_tempIndexPath, tagB, 2);
         await _index.AddPositionAsync(_tempIndexPath, tagA, 3);
@@ -247,8 +247,8 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_WithDifferentKeys_ReturnsCorrectPositions()
     {
         // Arrange
-        var tagA = new Tag { Key = "Environment", Value = "Production" };
-        var tagB = new Tag { Key = "Region", Value = "Production" };
+        var tagA = new Tag("Environment", "Production");
+        var tagB = new Tag("Region", "Production");
         await _index.AddPositionAsync(_tempIndexPath, tagA, 1);
         await _index.AddPositionAsync(_tempIndexPath, tagB, 2);
 
@@ -265,7 +265,7 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_WithNullIndexPath_ThrowsArgumentNullException()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -284,7 +284,7 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_WithNullTagKey_ThrowsArgumentNullException()
     {
         // Arrange
-        var tag = new Tag { Key = null!, Value = "Production" };
+        var tag = new Tag(null!, "Production");
 
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -299,7 +299,7 @@ public class TagIndexTests : IDisposable
     public async Task IndexExists_ReturnsTrueForExistingIndex()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
 
         // Act
@@ -313,7 +313,7 @@ public class TagIndexTests : IDisposable
     public void IndexExists_ReturnsFalseForNonExistentIndex()
     {
         // Arrange
-        var tag = new Tag { Key = "NonExistent", Value = "Value" };
+        var tag = new Tag("NonExistent", "Value");
 
         // Act
         var exists = _index.IndexExists(_tempIndexPath, tag);
@@ -326,7 +326,7 @@ public class TagIndexTests : IDisposable
     public void IndexExists_WithNullIndexPath_ThrowsArgumentNullException()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Act & Assert
         Assert.Throws<ArgumentNullException>(() => _index.IndexExists(null!, tag));
@@ -347,7 +347,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithSpecialCharactersInTag_CreatesSafeFileName()
     {
         // Arrange
-        var tag = new Tag { Key = "Test/Key:With*Special?Characters", Value = "Value/With:Special*Chars" };
+        var tag = new Tag("Test/Key:With*Special?Characters", "Value/With:Special*Chars");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -362,7 +362,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_WithDotInTag_CreatesSafeFileName()
     {
         // Arrange
-        var tag = new Tag { Key = "Namespace.Event", Value = "Value.With.Dots" };
+        var tag = new Tag("Namespace.Event", "Value.With.Dots");
 
         // Act
         await _index.AddPositionAsync(_tempIndexPath, tag, 1);
@@ -379,7 +379,7 @@ public class TagIndexTests : IDisposable
     public async Task GetPositionsAsync_WithCorruptedIndexFile_ReturnsEmptyArray()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
         var tagDir = Path.Combine(_tempIndexPath, "tag");
         Directory.CreateDirectory(tagDir);
         var indexFile = Path.Combine(tagDir, "Environment_Production.json");
@@ -397,7 +397,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_AfterCorruption_RebuildsIndex()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
         var tagDir = Path.Combine(_tempIndexPath, "tag");
         Directory.CreateDirectory(tagDir);
         var indexFile = Path.Combine(tagDir, "Environment_Production.json");
@@ -420,7 +420,7 @@ public class TagIndexTests : IDisposable
     public async Task AddPositionAsync_MultipleSequentialWrites_AllPositionsAdded()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
         var expectedPositions = Enumerable.Range(1, 20).Select(x => (long)x).ToArray();
 
         // Act - Add positions sequentially

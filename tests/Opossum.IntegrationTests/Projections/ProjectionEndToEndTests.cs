@@ -289,9 +289,9 @@ public class ProjectionEndToEndTests : IDisposable
             return evt.Event.Tags.First(t => t.Key == "orderId").Value;
         }
 
-        public E2EOrderState? Apply(E2EOrderState? current, IEvent evt)
+        public E2EOrderState? Apply(E2EOrderState? current, SequencedEvent evt)
         {
-            return evt switch
+            return evt.Event.Event switch
             {
                 E2EOrderCreatedEvent created => new E2EOrderState(
                     created.OrderId,

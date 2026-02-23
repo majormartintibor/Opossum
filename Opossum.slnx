@@ -62,6 +62,7 @@
     <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
   <Folder Name="/docs/features/">
+    <File Path="docs/features/immutablemetadata.md" />
     <File Path="docs/features/ledger.md" />
     <File Path="docs/features/parallel-projection-rebuilding.md" />
     <File Path="docs/features/projection-tag-indexing.md" />

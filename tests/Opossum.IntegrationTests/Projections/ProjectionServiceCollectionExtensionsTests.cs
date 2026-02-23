@@ -1,3 +1,4 @@
+using Opossum.Core;
 using Opossum.DependencyInjection;
 using Opossum.Projections;
 
@@ -190,7 +191,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         public string ProjectionName => "E2ETest";
         public string[] EventTypes => ["TestEvent"];
         public string KeySelector(Opossum.Core.SequencedEvent evt) => "key";
-        public E2ETestState? Apply(E2ETestState? current, IEvent evt) => current;
+        public E2ETestState? Apply(E2ETestState? current, SequencedEvent evt) => current;
     }
 
     private record E2ETestState(string Id);

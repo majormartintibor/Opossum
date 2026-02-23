@@ -378,9 +378,9 @@ public class AccountBalanceProjection : IProjectionDefinition<AccountBalanceStat
         };
     }
 
-    public AccountBalanceState? Apply(AccountBalanceState? current, IEvent evt)
+    public AccountBalanceState? Apply(AccountBalanceState? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             AccountCreatedEvent ace => new AccountBalanceState
             {

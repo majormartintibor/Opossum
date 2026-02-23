@@ -335,22 +335,22 @@ public class PostWithAuthorProjection : IProjectionWithRelatedEvents<PostWithAut
         };
     }
 
-    public Query? GetRelatedEventsQuery(IEvent evt)
+    public Query? GetRelatedEventsQuery(SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             PostCreatedEvent pce => Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "userId", Value = pce.AuthorId.ToString() }],
+                Tags = [new Tag("userId", pce.AuthorId.ToString())],
                 EventTypes = [nameof(UserCreatedEvent), nameof(UserNameChangedEvent)]
             }),
             _ => null
         };
     }
 
-    public PostWithAuthorState? Apply(PostWithAuthorState? current, IEvent evt, SequencedEvent[] relatedEvents)
+    public PostWithAuthorState? Apply(PostWithAuthorState? current, SequencedEvent evt, SequencedEvent[] relatedEvents)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             PostCreatedEvent pce => ApplyPostCreated(pce, relatedEvents),
             PostTitleChangedEvent ptce => current! with { Title = ptce.NewTitle },
@@ -434,27 +434,27 @@ public class OrderSummaryProjection : IProjectionWithRelatedEvents<OrderSummaryS
         };
     }
 
-    public Query? GetRelatedEventsQuery(IEvent evt)
+    public Query? GetRelatedEventsQuery(SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             OrderCreatedEvent oce => Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "customerId", Value = oce.CustomerId.ToString() }],
+                Tags = [new Tag("customerId", oce.CustomerId.ToString())],
                 EventTypes = [nameof(CustomerCreatedEvent)]
             }),
             OrderItemAddedEvent oiae => Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "productId", Value = oiae.ProductId.ToString() }],
+                Tags = [new Tag("productId", oiae.ProductId.ToString())],
                 EventTypes = [nameof(ProductCreatedEvent)]
             }),
             _ => null
         };
     }
 
-    public OrderSummaryState? Apply(OrderSummaryState? current, IEvent evt, SequencedEvent[] relatedEvents)
+    public OrderSummaryState? Apply(OrderSummaryState? current, SequencedEvent evt, SequencedEvent[] relatedEvents)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             OrderCreatedEvent oce => ApplyOrderCreated(oce, relatedEvents),
             OrderItemAddedEvent oiae => ApplyItemAdded(current!, oiae, relatedEvents),

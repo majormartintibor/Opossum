@@ -360,7 +360,7 @@ public class BuildProjectionsTests
             {
                 EventType = domainEvent.GetType().Name,
                 Event = domainEvent,
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+                Tags = [new Tag("studentId", studentId.ToString())]
             },
             Metadata = new Metadata
             {

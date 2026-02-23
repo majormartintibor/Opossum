@@ -48,14 +48,14 @@ public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<Stud
         return studentIdTag.Value;
     }
 
-    public Query? GetRelatedEventsQuery(IEvent evt)
+    public Query? GetRelatedEventsQuery(SequencedEvent evt)
     {
         // When a student enrolls in a course, we need to fetch the course creation details
-        if (evt is StudentEnrolledToCourseEvent enrolled)
+        if (evt.Event.Event is StudentEnrolledToCourseEvent enrolled)
         {
             return Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "courseId", Value = enrolled.CourseId.ToString() }],
+                Tags = [new Tag("courseId", enrolled.CourseId.ToString())],
                 EventTypes = [nameof(CourseCreatedEvent)]
             });
         }
@@ -63,9 +63,9 @@ public sealed class StudentDetailsProjection : IProjectionWithRelatedEvents<Stud
         return null; // No related events needed for other event types
     }
 
-    public StudentDetails? Apply(StudentDetails? current, IEvent evt, SequencedEvent[] relatedEvents)
+    public StudentDetails? Apply(StudentDetails? current, SequencedEvent evt, SequencedEvent[] relatedEvents)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             StudentRegisteredEvent registered => new StudentDetails(
                 StudentId: registered.StudentId,

@@ -250,9 +250,9 @@ public class ParallelRebuildTests : IDisposable
 
         public string KeySelector(SequencedEvent evt) => "key1";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
-            if (@event is TestEvent1 e)
+            if (@event.Event.Event is TestEvent1 e)
                 return new TestState { Value = e.Value };
             return current;
         }
@@ -265,9 +265,9 @@ public class ParallelRebuildTests : IDisposable
 
         public string KeySelector(SequencedEvent evt) => "key2";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
-            if (@event is TestEvent2 e)
+            if (@event.Event.Event is TestEvent2 e)
                 return new TestState { Value = e.Value };
             return current;
         }
@@ -280,9 +280,9 @@ public class ParallelRebuildTests : IDisposable
 
         public string KeySelector(SequencedEvent evt) => "key3";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
-            if (@event is TestEvent3 e)
+            if (@event.Event.Event is TestEvent3 e)
                 return new TestState { Value = e.Value };
             return current;
         }

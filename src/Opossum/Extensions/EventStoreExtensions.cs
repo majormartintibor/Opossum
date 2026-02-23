@@ -44,7 +44,7 @@ public class DomainEventBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
 
-        _tags.Add(new Tag { Key = key, Value = value });
+        _tags.Add(new Tag(key, value));
         return this;
     }
 
@@ -80,7 +80,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithCorrelationId(Guid correlationId)
     {
         EnsureMetadata();
-        _metadata!.CorrelationId = correlationId;
+        _metadata = _metadata! with { CorrelationId = correlationId };
         return this;
     }
 
@@ -92,7 +92,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithCausationId(Guid causationId)
     {
         EnsureMetadata();
-        _metadata!.CausationId = causationId;
+        _metadata = _metadata! with { CausationId = causationId };
         return this;
     }
 
@@ -104,7 +104,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithOperationId(Guid operationId)
     {
         EnsureMetadata();
-        _metadata!.OperationId = operationId;
+        _metadata = _metadata! with { OperationId = operationId };
         return this;
     }
 
@@ -116,7 +116,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithUserId(Guid userId)
     {
         EnsureMetadata();
-        _metadata!.UserId = userId;
+        _metadata = _metadata! with { UserId = userId };
         return this;
     }
 
@@ -128,7 +128,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithTimestamp(DateTimeOffset timestamp)
     {
         EnsureMetadata();
-        _metadata!.Timestamp = timestamp;
+        _metadata = _metadata! with { Timestamp = timestamp };
         return this;
     }
 

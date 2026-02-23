@@ -20,7 +20,7 @@ namespace Opossum.DecisionModel;
 ///             query: Query.FromItems(new QueryItem
 ///             {
 ///                 EventTypes = [nameof(CourseCreatedEvent)],
-///                 Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+///                 Tags = [new Tag("courseId", courseId.ToString())]
 ///             }),
 ///             apply: (state, evt) => evt.Event.Event is CourseCreatedEvent ? true : state);
 ///
@@ -30,7 +30,7 @@ namespace Opossum.DecisionModel;
 ///             query: Query.FromItems(new QueryItem
 ///             {
 ///                 EventTypes = [nameof(StudentEnrolledToCourseEvent)],
-///                 Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+///                 Tags = [new Tag("courseId", courseId.ToString())]
 ///             }),
 ///             apply: (state, evt) => evt.Event.Event is StudentEnrolledToCourseEvent
 ///                 ? state + 1

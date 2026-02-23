@@ -12,10 +12,6 @@ public sealed class CourseShortInfoTagProvider : IProjectionTagProvider<CourseSh
     public IEnumerable<Tag> GetTags(CourseShortInfo state)
     {
         // Index by full status - allows queries like "all courses with available spots"
-        yield return new Tag
-        {
-            Key = "IsFull",
-            Value = state.IsFull.ToString()
-        };
+        yield return new Tag("IsFull", state.IsFull.ToString());
     }
 }

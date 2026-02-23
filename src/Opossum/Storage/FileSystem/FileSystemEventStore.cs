@@ -105,11 +105,11 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
             var sequencedEvents = new SequencedEvent[events.Length];
             for (int i = 0; i < events.Length; i++)
             {
-                var metadata = events[i].Metadata;
-                if (metadata.Timestamp == default)
-                {
-                    metadata.Timestamp = DateTimeOffset.UtcNow;
-                }
+                // Metadata is immutable — create a new instance with Timestamp defaulted to UtcNow
+                // if the caller did not supply one, rather than mutating the caller's object.
+                var metadata = events[i].Metadata.Timestamp == default
+                    ? events[i].Metadata with { Timestamp = DateTimeOffset.UtcNow }
+                    : events[i].Metadata;
 
                 sequencedEvents[i] = new SequencedEvent
                 {

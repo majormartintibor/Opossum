@@ -218,7 +218,7 @@ public class ReadBenchmarks
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
 
-        var query = Query.FromTags([new Tag { Key = "Region", Value = "US-West" }]);
+        var query = Query.FromTags([new Tag("Region", "US-West")]);
         var results = await store.ReadAsync(query, null);
     }
 
@@ -239,7 +239,7 @@ public class ReadBenchmarks
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
 
-        var query = Query.FromTags([new Tag { Key = "Region", Value = "US-West" }]);
+        var query = Query.FromTags([new Tag("Region", "US-West")]);
         var results = await store.ReadAsync(query, null);
     }
 
@@ -260,7 +260,7 @@ public class ReadBenchmarks
         using var sp = services.BuildServiceProvider();
         var store = sp.GetRequiredService<IEventStore>();
 
-        var query = Query.FromTags([new Tag { Key = "Region", Value = "US-West" }]);
+        var query = Query.FromTags([new Tag("Region", "US-West")]);
         var results = await store.ReadAsync(query, null);
     }
 
@@ -286,8 +286,8 @@ public class ReadBenchmarks
         var store = sp.GetRequiredService<IEventStore>();
 
         var query = Query.FromTags([
-            new Tag { Key = "Region", Value = "US-West" },
-            new Tag { Key = "Environment", Value = "Production" }
+            new Tag("Region", "US-West"),
+            new Tag("Environment", "Production")
         ]);
         var results = await store.ReadAsync(query, null);
     }

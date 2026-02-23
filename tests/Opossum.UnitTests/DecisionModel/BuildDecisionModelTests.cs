@@ -24,7 +24,7 @@ public class BuildDecisionModelTests
             {
                 EventType = payload.GetType().Name,
                 Event = payload,
-                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
+                Tags = [.. tags.Select(t => new Tag(t.Key, t.Value))]
             }
         };
 
