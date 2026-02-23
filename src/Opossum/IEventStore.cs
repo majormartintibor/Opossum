@@ -22,9 +22,13 @@ public interface IEventStore
     /// appended between the caller's read and this append. Catch this exception and
     /// retry the full read → decide → append cycle.
     /// </exception>
+    /// <param name="cancellationToken">
+    /// Token to cancel the operation. When cancelled, the semaphore wait is aborted and
+    /// no events are written.
+    /// </param>
     /// <exception cref="ArgumentNullException">When <paramref name="events"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">When <paramref name="events"/> is empty or contains an event with a null/empty <see cref="Core.DomainEvent.EventType"/>.</exception>
-    Task AppendAsync(NewEvent[] events, AppendCondition? condition);
+    Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reads events matching <paramref name="query"/> from the event store.

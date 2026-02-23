@@ -820,7 +820,7 @@ public class EventStoreExtensionsTests
         public ReadOption[]? LastReadOptions { get; private set; }
         public SequencedEvent[] EventsToReturn { get; set; } = [];
 
-        public Task AppendAsync(NewEvent[] events, AppendCondition? condition)
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)
         {
             LastAppendedEvents = events;
             LastAppendCondition = condition;
@@ -852,7 +852,7 @@ public class EventStoreExtensionsTests
             _onAppend = onAppend;
         }
 
-        public Task AppendAsync(NewEvent[] events, AppendCondition? condition)
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)
         {
             _onAppend();
             return Task.CompletedTask;

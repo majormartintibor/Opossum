@@ -185,12 +185,13 @@ public static class EventStoreExtensions
     public static Task AppendAsync(
         this IEventStore eventStore,
         NewEvent @event,
-        AppendCondition? condition = null)
+        AppendCondition? condition = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(@event);
 
-        return eventStore.AppendAsync([@event], condition);
+        return eventStore.AppendAsync([@event], condition, cancellationToken);
     }
 
     /// <summary>
@@ -201,12 +202,13 @@ public static class EventStoreExtensions
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
-        NewEvent[] events)
+        NewEvent[] events,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(events);
 
-        return eventStore.AppendAsync(events, condition: null);
+        return eventStore.AppendAsync(events, condition: null, cancellationToken);
     }
 
     /// <summary>
@@ -279,7 +281,8 @@ public static class EventStoreExtensions
         IEvent @event,
         IEnumerable<Tag>? tags = null,
         Metadata? metadata = null,
-        AppendCondition? condition = null)
+        AppendCondition? condition = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(@event);
@@ -299,7 +302,7 @@ public static class EventStoreExtensions
             }
         };
 
-        return eventStore.AppendAsync([newEvent], condition);
+        return eventStore.AppendAsync([newEvent], condition, cancellationToken);
     }
 
     /// <summary>
@@ -316,7 +319,8 @@ public static class EventStoreExtensions
         IEvent[] events,
         IEnumerable<Tag>? tags = null,
         Metadata? metadata = null,
-        AppendCondition? condition = null)
+        AppendCondition? condition = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(events);
@@ -339,7 +343,7 @@ public static class EventStoreExtensions
             Metadata = sharedMetadata
         }).ToArray();
 
-        return eventStore.AppendAsync(newEvents, condition);
+        return eventStore.AppendAsync(newEvents, condition, cancellationToken);
     }
 
     /// <summary>

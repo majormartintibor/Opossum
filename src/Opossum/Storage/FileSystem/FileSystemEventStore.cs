@@ -49,7 +49,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         _appendLock.Dispose();
     }
 
-    public async Task AppendAsync(NewEvent[] events, AppendCondition? condition)
+    public async Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)
     {
         // 1. Validation
         ArgumentNullException.ThrowIfNull(events);
@@ -90,7 +90,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         activity?.SetTag("opossum.context", _options.Contexts[0]);
 
         // 3. Use semaphore for atomic operation (one append at a time)
-        await _appendLock.WaitAsync().ConfigureAwait(false);
+        await _appendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             // 4. Check AppendCondition
