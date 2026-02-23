@@ -59,6 +59,8 @@
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
+    <File Path="docs/decisions/003-iasyncenumerable-not-implemented.md" />
+    <File Path="docs/decisions/004-single-context-by-design.md" />
     <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
   <Folder Name="/docs/features/">

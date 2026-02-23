@@ -30,7 +30,7 @@ public class ParallelRebuildLockingTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("LockingTestContext");
+            options.UseStore("LockingTestContext");
         });
 
         services.AddProjections(options =>

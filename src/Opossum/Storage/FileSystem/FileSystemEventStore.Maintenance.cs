@@ -7,16 +7,15 @@ internal sealed partial class FileSystemEventStore : IEventStoreMaintenance
     public async Task<TagMigrationResult> AddTagsAsync(
         string eventType,
         Func<SequencedEvent, IReadOnlyList<Tag>> tagFactory,
-        string? context = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
         ArgumentNullException.ThrowIfNull(tagFactory);
 
-        if (_options.Contexts.Count == 0)
-            throw new InvalidOperationException("No contexts configured.");
+        if (_options.StoreName is null)
+            throw new InvalidOperationException("No store configured.");
 
-        var contextPath = GetContextPath(_options.Contexts[0]);
+        var contextPath = GetContextPath(_options.StoreName);
         var eventsPath = GetEventsPath(contextPath);
 
         var positions = await _indexManager.GetPositionsByEventTypeAsync(contextPath, eventType).ConfigureAwait(false);

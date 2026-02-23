@@ -29,7 +29,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("BenchmarkContext");
+            options.UseStore("BenchmarkContext");
         });
 
         services.AddProjections(options =>
@@ -91,7 +91,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath!;
-            options.AddContext("BenchmarkContext");
+            options.UseStore("BenchmarkContext");
         });
 
         services.AddProjections(options =>

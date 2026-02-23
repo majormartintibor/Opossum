@@ -109,7 +109,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = @"D:\MyAppData\EventStore";  // Where to store events
-    options.AddContext("MyApp");                     // Bounded context name
+    options.UseStore("MyApp");                       // Store name
     options.FlushEventsImmediately = true;           // Durability guarantee (recommended)
 });
 

@@ -18,7 +18,7 @@ public class EventStoreMaintenanceTests : IDisposable
             RootPath = _tempRootPath,
             FlushEventsImmediately = false
         };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
         _store = new FileSystemEventStore(_options);
     }
 

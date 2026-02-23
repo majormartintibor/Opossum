@@ -18,9 +18,6 @@ public interface IEventStoreMaintenance
     /// A delegate invoked for each matching event. Return the tags that should be added;
     /// the framework discards any tag whose key already exists on the event.
     /// </param>
-    /// <param name="context">
-    /// The context to target. When <see langword="null"/> the first configured context is used.
-    /// </param>
     /// <param name="cancellationToken">Token that can cancel the operation between events.</param>
     /// <returns>
     /// A <see cref="TagMigrationResult"/> summarising how many tags were added and how many
@@ -29,6 +26,5 @@ public interface IEventStoreMaintenance
     Task<TagMigrationResult> AddTagsAsync(
         string eventType,
         Func<SequencedEvent, IReadOnlyList<Tag>> tagFactory,
-        string? context = null,
         CancellationToken cancellationToken = default);
 }

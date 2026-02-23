@@ -31,7 +31,7 @@ public class ProjectionFixture : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = TestStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Configure projections (without auto-discovery for manual testing)

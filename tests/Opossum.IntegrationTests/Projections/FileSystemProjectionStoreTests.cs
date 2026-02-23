@@ -209,7 +209,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
 
         var projectionPath = Path.Combine(
             _fixture.OpossumOptions.RootPath,
-            _fixture.OpossumOptions.Contexts[0],
+            _fixture.OpossumOptions.StoreName!,
             "Projections",
             storeName);
 
@@ -237,7 +237,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
 
         var projectionPath = Path.Combine(
             _fixture.OpossumOptions.RootPath,
-            _fixture.OpossumOptions.Contexts[0],
+            _fixture.OpossumOptions.StoreName!,
             "Projections",
             storeName);
 
@@ -266,7 +266,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
 
         var projectionPath = Path.Combine(
             _fixture.OpossumOptions.RootPath,
-            _fixture.OpossumOptions.Contexts[0],
+            _fixture.OpossumOptions.StoreName!,
             "Projections",
             storeName);
 
@@ -300,7 +300,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
 
         var projectionPath = Path.Combine(
             _fixture.OpossumOptions.RootPath,
-            _fixture.OpossumOptions.Contexts[0],
+            _fixture.OpossumOptions.StoreName!,
             "Projections",
             storeName);
 
@@ -325,7 +325,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
 
         var projectionPath = Path.Combine(
             _fixture.OpossumOptions.RootPath,
-            _fixture.OpossumOptions.Contexts[0],
+            _fixture.OpossumOptions.StoreName!,
             "Projections",
             storeName);
 

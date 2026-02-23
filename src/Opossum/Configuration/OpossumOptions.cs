@@ -17,20 +17,10 @@ public sealed class OpossumOptions
     public string RootPath { get; set; } = "OpossumStore";
 
     /// <summary>
-    /// List of configured bounded contexts.
-    /// Each context gets its own isolated event store directory.
-    /// 
-    /// ⚠️ MVP LIMITATION: Only the FIRST context is currently used.
-    /// While you can add multiple contexts, only Contexts[0] will be used for storage.
-    /// See docs/limitations/mvp-single-context.md for details.
-    /// 
-    /// Configure exactly ONE context in MVP:
-    /// <code>
-    /// options.AddContext("CourseManagement"); // ✅ This will be used
-    /// // Don't add more contexts - they will be ignored in MVP
-    /// </code>
+    /// The name of this event store. Used as a subdirectory under <see cref="RootPath"/>.
+    /// Set exactly once via <see cref="UseStore"/>.
     /// </summary>
-    public List<string> Contexts { get; } = [];
+    public string? StoreName { get; private set; }
 
     /// <summary>
     /// When true, forces events to be physically written to disk (flushed) before append completes.
@@ -54,32 +44,43 @@ public sealed class OpossumOptions
     public bool FlushEventsImmediately { get; set; } = true;
 
     /// <summary>
-    /// Adds a bounded context to the event store.
+    /// Sets the name of this event store. The name is used as a subdirectory under
+    /// <see cref="RootPath"/> and must be a valid directory name.
     /// </summary>
-    /// <param name="contextName">Name of the context (must be valid directory name)</param>
-    /// <returns>This options instance for fluent configuration</returns>
-    /// <exception cref="ArgumentException">Thrown when context name is invalid</exception>
-    /// <exception cref="InvalidOperationException">Thrown when context already exists</exception>
-    public OpossumOptions AddContext(string contextName)
+    /// <param name="name">
+    /// The store name. Must be a valid directory name (no path separators or wildcards).
+    /// </param>
+    /// <returns>This options instance for fluent configuration.</returns>
+    /// <exception cref="ArgumentException">Thrown when the name is null, empty, or contains invalid characters.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <see cref="UseStore"/> has already been called. Opossum supports exactly
+    /// one store per instance. To use multiple isolated event stores, register separate
+    /// <see cref="IEventStore"/> instances with different <see cref="RootPath"/> values.
+    /// </exception>
+    public OpossumOptions UseStore(string name)
     {
-        if (string.IsNullOrWhiteSpace(contextName))
+        if (StoreName is not null)
         {
-            throw new ArgumentException("Context name cannot be empty", nameof(contextName));
+            throw new InvalidOperationException(
+                $"UseStore has already been called with '{StoreName}'. " +
+                "Opossum supports exactly one store per instance. " +
+                "To use multiple isolated event stores, register separate IEventStore instances " +
+                "with different RootPath values.");
         }
 
-        if (!IsValidDirectoryName(contextName))
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Store name cannot be empty", nameof(name));
+        }
+
+        if (!IsValidDirectoryName(name))
         {
             throw new ArgumentException(
-                $"Invalid context name: '{contextName}'. Context names must be valid directory names.",
-                nameof(contextName));
+                $"Invalid store name: '{name}'. Store names must be valid directory names.",
+                nameof(name));
         }
 
-        if (Contexts.Contains(contextName, StringComparer.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException($"Context '{contextName}' has already been added");
-        }
-
-        Contexts.Add(contextName);
+        StoreName = name;
         return this;
     }
 

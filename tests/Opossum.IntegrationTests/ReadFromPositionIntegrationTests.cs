@@ -31,7 +31,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
         {
             opt.RootPath = _tempPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("TestContext");
+            opt.UseStore("TestContext");
         });
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();

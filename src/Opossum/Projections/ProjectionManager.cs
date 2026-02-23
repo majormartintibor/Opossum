@@ -62,12 +62,13 @@ internal sealed partial class ProjectionManager : IProjectionManager
         _projectionOptions = projectionOptions;
         _logger = logger ?? NullLogger<ProjectionManager>.Instance;
 
-        if (options.Contexts.Count == 0)
+        if (options.StoreName is null)
         {
-            throw new InvalidOperationException("No contexts configured");
+            throw new InvalidOperationException("No store configured");
         }
 
-        var contextPath = Path.Combine(options.RootPath, options.Contexts[0]);
+        // Opossum is single-context by design (see ADR-004)
+        var contextPath = Path.Combine(options.RootPath, options.StoreName);
         _checkpointPath = Path.Combine(contextPath, "Projections", "_checkpoints");
 
         Directory.CreateDirectory(_checkpointPath);

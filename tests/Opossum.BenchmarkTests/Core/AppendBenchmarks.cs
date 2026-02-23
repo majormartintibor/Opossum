@@ -39,7 +39,7 @@ public class AppendBenchmarks
             RootPath = iterationPath,
             FlushEventsImmediately = false // Will be overridden by specific benchmarks
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         // Use DI to create event store (same as production usage)
         var services = new ServiceCollection();
@@ -47,7 +47,7 @@ public class AppendBenchmarks
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = options.FlushEventsImmediately;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();
@@ -82,14 +82,14 @@ public class AppendBenchmarks
             RootPath = _tempHelper.CreateSubDirectory($"Flush_{Guid.NewGuid():N}"),
             FlushEventsImmediately = true
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = true;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -121,14 +121,14 @@ public class AppendBenchmarks
             RootPath = _tempHelper.CreateSubDirectory($"FlushBatch_{Guid.NewGuid():N}"),
             FlushEventsImmediately = true
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = true;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();

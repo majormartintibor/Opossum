@@ -47,7 +47,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("TestContext");
+        options.UseStore("TestContext");
 
         // Act
         var initializer = new StorageInitializer(options);
@@ -57,7 +57,7 @@ public class StorageInitializerTests : IDisposable
     }
 
     [Fact]
-    public void Initialize_WithNoContexts_ThrowsInvalidOperationException()
+    public void Initialize_WithNoStoreName_ThrowsInvalidOperationException()
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
@@ -65,7 +65,7 @@ public class StorageInitializerTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() => initializer.Initialize());
-        Assert.Contains("no contexts configured", exception.Message);
+        Assert.Contains("store name not configured", exception.Message);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -108,48 +108,11 @@ public class StorageInitializerTests : IDisposable
     }
 
     [Fact]
-    public void Initialize_WithMultipleContexts_CreatesAllStructures()
-    {
-        // Arrange
-        var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement")
-               .AddContext("StudentEnrollment")
-               .AddContext("Billing");
-        var initializer = new StorageInitializer(options);
-
-        // Act
-        initializer.Initialize();
-
-        // Assert - All context directories exist
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing")));
-
-        // Assert - All ledger files exist
-        Assert.True(File.Exists(Path.Combine(_testRootPath, "CourseManagement", ".ledger")));
-        Assert.True(File.Exists(Path.Combine(_testRootPath, "StudentEnrollment", ".ledger")));
-        Assert.True(File.Exists(Path.Combine(_testRootPath, "Billing", ".ledger")));
-
-        // Assert - All Events directories exist
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "events")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment", "events")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing", "events")));
-
-        // Assert - All index structures exist
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Indices", "EventType")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement", "Indices", "Tags")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment", "Indices", "EventType")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment", "Indices", "Tags")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing", "Indices", "EventType")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing", "Indices", "Tags")));
-    }
-
-    [Fact]
     public void Initialize_CalledMultipleTimes_DoesNotThrow()
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -166,7 +129,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Pre-create ledger with content
@@ -188,7 +151,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -205,7 +168,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -221,7 +184,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -237,7 +200,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -253,7 +216,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -269,7 +232,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -286,7 +249,7 @@ public class StorageInitializerTests : IDisposable
         // Arrange
         var relativePath = Path.Combine(".", "test-data", Guid.NewGuid().ToString());
         var options = new OpossumOptions { RootPath = relativePath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         try
@@ -314,7 +277,7 @@ public class StorageInitializerTests : IDisposable
         // Arrange
         var nestedPath = Path.Combine(_testRootPath, "level1", "level2", "level3");
         var options = new OpossumOptions { RootPath = nestedPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -330,7 +293,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act
@@ -349,7 +312,7 @@ public class StorageInitializerTests : IDisposable
     {
         // Arrange
         var options = new OpossumOptions { RootPath = _testRootPath };
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
         var initializer = new StorageInitializer(options);
 
         // Act

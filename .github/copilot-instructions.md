@@ -398,9 +398,7 @@ example:
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("OpossumSampleApp");
-    //TODO: multiple context support
-    //options.AddContext("ExampleAdditionalContext");
+    options.UseStore("OpossumSampleApp");
 });
 ```
 Never use "D:\\Database" directly in tests.

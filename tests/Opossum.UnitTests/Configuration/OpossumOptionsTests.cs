@@ -15,132 +15,116 @@ public class OpossumOptionsTests
     }
 
     [Fact]
-    public void Constructor_InitializesEmptyContextsList()
+    public void Constructor_StoreNameIsNullByDefault()
     {
         // Arrange & Act
         var options = new OpossumOptions();
 
         // Assert
-        Assert.NotNull(options.Contexts);
-        Assert.Empty(options.Contexts);
+        Assert.Null(options.StoreName);
     }
 
     [Fact]
-    public void AddContext_WithValidName_AddsContext()
+    public void UseStore_WithValidName_SetsStoreName()
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act
-        var result = options.AddContext("CourseManagement");
+        var result = options.UseStore("CourseManagement");
 
         // Assert
-        Assert.Single(options.Contexts);
-        Assert.Contains("CourseManagement", options.Contexts);
+        Assert.Equal("CourseManagement", options.StoreName);
         Assert.Same(options, result); // Fluent API
     }
 
     [Fact]
-    public void AddContext_WithMultipleContexts_AddsAll()
+    public void UseStore_WhenCalledTwice_ThrowsInvalidOperationException()
     {
         // Arrange
         var options = new OpossumOptions();
+        options.UseStore("CourseManagement");
 
-        // Act
-        options.AddContext("CourseManagement")
-               .AddContext("StudentEnrollment")
-               .AddContext("Billing");
-
-        // Assert
-        Assert.Equal(3, options.Contexts.Count);
-        Assert.Contains("CourseManagement", options.Contexts);
-        Assert.Contains("StudentEnrollment", options.Contexts);
-        Assert.Contains("Billing", options.Contexts);
+        // Act & Assert
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            options.UseStore("Billing"));
+        Assert.Contains("UseStore has already been called", exception.Message);
     }
 
     [Fact]
-    public void AddContext_WithNullName_ThrowsArgumentException()
+    public void UseStore_WithNullName_ThrowsArgumentException()
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => options.AddContext(null!));
-        Assert.Equal("contextName", exception.ParamName);
+        var exception = Assert.Throws<ArgumentException>(() => options.UseStore(null!));
+        Assert.Equal("name", exception.ParamName);
         Assert.Contains("cannot be empty", exception.Message);
     }
 
     [Fact]
-    public void AddContext_WithEmptyName_ThrowsArgumentException()
+    public void UseStore_WithEmptyName_ThrowsArgumentException()
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => options.AddContext(""));
-        Assert.Equal("contextName", exception.ParamName);
+        var exception = Assert.Throws<ArgumentException>(() => options.UseStore(""));
+        Assert.Equal("name", exception.ParamName);
         Assert.Contains("cannot be empty", exception.Message);
     }
 
     [Fact]
-    public void AddContext_WithWhitespaceName_ThrowsArgumentException()
+    public void UseStore_WithWhitespaceName_ThrowsArgumentException()
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act & Assert
-        var exception = Assert.Throws<ArgumentException>(() => options.AddContext("   "));
-        Assert.Equal("contextName", exception.ParamName);
+        var exception = Assert.Throws<ArgumentException>(() => options.UseStore("   "));
+        Assert.Equal("name", exception.ParamName);
         Assert.Contains("cannot be empty", exception.Message);
     }
 
     [Fact]
-    public void AddContext_WithInvalidCharacters_ThrowsArgumentException()
+    public void UseStore_WithInvalidCharacters_ThrowsArgumentException()
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act & Assert - various invalid characters
-        var exception1 = Assert.Throws<ArgumentException>(() => options.AddContext("Course/Management"));
-        Assert.Contains("Invalid context name", exception1.Message);
+        var exception1 = Assert.Throws<ArgumentException>(() => options.UseStore("Course/Management"));
+        Assert.Contains("Invalid store name", exception1.Message);
 
-        var exception2 = Assert.Throws<ArgumentException>(() => options.AddContext("Course\\Management"));
-        Assert.Contains("Invalid context name", exception2.Message);
+        var options2 = new OpossumOptions();
+        var exception2 = Assert.Throws<ArgumentException>(() => options2.UseStore("Course\\Management"));
+        Assert.Contains("Invalid store name", exception2.Message);
 
-        var exception3 = Assert.Throws<ArgumentException>(() => options.AddContext("Course:Management"));
-        Assert.Contains("Invalid context name", exception3.Message);
+        var options3 = new OpossumOptions();
+        var exception3 = Assert.Throws<ArgumentException>(() => options3.UseStore("Course:Management"));
+        Assert.Contains("Invalid store name", exception3.Message);
 
-        var exception4 = Assert.Throws<ArgumentException>(() => options.AddContext("Course*Management"));
-        Assert.Contains("Invalid context name", exception4.Message);
+        var options4 = new OpossumOptions();
+        var exception4 = Assert.Throws<ArgumentException>(() => options4.UseStore("Course*Management"));
+        Assert.Contains("Invalid store name", exception4.Message);
 
-        var exception5 = Assert.Throws<ArgumentException>(() => options.AddContext("Course?Management"));
-        Assert.Contains("Invalid context name", exception5.Message);
+        var options5 = new OpossumOptions();
+        var exception5 = Assert.Throws<ArgumentException>(() => options5.UseStore("Course?Management"));
+        Assert.Contains("Invalid store name", exception5.Message);
     }
 
     [Fact]
-    public void AddContext_WithDuplicateName_ThrowsInvalidOperationException()
+    public void UseStore_WhenCalledTwiceWithSameName_ThrowsInvalidOperationException()
     {
         // Arrange
         var options = new OpossumOptions();
-        options.AddContext("CourseManagement");
+        options.UseStore("CourseManagement");
 
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() =>
-            options.AddContext("CourseManagement"));
-        Assert.Contains("already been added", exception.Message);
-    }
-
-    [Fact]
-    public void AddContext_WithDuplicateNameDifferentCase_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var options = new OpossumOptions();
-        options.AddContext("CourseManagement");
-
-        // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            options.AddContext("coursemanagement"));
-        Assert.Contains("already been added", exception.Message);
+            options.UseStore("CourseManagement"));
+        Assert.Contains("UseStore has already been called", exception.Message);
     }
 
     [Fact]
@@ -178,33 +162,29 @@ public class OpossumOptionsTests
     [InlineData("Context-With-Dashes")]
     [InlineData("Context.With.Dots")]
     [InlineData("CourseManagement")]
-    public void AddContext_WithValidNames_Succeeds(string contextName)
+    public void UseStore_WithValidNames_SetsStoreName(string storeName)
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act
-        options.AddContext(contextName);
+        options.UseStore(storeName);
 
         // Assert
-        Assert.Contains(contextName, options.Contexts);
+        Assert.Equal(storeName, options.StoreName);
     }
 
     [Fact]
-    public void AddContext_PreservesOrder()
+    public void UseStore_ReturnsOptionsForFluentChaining()
     {
         // Arrange
         var options = new OpossumOptions();
 
         // Act
-        options.AddContext("First")
-               .AddContext("Second")
-               .AddContext("Third");
+        var result = options.UseStore("CourseManagement");
 
-        // Assert
-        Assert.Equal("First", options.Contexts[0]);
-        Assert.Equal("Second", options.Contexts[1]);
-        Assert.Equal("Third", options.Contexts[2]);
+        // Assert — same instance returned for fluent chaining
+        Assert.Same(options, result);
     }
 
     [Fact]

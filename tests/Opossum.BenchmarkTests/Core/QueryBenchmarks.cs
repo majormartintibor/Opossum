@@ -32,14 +32,14 @@ public class QueryBenchmarks
     {
         var path = _tempHelper.CreateSubDirectory($"Store_{eventCount}Events");
         var options = new OpossumOptions { RootPath = path, FlushEventsImmediately = false };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -69,7 +69,7 @@ public class QueryBenchmarks
         {
             opt.RootPath = _storePath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         return services.BuildServiceProvider().GetRequiredService<IEventStore>();

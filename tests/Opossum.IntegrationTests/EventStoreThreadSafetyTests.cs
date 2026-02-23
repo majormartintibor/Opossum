@@ -29,7 +29,7 @@ public class EventStoreThreadSafetyTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("ThreadSafetyContext");
+            options.UseStore("ThreadSafetyContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();

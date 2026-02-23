@@ -44,7 +44,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
         {
             opt.RootPath = path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("TestContext");
+            opt.UseStore("TestContext");
         });
         var sp = services.BuildServiceProvider();
         _serviceProviders.Add(sp);

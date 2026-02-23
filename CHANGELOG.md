@@ -15,16 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `TagMigrationResult(TagsAdded, EventsProcessed)` summary. Registered in DI alongside
   `IEventStore` (same singleton instance).
 - `TagMigrationResult` record — carries the outcome of an `AddTagsAsync` call.
-- Multi-context support — `AppendAsync` and `ReadAsync` gain an optional `context` parameter;
-  each registered context gets its own `SemaphoreSlim` to avoid unnecessary serialisation
-  of appends to unrelated contexts.
-- Streaming reads via `IAsyncEnumerable<SequencedEvent>` — `IEventStore.ReadAsync` return
-  type changed from `Task<SequencedEvent[]>` to `IAsyncEnumerable<SequencedEvent>`, enabling
-  incremental event processing and eliminating full-result materialisation on large reads.
 - `CancellationToken` parameter on `AppendAsync` — all async operations in the public API
   now accept a `CancellationToken`.
 
 ### Changed
+- **Breaking: `OpossumOptions.AddContext(string)` renamed to `UseStore(string)`** —
+  `AddContext` and the `Contexts` list are removed. Call `options.UseStore("MyApp")` instead.
+  `UseStore` throws `InvalidOperationException` if called more than once per options instance,
+  enforcing the single-store-per-instance contract. The corresponding internal field is now
+  `StoreName` (string?) instead of `Contexts` (List\<string\>).
+  Migration: replace every `options.AddContext("Name")` with `options.UseStore("Name")`.
+- **Breaking: `IEventStoreMaintenance.AddTagsAsync`** — removed the unused `string? context`
+  parameter (single-store design makes it meaningless).
 - **Breaking: `IProjectionDefinition<TState>.Apply` now receives `SequencedEvent` instead of `IEvent`** —
   the full event envelope (tags, metadata, position) is available in every `Apply` call,
   removing the asymmetry with `KeySelector(SequencedEvent)`.
@@ -44,8 +46,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `NewEvent` instances while assigning derived metadata fields (`Timestamp`).
 
 ### Removed
-- `docs/limitations/mvp-single-context.md` — limitation no longer applies; replaced by a
-  multi-context usage guide.
+- `Contexts` property and `AddContext()` method from `OpossumOptions` — replaced by
+  `StoreName` property and `UseStore()` method (see Changed above).
 
 ---
 

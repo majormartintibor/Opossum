@@ -16,7 +16,7 @@ public class ProjectionTagQueryTests : IDisposable
         {
             RootPath = _tempPath
         };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
     }
 
     public void Dispose()

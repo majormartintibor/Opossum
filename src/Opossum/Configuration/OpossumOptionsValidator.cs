@@ -35,32 +35,16 @@ public sealed class OpossumOptionsValidator : IValidateOptions<OpossumOptions>
             }
         }
 
-        // Validate Contexts
-        // MVP LIMITATION: Only one context is currently supported
-        // See docs/limitations/mvp-single-context.md
-        if (options.Contexts.Count == 0)
+        // Validate StoreName
+        if (string.IsNullOrWhiteSpace(options.StoreName))
         {
-            failures.Add("At least one context must be configured. Use AddContext() to add contexts.");
+            failures.Add("StoreName must be configured. Call UseStore(\"YourStoreName\") in the configuration action.");
         }
-
-        // TODO: Add validation to enforce single context in MVP
-        // if (options.Contexts.Count > 1)
-        // {
-        //     failures.Add("MVP currently supports only ONE context. " +
-        //                  "See docs/limitations/mvp-single-context.md for details.");
-        // }
-
-        foreach (var context in options.Contexts)
+        else
         {
-            if (string.IsNullOrWhiteSpace(context))
+            if (!IsValidDirectoryName(options.StoreName))
             {
-                failures.Add("Context names cannot be null or whitespace");
-                continue;
-            }
-
-            if (!IsValidDirectoryName(context))
-            {
-                failures.Add($"Invalid context name '{context}'. Context names must be valid directory names.");
+                failures.Add($"Invalid store name '{options.StoreName}'. Store names must be valid directory names.");
             }
         }
 

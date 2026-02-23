@@ -29,7 +29,7 @@ public class ParallelRebuildTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("ParallelRebuildContext");
+            options.UseStore("ParallelRebuildContext");
         });
 
         services.AddProjections(options =>

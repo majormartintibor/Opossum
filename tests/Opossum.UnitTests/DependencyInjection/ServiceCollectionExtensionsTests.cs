@@ -42,12 +42,12 @@ public class ServiceCollectionExtensionsTests : IDisposable
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentNullException>(() =>
-            services.AddOpossum(options => options.AddContext("Test")));
+            services.AddOpossum(options => options.UseStore("Test")));
         Assert.Equal("services", exception.ParamName);
     }
 
     [Fact]
-    public void AddOpossum_WithNoContexts_ThrowsInvalidOperationException()
+    public void AddOpossum_WithNoStoreName_ThrowsInvalidOperationException()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -55,7 +55,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         // Act & Assert
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.AddOpossum());
-        Assert.Contains("At least one context must be configured", exception.Message);
+        Assert.Contains("A store name must be configured", exception.Message);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         // Act & Assert - no configure action means no contexts
         var exception = Assert.Throws<InvalidOperationException>(() =>
             services.AddOpossum(configure: null));
-        Assert.Contains("At least one context must be configured", exception.Message);
+        Assert.Contains("A store name must be configured", exception.Message);
     }
 
     [Fact]
@@ -80,7 +80,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -89,7 +89,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         var options = serviceProvider.GetService<OpossumOptions>();
         Assert.NotNull(options);
         Assert.Equal(_testRootPath, options.RootPath);
-        Assert.Contains("CourseManagement", options.Contexts);
+        Assert.Equal("CourseManagement", options.StoreName);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -123,7 +123,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -143,7 +143,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -164,7 +164,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -185,7 +185,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -206,7 +206,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         // Assert - Directory structure should exist
@@ -219,7 +219,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void AddOpossum_WithMultipleContexts_InitializesAll()
+    public void AddOpossum_InitializesStorageStructure_WithSingleStore()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -228,15 +228,11 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement")
-                   .AddContext("StudentEnrollment")
-                   .AddContext("Billing");
+            options.UseStore("CourseManagement");
         });
 
-        // Assert - All context directories exist
+        // Assert - Directory structure for the single store exists
         Assert.True(Directory.Exists(Path.Combine(_testRootPath, "CourseManagement")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "StudentEnrollment")));
-        Assert.True(Directory.Exists(Path.Combine(_testRootPath, "Billing")));
     }
 
     [Fact]
@@ -249,7 +245,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         var result = services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         // Assert
@@ -267,7 +263,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
             .AddOpossum(options =>
             {
                 options.RootPath = _testRootPath;
-                options.AddContext("CourseManagement");
+                options.UseStore("CourseManagement");
             })
             .AddLogging()
             .AddSingleton<string>("test");
@@ -291,7 +287,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = customPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         // Assert
@@ -313,7 +309,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
             services.AddOpossum(options =>
             {
                 options.RootPath = absolutePath;
-                options.AddContext("CourseManagement");
+                options.UseStore("CourseManagement");
             });
 
             // Assert
@@ -331,22 +327,23 @@ public class ServiceCollectionExtensionsTests : IDisposable
     }
 
     [Fact]
-    public void AddOpossum_CalledMultipleTimes_ThrowsOrOverwrites()
+    public void AddOpossum_CalledMultipleTimes_SecondRegistrationOverrides()
     {
         // Arrange
         var services = new ServiceCollection();
 
-        // Act - Call twice
+        // Act - Call twice with different store names (each call registers a new singleton)
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
+        var testRootPath2 = Path.Combine(Path.GetTempPath(), $"Test2_{Guid.NewGuid():N}");
         services.AddOpossum(options =>
         {
-            options.RootPath = _testRootPath;
-            options.AddContext("Billing");
+            options.RootPath = testRootPath2;
+            options.UseStore("Billing");
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -354,8 +351,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         // Assert - Last registration wins (standard DI behavior)
         var options = serviceProvider.GetService<OpossumOptions>();
         Assert.NotNull(options);
-        // The last AddOpossum call should have registered different contexts
-        Assert.Contains("Billing", options.Contexts);
+        Assert.Equal("Billing", options.StoreName);
     }
 
     [Fact]
@@ -369,7 +365,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
             configure: options =>
             {
                 options.RootPath = _testRootPath;
-                options.AddContext("CourseManagement");
+                options.UseStore("CourseManagement");
             });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -391,7 +387,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
             configure: options =>
             {
                 options.RootPath = _testRootPath;
-                options.AddContext("CourseManagement");
+                options.UseStore("CourseManagement");
             });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -410,7 +406,7 @@ public class ServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testRootPath;
-            options.AddContext("CourseManagement");
+            options.UseStore("CourseManagement");
         });
 
         var serviceProvider = services.BuildServiceProvider();

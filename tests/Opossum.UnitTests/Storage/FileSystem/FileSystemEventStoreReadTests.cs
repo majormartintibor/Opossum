@@ -17,7 +17,7 @@ public class FileSystemEventStoreReadTests : IDisposable
         {
             RootPath = _tempRootPath
         };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
 
         _store = new FileSystemEventStore(_options);
     }

@@ -24,7 +24,7 @@ public class ProjectionEndToEndTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("E2EContext");
+            options.UseStore("E2EContext");
         });
 
         services.AddProjections(options =>

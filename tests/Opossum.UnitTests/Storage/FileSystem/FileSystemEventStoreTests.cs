@@ -19,7 +19,7 @@ public class FileSystemEventStoreTests : IDisposable
             RootPath = _tempRootPath,
             FlushEventsImmediately = false // Faster tests
         };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
 
         _store = new FileSystemEventStore(_options);
     }
@@ -510,7 +510,7 @@ public class FileSystemEventStoreTests : IDisposable
             RootPath = tempPath,
             FlushEventsImmediately = true // Production mode
         };
-        options.AddContext("ProductionContext");
+        options.UseStore("ProductionContext");
 
         var store = new FileSystemEventStore(options);
         var events = new[] { CreateTestEvent("CriticalEvent", new TestDomainEvent { Data = "important" }) };
@@ -548,7 +548,7 @@ public class FileSystemEventStoreTests : IDisposable
             RootPath = tempPath,
             FlushEventsImmediately = false // Test mode (faster)
         };
-        options.AddContext("TestContext");
+        options.UseStore("TestContext");
 
         var store = new FileSystemEventStore(options);
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
@@ -580,7 +580,7 @@ public class FileSystemEventStoreTests : IDisposable
         var tempPath = Path.Combine(Path.GetTempPath(), $"DefaultFlushTest_{Guid.NewGuid():N}");
         var options = new OpossumOptions { RootPath = tempPath };
         // Note: NOT setting FlushEventsImmediately - should default to true
-        options.AddContext("DefaultContext");
+        options.UseStore("DefaultContext");
 
         try
         {

@@ -25,7 +25,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Act
@@ -47,7 +47,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Act
@@ -76,7 +76,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Act
@@ -101,7 +101,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Act
@@ -121,7 +121,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Act
@@ -157,7 +157,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         services.AddProjections(options =>

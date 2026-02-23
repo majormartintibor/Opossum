@@ -52,7 +52,7 @@ public class ProjectionRebuildBenchmarks
         {
             opt.RootPath = storePath;
             opt.FlushEventsImmediately = false; // Faster setup
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();

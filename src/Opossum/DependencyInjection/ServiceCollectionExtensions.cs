@@ -32,23 +32,13 @@ public static class ServiceCollectionExtensions
         var options = new OpossumOptions();
         configure?.Invoke(options);
 
-        // Validate that at least one context is configured
-        // MVP LIMITATION: Only the first context is actually used
-        // See docs/limitations/mvp-single-context.md for details
-        if (options.Contexts.Count == 0)
+        // Validate that UseStore has been called
+        if (options.StoreName is null)
         {
             throw new InvalidOperationException(
-                "At least one context must be configured. " +
-                "Use options.AddContext(\"ContextName\") in the configuration action.");
+                "A store name must be configured. " +
+                "Call options.UseStore(\"YourStoreName\") in the configuration action.");
         }
-
-        // TODO: Add validation to enforce single context in MVP
-        // if (options.Contexts.Count > 1)
-        // {
-        //     throw new InvalidOperationException(
-        //         "MVP currently supports only ONE context. " +
-        //         "See docs/limitations/mvp-single-context.md for details.");
-        // }
 
         // Manually validate options immediately (fail fast)
         var validator = new OpossumOptionsValidator();

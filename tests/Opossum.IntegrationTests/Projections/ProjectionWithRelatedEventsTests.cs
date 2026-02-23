@@ -29,7 +29,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("RelatedEventsContext");
+            options.UseStore("RelatedEventsContext");
         });
 
         services.AddProjections(options =>

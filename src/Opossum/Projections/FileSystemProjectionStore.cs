@@ -35,12 +35,12 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
 
-        if (options.Contexts.Count == 0)
+        if (options.StoreName is null)
         {
-            throw new InvalidOperationException("No contexts configured");
+            throw new InvalidOperationException("No store configured");
         }
 
-        var contextPath = Path.Combine(options.RootPath, options.Contexts[0]);
+        var contextPath = Path.Combine(options.RootPath, options.StoreName);
         _projectionPath = Path.Combine(contextPath, "Projections", projectionName);
         _tagProvider = tagProvider;
         _tagIndex = new ProjectionTagIndex();

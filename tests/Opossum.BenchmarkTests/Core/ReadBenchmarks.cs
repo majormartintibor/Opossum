@@ -46,14 +46,14 @@ public class ReadBenchmarks
             RootPath = _store100Path, // Will be overridden by specific benchmarks
             FlushEventsImmediately = false
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();
@@ -74,14 +74,14 @@ public class ReadBenchmarks
     {
         var path = _tempHelper.CreateSubDirectory($"Store_{eventCount}Events");
         var options = new OpossumOptions { RootPath = path, FlushEventsImmediately = false };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -120,7 +120,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store100Path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -141,7 +141,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store1KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -162,7 +162,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store10KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -187,7 +187,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store1KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -212,7 +212,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store100Path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -233,7 +233,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store1KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -254,7 +254,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store10KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -279,7 +279,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store1KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -307,7 +307,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store100Path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -328,7 +328,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store1KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -349,7 +349,7 @@ public class ReadBenchmarks
         {
             opt.RootPath = _store10KPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
