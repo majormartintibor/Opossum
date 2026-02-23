@@ -568,9 +568,8 @@ builder.Services.AddOpossum(options =>
     // Must be an absolute path
     options.RootPath = @"D:\MyApp\EventStore";
 
-    // Bounded context name (REQUIRED)
-    // ?? MVP: Only ONE context is currently supported
-    options.AddContext("MyApplicationContext");
+    // Store name (REQUIRED) — used as a subdirectory under RootPath
+    options.UseStore("MyApplicationContext");
 
     // Flush events to disk immediately (OPTIONAL, default: true)
     // TRUE: Events are durable (survive power failure) but slower (~1-5ms per event)
@@ -614,14 +613,11 @@ builder.Services.AddOpossum(options =>
 {
     builder.Configuration.GetSection("Opossum").Bind(options);
 
-    // Contexts must be added programmatically
-    var contexts = builder.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
-    if (contexts != null)
+    // StoreName must be set programmatically — UseStore enforces the single-store contract
+    var storeName = builder.Configuration["Opossum:StoreName"];
+    if (storeName != null)
     {
-        foreach (var context in contexts)
-        {
-            options.AddContext(context);
-        }
+        options.UseStore(storeName);
     }
 });
 ```

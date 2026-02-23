@@ -32,14 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removing the asymmetry with `KeySelector(SequencedEvent)`.
 - **Breaking: `IProjectionWithRelatedEvents<TState>.Apply` and `GetRelatedEventsQuery`** — both
   methods updated to accept `SequencedEvent` for consistency with the base interface.
-- **Breaking: `IEventStore.ReadAsync`** — return type changed from `Task<SequencedEvent[]>` to
-  `IAsyncEnumerable<SequencedEvent>`. Callers that need a full array use `.ToArrayAsync()`.
 - **Breaking: `Tag` and `QueryItem` are now immutable `record` types** — construction syntax
   changes; existing positional or property-init call sites are unaffected.
 - **Breaking: `Metadata`, `DomainEvent`, and `SequencedEvent` are now immutable `record` types** —
   all properties are `init`-only; use `with` expressions to derive modified copies.
-- `ProjectionManager.RebuildAsync` and `ProjectionDaemon` adopt `await foreach` streaming,
-  eliminating the "load all events then iterate" allocation pattern on large event logs.
 
 ### Fixed
 - Metadata mutation side-effect in `AppendAsync` — the store no longer mutates the caller's

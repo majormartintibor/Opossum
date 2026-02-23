@@ -103,7 +103,7 @@ public class OpossumOptions
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("Production");
+    options.UseStore("Production");
     options.FlushEventsImmediately = true; // ← Default
 });
 
@@ -111,7 +111,7 @@ builder.Services.AddOpossum(options =>
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "TestData";
-    options.AddContext("TestContext");
+    options.UseStore("TestContext");
     options.FlushEventsImmediately = false; // ← Skip flush for speed
 });
 ```
@@ -530,7 +530,7 @@ else if (storageType == StorageType.HDD)
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("MyContext");
+    options.UseStore("MyContext");
     // ✅ Default: FlushEventsImmediately = true (safe)
 });
 
@@ -538,7 +538,7 @@ builder.Services.AddOpossum(options =>
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("MyContext");
+    options.UseStore("MyContext");
     options.FlushEventsImmediately = false; // ⚠️ Risk data loss!
 });
 ```

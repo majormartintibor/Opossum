@@ -51,7 +51,7 @@ static IServiceProvider ConfigureServices(SeedingConfiguration config)
     services.AddOpossum(options =>
     {
         options.RootPath = config.RootPath;
-        options.AddContext("OpossumSampleApp");
+        options.UseStore("OpossumSampleApp");
     });
 
     // ✅ NEW: Add mediator and scan CourseManagement assembly for command handlers

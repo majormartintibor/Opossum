@@ -81,7 +81,7 @@
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("Production");
+    options.UseStore("Production");
     // FlushEventsImmediately = true (default, safe)
 });
 ```

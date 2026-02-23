@@ -185,8 +185,8 @@ internal sealed class WarmupBudget
 services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("DealershipApp");
-    
+    options.UseStore("DealershipApp");
+
     // Enable cache warming
     options.CacheWarming.Enabled = true;
     options.CacheWarming.WarmProjectionsSince = DateTime.UtcNow.AddMonths(-3);

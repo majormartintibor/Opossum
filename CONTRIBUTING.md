@@ -238,7 +238,7 @@ public class MyIntegrationTests : IDisposable
         {
             RootPath = _testDirectory
         };
-        options.AddContext("TestContext");
+        options.UseStore("TestContext");
         
         // Test logic...
     }
