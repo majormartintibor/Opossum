@@ -209,6 +209,7 @@ app.MapEnrollStudentToCourseEndpoint();
 // }
 // ============================================================================
 Opossum.Samples.CourseManagement.AdminEndpoints.MapProjectionAdminEndpoints(app);
+Opossum.Samples.CourseManagement.AdminEndpoints.MapStoreAdminEndpoints(app);
 
 app.Run();
 

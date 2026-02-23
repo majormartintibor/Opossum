@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`IEventStoreAdmin` interface with `DeleteStoreAsync`** — new public administrative interface
+  that exposes destructive store-lifecycle operations. `DeleteStoreAsync` permanently removes
+  all data owned by the store: events, indices, projections, checkpoints, and the ledger.
+  Write-protected files (`WriteProtectEventFiles`, `WriteProtectProjectionFiles`) are handled
+  transparently — the read-only attribute is stripped before deletion so no
+  `UnauthorizedAccessException` is thrown. After the call, the store directory no longer
+  exists; subsequent `AppendAsync`/`ReadAsync` calls recreate the required directory structure
+  automatically. Registered in DI alongside `IEventStore` (same singleton instance).
+- **`DELETE /admin/store?confirm=true` endpoint in sample app** — `AdminEndpoints.MapStoreAdminEndpoints`
+  maps a delete endpoint for the whole event store. The `confirm=true` query parameter is
+  required to prevent accidental erasure (omitting it or passing `confirm=false` returns HTTP
+  400). A successful deletion returns HTTP 204 No Content. The endpoint is idempotent: calling
+  it on an already-absent store also returns 204.
+- **`EventStoreAdminTests`** — unit test class covering `DeleteStoreAsync`: basic deletion,
+  graceful no-op when the store directory is absent, transparent bypass of write-protected
+  event files, transparent bypass of write-protected projection files, store recreation after
+  deletion, and `InvalidOperationException` when no store is configured.
+- **`StoreAdminEndpointTests`** — integration test class for the `DELETE /admin/store` endpoint:
+  missing `confirm`, `confirm=false`, and `confirm=true` (HTTP status codes), store-directory
+  deletion verified on disk, store-recreation after deletion verified via a subsequent append,
+  and idempotent double-deletion.
+- **`OpossumOptions.WriteProtectProjectionFiles`** — new option (default: `true`) that marks
+  projection files read-only at the OS level immediately after they are written to disk.
+  Human operators can open and read the JSON files in any text editor, but cannot accidentally
+  modify or delete them. Opossum transparently removes the read-only attribute before
+  overwriting or deleting a projection file internally, then re-applies protection afterward.
+  This mirrors the existing `WriteProtectEventFiles` behavior and satisfies the same
+  "human-readable but immutable" requirement for the derived projection store.
+- **`TestDirectoryHelper.ForceDelete`** — shared test utility in both `Opossum.UnitTests` and
+  `Opossum.IntegrationTests` that strips all read-only attributes from files recursively before
+  deleting a temp directory. Used in all test `Dispose()` methods that clean up temp stores
+  created with write-protection enabled.
+
+### Changed
+- **`WriteProtectEventFiles` default changed from `true` to `false`** — write protection is
+  now opt-in. Development environments can delete store files freely without clearing
+  read-only attributes. Enable explicitly in production: `options.WriteProtectEventFiles = true`.
+- **`WriteProtectProjectionFiles` default changed from `true` to `false`** — same rationale.
+  Enable in production: `options.WriteProtectProjectionFiles = true`.
+- **Event files are now pretty-printed JSON** — `JsonEventSerializer` switched from minified
+  single-line JSON to indented multi-line JSON (`WriteIndented = true`). Event files are now
+  immediately readable when opened in any text editor without any reformatting step.
+- **Projection files are now pretty-printed JSON** — `FileSystemProjectionStore` likewise
+  switched to `WriteIndented = true`. Both event and projection JSON files use the same
+  human-friendly indented format.
+
+### Fixed
+- **Duplicate `EventStoreAdminTests` class** — the unit test file accidentally contained two
+  identical class definitions, causing `CS0101`/`CS0111` compilation errors. The redundant
+  second definition was removed; the first (which uses the cleaner `CreateEvent` helper) is
+  the canonical version.
+- **`StoreAdminEndpointTests.GetStoreName()` used stale `Opossum:Contexts` config key** —
+  after the `AddContext` → `UseStore` rename in 0.3.0-preview.1, the helper still read the
+  old `Opossum:Contexts` array and called `.Get<string[]>()` (an extension method unavailable
+  without `Microsoft.Extensions.Configuration.Binder`), causing a `CS1061` build error.
+  Updated to `config["Opossum:StoreName"]` which uses the plain `IConfiguration` indexer.
+- **`IntegrationTestFixture` used stale `Opossum:Contexts` config key** — same root cause as
+  above; updated to `context.Configuration["Opossum:StoreName"]`.
+- **Test cleanup failures with write-protected files** — `Dispose()` methods in multiple test
+  classes were calling `Directory.Delete(path, recursive: true)` directly, which throws
+  `UnauthorizedAccessException` on Windows when the directory contains read-only files.
+  Updated all affected `Dispose()` methods and inline `finally` blocks to use
+  `TestDirectoryHelper.ForceDelete` so tests pass reliably when `WriteProtectEventFiles` or
+  `WriteProtectProjectionFiles` is enabled (the default).
+- **`EventFileManagerTests.CreateTestEvent` missing method declaration** — the method body was
+  present in the file but the signature had been accidentally removed. Restored the signature.
+
 ## [0.3.0-preview.1] - 2026-02-23
 
 ### Fixed

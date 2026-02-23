@@ -15,6 +15,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     private readonly ProjectionMetadataIndex _metadataIndex;
     private readonly IProjectionTagProvider<TState>? _tagProvider;
     private readonly Dictionary<string, List<Tag>> _projectionTags = [];
+    private readonly bool _writeProtect;
 
     // Rebuild mode: state changes are buffered in memory; disk writes are deferred to CommitRebuildAsync.
     // Guarded by the per-projection lock held in ProjectionManager.RebuildAsync — not a concurrent field.
@@ -23,7 +24,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
-        WriteIndented = false, // Minified for performance (40% smaller files, faster I/O)
+        WriteIndented = true,
         PropertyNameCaseInsensitive = true
     };
 
@@ -45,6 +46,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         _tagProvider = tagProvider;
         _tagIndex = new ProjectionTagIndex();
         _metadataIndex = new ProjectionMetadataIndex();
+        _writeProtect = options.WriteProtectProjectionFiles;
 
         Directory.CreateDirectory(_projectionPath);
     }
@@ -380,7 +382,20 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
             // Serialize once and save
             var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
+
+            // If write-protected, remove the read-only attribute before overwriting
+            if (_writeProtect && File.Exists(filePath))
+            {
+                var existing = File.GetAttributes(filePath);
+                if ((existing & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(filePath, existing & ~FileAttributes.ReadOnly);
+            }
+
             await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
+
+            // Mark the file read-only so humans cannot accidentally modify or delete it
+            if (_writeProtect)
+                File.SetAttributes(filePath, FileAttributes.ReadOnly);
 
             // Save metadata to index with actual file size (single serialization pass)
             await _metadataIndex.SaveAsync(_projectionPath, key, metadata with { SizeInBytes = json.Length }).ConfigureAwait(false);
@@ -446,6 +461,14 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
+            // Remove read-only attribute before deleting if write protection is enabled
+            if (_writeProtect)
+            {
+                var attrs = File.GetAttributes(filePath);
+                if ((attrs & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(filePath, attrs & ~FileAttributes.ReadOnly);
+            }
+
             // Delete projection file
             File.Delete(filePath);
 
@@ -519,6 +542,10 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
                 await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
 
+                // Mark committed projection file as read-only after writing
+                if (_writeProtect)
+                    File.SetAttributes(filePath, FileAttributes.ReadOnly);
+
                 metadataEntries[key] = metadata with { SizeInBytes = json.Length };
 
                 if (_tagProvider != null)
@@ -554,6 +581,29 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         finally
         {
             _lock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Deletes all projection JSON files in this projection's directory,
+    /// transparently removing the read-only attribute first when write protection is enabled.
+    /// Called during a full rebuild to clear old state before applying events.
+    /// </summary>
+    internal void ClearProjectionFiles()
+    {
+        if (!Directory.Exists(_projectionPath))
+            return;
+
+        foreach (var file in Directory.GetFiles(_projectionPath, "*.json"))
+        {
+            if (_writeProtect)
+            {
+                var attrs = File.GetAttributes(file);
+                if ((attrs & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+            }
+
+            File.Delete(file);
         }
     }
 

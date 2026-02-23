@@ -47,9 +47,10 @@ public class IntegrationTestFixture : IDisposable
                         RootPath = TestDatabasePath
                     };
 
-                    // Set store name from configuration (first entry used as single store name)
-                    var contexts = context.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
-                    var storeName = contexts?.FirstOrDefault() ?? "TestContext";
+                    // Set store name from configuration
+                    var storeName = context.Configuration["Opossum:StoreName"];
+                    if (string.IsNullOrWhiteSpace(storeName))
+                        storeName = "TestContext";
                     testOptions.UseStore(storeName);
 
                     // Register the test-specific options
@@ -234,5 +235,15 @@ public class AdminTestCollection : ICollectionFixture<IntegrationTestFixture>
 /// </summary>
 [CollectionDefinition("Diagnostic Tests")]
 public class DiagnosticTestCollection : ICollectionFixture<IntegrationTestFixture>
+{
+}
+
+/// <summary>
+/// Collection definition for store admin tests that delete the entire store.
+/// Each test in this collection receives its own isolated fixture instance so
+/// store deletions do not affect any other collection's data.
+/// </summary>
+[CollectionDefinition("Store Admin Tests")]
+public class StoreAdminTestCollection : ICollectionFixture<IntegrationTestFixture>
 {
 }

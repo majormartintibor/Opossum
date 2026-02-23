@@ -44,7 +44,62 @@ public sealed class OpossumOptions
     public bool FlushEventsImmediately { get; set; } = true;
 
     /// <summary>
-    /// Sets the name of this event store. The name is used as a subdirectory under
+    /// When true, committed event files are marked read-only at the OS level immediately
+    /// after being written to disk. This prevents accidental modification or deletion of
+    /// immutable event records.
+    ///
+    /// What this provides:
+    /// - Committed event files cannot be opened for writing by any process without
+    ///   explicitly removing the read-only attribute first.
+    /// - On Windows, File Explorer warns before deleting a read-only file.
+    /// - Satisfies the common compliance requirement that audit records "cannot be altered"
+    ///   (ISO 9001:2015 clause 7.5.3.2, EU GMP Annex 11 section 4.8, HACCP documentation).
+    ///
+    /// What this does NOT provide:
+    /// - Protection against a Windows Administrator or root user who explicitly removes
+    ///   the read-only attribute and then modifies or deletes the file.
+    /// - On Linux, deletion is controlled by the parent directory's write permission,
+    ///   not the file's own permission, so read-only does not prevent deletion by the
+    ///   directory owner.
+    ///
+    /// The additive maintenance operation (<see cref="IEventStoreMaintenance.AddTagsAsync"/>)
+    /// automatically unprotects a file before rewriting it and re-applies protection
+    /// afterward. Write protection is transparent to all Opossum operations.
+    ///
+    /// Default: false. Enable in production environments where event files must not be
+    /// accidentally modified or deleted by operators browsing the store directory.
+    /// </summary>
+    public bool WriteProtectEventFiles { get; set; } = false;
+
+    /// <summary>
+    /// When true, projection files are marked read-only at the OS level immediately
+    /// after being written to disk. This prevents accidental modification or deletion
+    /// by humans or other processes while Opossum transparently manages unprotecting
+    /// files before updates or rebuilds and re-applying protection afterwards.
+    ///
+    /// What this provides:
+    /// - Projection files cannot be opened for writing by any process without
+    ///   explicitly removing the read-only attribute first.
+    /// - On Windows, File Explorer warns before deleting a read-only file.
+    ///
+    /// What this does NOT provide:
+    /// - Protection against a Windows Administrator or root user who explicitly removes
+    ///   the read-only attribute and then modifies or deletes the file.
+    /// - On Linux, deletion is controlled by the parent directory's write permission,
+    ///   not the file's own permission, so read-only does not prevent deletion by the
+    ///   directory owner.
+    ///
+    /// Unlike event files, projection files are derived state and can always be rebuilt
+    /// from events. Write protection here is purely about preventing accidental edits
+    /// by humans browsing the store directory.
+    ///
+    /// Default: false. Enable in production environments where projection files must not
+    /// be accidentally modified or deleted by operators browsing the store directory.
+    /// </summary>
+    public bool WriteProtectProjectionFiles { get; set; } = false;
+
+    /// <summary>
+    /// Sets the name of this event store.
     /// <see cref="RootPath"/> and must be a valid directory name.
     /// </summary>
     /// <param name="name">

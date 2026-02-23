@@ -12,12 +12,14 @@ internal sealed class EventFileManager
 {
     private readonly JsonEventSerializer _serializer;
     private readonly bool _flushImmediately;
+    private readonly bool _writeProtect;
     private const int PositionPadding = 10; // Supports up to 10 billion events
 
-    public EventFileManager(bool flushImmediately = true)
+    public EventFileManager(bool flushImmediately = true, bool writeProtect = true)
     {
         _serializer = new JsonEventSerializer();
         _flushImmediately = flushImmediately;
+        _writeProtect = writeProtect;
     }
 
     /// <summary>
@@ -60,8 +62,25 @@ internal sealed class EventFileManager
                 await FlushFileToDiskAsync(tempPath).ConfigureAwait(false);
             }
 
+            // If write protection is enabled and the destination already exists (maintenance
+            // rewrite via AddTagsAsync), remove the read-only attribute before the overwrite.
+            // File.Move with overwrite:true throws UnauthorizedAccessException on Windows
+            // when the destination file is read-only.
+            if (_writeProtect && File.Exists(filePath))
+            {
+                var existing = File.GetAttributes(filePath);
+                if ((existing & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(filePath, existing & ~FileAttributes.ReadOnly);
+            }
+
             // Atomic move (now safe - data is on disk if flushing is enabled)
             File.Move(tempPath, filePath, overwrite: true);
+
+            // Mark committed event file as read-only so it cannot be accidentally
+            // modified or deleted. All Opossum read operations use FileAccess.Read
+            // and are unaffected by this attribute.
+            if (_writeProtect)
+                File.SetAttributes(filePath, FileAttributes.ReadOnly);
         }
         catch
         {

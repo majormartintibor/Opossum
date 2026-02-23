@@ -10,7 +10,7 @@ internal sealed class JsonEventSerializer
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        WriteIndented = false, // Minified for performance (40% smaller files, faster I/O)
+        WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         Converters =

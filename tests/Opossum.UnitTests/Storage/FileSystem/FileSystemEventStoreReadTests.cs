@@ -1,6 +1,7 @@
 using Opossum.Core;
 using Opossum.Configuration;
 using Opossum.Storage.FileSystem;
+using Opossum.UnitTests.Helpers;
 
 namespace Opossum.UnitTests.Storage.FileSystem;
 
@@ -24,10 +25,7 @@ public class FileSystemEventStoreReadTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRootPath))
-        {
-            Directory.Delete(_tempRootPath, recursive: true);
-        }
+        TestDirectoryHelper.ForceDelete(_tempRootPath);
     }
 
     // ========================================================================

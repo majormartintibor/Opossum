@@ -1,5 +1,6 @@
 using Opossum.Core;
 using Opossum.Storage.FileSystem;
+using Opossum.UnitTests.Helpers;
 
 namespace Opossum.UnitTests.Storage.FileSystem;
 
@@ -10,17 +11,13 @@ public class EventFileManagerTests : IDisposable
 
     public EventFileManagerTests()
     {
-        _manager = new EventFileManager(flushImmediately: false); // Faster tests
+        _manager = new EventFileManager(flushImmediately: false, writeProtect: false); // No protection in unit tests — cleanup requires deletable files
         _tempEventsPath = Path.Combine(Path.GetTempPath(), $"EventFileManagerTests_{Guid.NewGuid():N}");
     }
 
     public void Dispose()
     {
-        // Cleanup temp directory
-        if (Directory.Exists(_tempEventsPath))
-        {
-            Directory.Delete(_tempEventsPath, recursive: true);
-        }
+        TestDirectoryHelper.ForceDelete(_tempEventsPath);
     }
 
     // ========================================================================
@@ -467,9 +464,140 @@ public class EventFileManagerTests : IDisposable
         Assert.NotNull(defaultManager);
     }
 
+    [Fact]
+    public void Constructor_DefaultsToWriteProtectTrue()
+    {
+        var manager = new EventFileManager();
+        Assert.NotNull(manager);
+    }
+
+    // ========================================================================
+    // Write Protection Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task WriteEventAsync_SetsReadOnlyAttribute_WhenWriteProtectEnabled()
+    {
+        // Arrange
+        var protectedPath = Path.Combine(Path.GetTempPath(), $"WriteProtect_{Guid.NewGuid():N}");
+        var manager = new EventFileManager(flushImmediately: false, writeProtect: true);
+        var evt = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
+
+        try
+        {
+            // Act
+            await manager.WriteEventAsync(protectedPath, evt);
+
+            // Assert
+            var filePath = manager.GetEventFilePath(protectedPath, 1);
+            var attrs = File.GetAttributes(filePath);
+            Assert.True((attrs & FileAttributes.ReadOnly) != 0);
+        }
+        finally
+        {
+            RemoveReadOnlyAndDelete(protectedPath);
+        }
+    }
+
+    [Fact]
+    public async Task WriteEventAsync_DoesNotSetReadOnlyAttribute_WhenWriteProtectDisabled()
+    {
+        // Arrange
+        var unprotectedPath = Path.Combine(Path.GetTempPath(), $"NoWriteProtect_{Guid.NewGuid():N}");
+        var manager = new EventFileManager(flushImmediately: false, writeProtect: false);
+        var evt = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
+
+        try
+        {
+            // Act
+            await manager.WriteEventAsync(unprotectedPath, evt);
+
+            // Assert
+            var filePath = manager.GetEventFilePath(unprotectedPath, 1);
+            var attrs = File.GetAttributes(filePath);
+            Assert.True((attrs & FileAttributes.ReadOnly) == 0);
+        }
+        finally
+        {
+            if (Directory.Exists(unprotectedPath))
+                Directory.Delete(unprotectedPath, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task WriteEventAsync_CanOverwriteReadOnlyFile_WhenWriteProtectEnabled()
+    {
+        // Arrange — simulates AddTagsAsync rewriting an existing protected event
+        var protectedPath = Path.Combine(Path.GetTempPath(), $"WriteProtectOverwrite_{Guid.NewGuid():N}");
+        var manager = new EventFileManager(flushImmediately: false, writeProtect: true);
+        var original = CreateTestEvent(1, "OriginalEvent", new TestDomainEvent { Data = "original" });
+        var patched = CreateTestEvent(1, "PatchedEvent", new TestDomainEvent { Data = "patched" });
+
+        try
+        {
+            await manager.WriteEventAsync(protectedPath, original);
+
+            // File is now ReadOnly — verify before overwrite
+            var filePath = manager.GetEventFilePath(protectedPath, 1);
+            Assert.True((File.GetAttributes(filePath) & FileAttributes.ReadOnly) != 0);
+
+            // Act — overwrite (maintenance scenario, no exception expected)
+            await manager.WriteEventAsync(protectedPath, patched);
+
+            // Assert — file was overwritten and is ReadOnly again
+            Assert.True((File.GetAttributes(filePath) & FileAttributes.ReadOnly) != 0);
+            var read = await manager.ReadEventAsync(protectedPath, 1);
+            Assert.Equal("PatchedEvent", read.Event.EventType);
+        }
+        finally
+        {
+            RemoveReadOnlyAndDelete(protectedPath);
+        }
+    }
+
+    [Fact]
+    public async Task ReadEventAsync_SucceedsOnReadOnlyFile()
+    {
+        // Arrange
+        var protectedPath = Path.Combine(Path.GetTempPath(), $"ReadOnlyRead_{Guid.NewGuid():N}");
+        var manager = new EventFileManager(flushImmediately: false, writeProtect: true);
+        var evt = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "readable" });
+
+        try
+        {
+            await manager.WriteEventAsync(protectedPath, evt);
+
+            // Act — read the file (should work despite ReadOnly attribute)
+            var read = await manager.ReadEventAsync(protectedPath, 1);
+
+            // Assert
+            Assert.Equal(1, read.Position);
+            Assert.Equal("TestEvent", read.Event.EventType);
+        }
+        finally
+        {
+            RemoveReadOnlyAndDelete(protectedPath);
+        }
+    }
+
     // ========================================================================
     // Helper Methods
     // ========================================================================
+
+    private static void RemoveReadOnlyAndDelete(string directoryPath)
+    {
+        if (!Directory.Exists(directoryPath))
+            return;
+
+        foreach (var file in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+        {
+            var attrs = File.GetAttributes(file);
+            if ((attrs & FileAttributes.ReadOnly) != 0)
+                File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+        }
+
+        Directory.Delete(directoryPath, recursive: true);
+    }
 
     private static SequencedEvent CreateTestEvent(long position, string eventType, IEvent domainEvent)
     {

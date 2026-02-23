@@ -1,5 +1,6 @@
 using Opossum.Configuration;
 using Opossum.Core;
+using Opossum.IntegrationTests.Helpers;
 using Opossum.Projections;
 
 namespace Opossum.IntegrationTests.Projections;
@@ -21,10 +22,7 @@ public class ProjectionTagQueryTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempPath))
-        {
-            Directory.Delete(_tempPath, recursive: true);
-        }
+        TestDirectoryHelper.ForceDelete(_tempPath);
     }
 
     [Fact]

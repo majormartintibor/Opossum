@@ -25,6 +25,9 @@
   </Folder>
   <Folder Name="/docs/analysis/">
     <File Path="docs/analysis/dcb-compliance-analysis.md" />
+    <File Path="docs/analysis/dotnet-eventsourcing-comparison.md" />
+    <File Path="docs/analysis/throughput-research-and-improvement-paths.md" />
+    <File Path="docs/analysis/use-case-fit-post-adr005.md" />
   </Folder>
   <Folder Name="/docs/architecture/" />
   <Folder Name="/docs/benchmarking/" />
@@ -70,6 +73,7 @@
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
     <File Path="docs/decisions/003-iasyncenumerable-not-implemented.md" />
     <File Path="docs/decisions/004-single-context-by-design.md" />
+    <File Path="docs/decisions/005-cross-process-append-safety.md" />
     <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
   <Folder Name="/docs/features/">

@@ -615,24 +615,14 @@ internal sealed partial class ProjectionManager : IProjectionManager
         public override async Task ClearAsync(CancellationToken cancellationToken)
         {
             // Delete all projection files and indices
-            // Cast to FileSystemProjectionStore to access DeleteAllIndicesAsync method
+            // Cast to FileSystemProjectionStore to access internal clearing methods
             if (_store is FileSystemProjectionStore<TState> fsStore)
             {
                 // Delete indices first
                 await fsStore.DeleteAllIndicesAsync().ConfigureAwait(false);
 
-                // Then delete projection files
-                var projectionPath = fsStore.GetType().GetField("_projectionPath",
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
-                    ?.GetValue(fsStore) as string ?? "";
-
-                if (Directory.Exists(projectionPath))
-                {
-                    foreach (var file in Directory.GetFiles(projectionPath, "*.json"))
-                    {
-                        File.Delete(file);
-                    }
-                }
+                // Delete projection files, handling read-only protection transparently
+                fsStore.ClearProjectionFiles();
             }
         }
 

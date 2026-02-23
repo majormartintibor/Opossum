@@ -1,5 +1,6 @@
 using Opossum.Core;
 using Opossum.DependencyInjection;
+using Opossum.IntegrationTests.Helpers;
 using Opossum.Projections;
 
 namespace Opossum.IntegrationTests.Projections;
@@ -235,11 +236,7 @@ public class ParallelRebuildTests : IDisposable
     public void Dispose()
     {
         _serviceProvider.Dispose();
-
-        if (Directory.Exists(_testStoragePath))
-        {
-            Directory.Delete(_testStoragePath, recursive: true);
-        }
+        TestDirectoryHelper.ForceDelete(_testStoragePath);
     }
 
     // Test projection definitions
