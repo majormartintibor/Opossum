@@ -45,6 +45,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Metadata mutation side-effect in `AppendAsync` — the store no longer mutates the caller's
   `NewEvent` instances while assigning derived metadata fields (`Timestamp`).
 
+### Internal
+- Extracted duplicated file I/O plumbing from `TagIndex` and `EventTypeIndex` into a shared
+  `PositionIndexFile` static utility — atomic writes, retry logic, and `IndexData` now live
+  in one place, eliminating the risk of durability fixes being applied to one index but not
+  the other. No public API changes; `ProjectionTagIndex` is unaffected.
+
 ### Removed
 - `Contexts` property and `AddContext()` method from `OpossumOptions` — replaced by
   `StoreName` property and `UseStore()` method (see Changed above).
