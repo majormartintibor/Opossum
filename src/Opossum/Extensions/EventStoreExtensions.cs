@@ -181,6 +181,7 @@ public static class EventStoreExtensions
     /// <param name="eventStore">The event store</param>
     /// <param name="event">The new event to append</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
@@ -199,6 +200,7 @@ public static class EventStoreExtensions
     /// </summary>
     /// <param name="eventStore">The event store</param>
     /// <param name="events">The new events to append</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
@@ -275,6 +277,7 @@ public static class EventStoreExtensions
     /// <param name="tags">Optional tags to attach to the event</param>
     /// <param name="metadata">Optional metadata (timestamp and correlation ID auto-generated if not provided)</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendEventAsync(
         this IEventStore eventStore,
@@ -313,6 +316,7 @@ public static class EventStoreExtensions
     /// <param name="tags">Optional tags to attach to all events</param>
     /// <param name="metadata">Optional metadata (timestamp and correlation ID auto-generated if not provided)</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendEventsAsync(
         this IEventStore eventStore,

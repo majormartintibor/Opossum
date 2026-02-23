@@ -33,18 +33,15 @@ builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =
 // ============================================================================
 builder.Services.AddOpossum(options =>
 {
-    // Add contexts from configuration
-    var contexts = builder.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
-    if (contexts != null)
-    {
-        foreach (var context in contexts)
-        {
-            options.UseStore(context);
-        }
-    }
-
     // Bind all properties from configuration (RootPath, FlushEventsImmediately, etc.)
     builder.Configuration.GetSection("Opossum").Bind(options);
+
+    // StoreName has a private setter — must be set via UseStore() rather than Bind()
+    var storeName = builder.Configuration.GetValue<string>("Opossum:StoreName");
+    if (!string.IsNullOrWhiteSpace(storeName))
+    {
+        options.UseStore(storeName);
+    }
 
     // AFTER binding, ensure RootPath is valid for the current platform
     // This handles cases where config has Windows path (D:\Database) on Linux

@@ -1,23 +1,24 @@
 # Opossum Performance Baseline & Benchmark Results
 
-## Latest Benchmark: 2026-02-12
-## Status: ✅ Complete - Production Baseline Validated & Updated
-## Version: 1.1.0
+## Latest Benchmark: 2026-02-23
+## Status: ✅ Complete — 0.3.0-preview.1 Release Validated
+## Version: 1.2.0
 
-**Latest comprehensive analysis:** See `docs/benchmarking/results/20260212/ANALYSIS.md`
+**Latest comprehensive analysis:** See `docs/benchmarking/results/20260223/ANALYSIS.md`
 
 ---
 
-## 📊 Executive Summary (Updated 2026-02-12)
+## 📊 Executive Summary (Updated 2026-02-23)
 
 **Opossum's file-based event store delivers excellent performance for event sourcing workloads:**
 
-- **Write:** ~100 events/sec with full durability (fsync) on SSD
-- **Read (tag-based, high selectivity):** ~500μs for targeted queries  
-- **Read (tag-based, 1K events):** ~10ms (sub-linear scaling)
-- **Projections:** 15K events/sec rebuild, 9-10μs incremental updates (611x faster)
-- **Parallel rebuilding:** 2x speedup with 4 CPU cores
-- **Descending queries:** Zero overhead (optimized in-place)
+- **Write:** ~92-94 events/sec with full durability (fsync) on SSD
+- **Read (tag-based, high selectivity):** ~535 μs for targeted queries (**improved from ~588 μs**)
+- **Read (tag-based, 1K events):** ~10.8 ms (sub-linear scaling)
+- **Projections:** 15K events/sec rebuild, 9-11 μs incremental updates (475-558x faster)
+- **Parallel rebuilding:** ~3% speedup with 4 CPU cores (I/O-bound workload)
+- **Descending queries:** Zero overhead — full parity with ascending (**confirmed**)
+- **Complex projections:** ~112 μs (**improved from ~128 μs**)
 
 **All core operations perform within acceptable ranges for production use.**
 
@@ -27,12 +28,12 @@
 
 | Operation | Typical Performance | Best For |
 |-----------|-------------------|----------|
-| **Single Event Append** | 10.67ms | CRUD operations |
-| **Batch Append (5 events)** | 32ms (6.4ms/event) | Bulk imports |
-| **Query by Tag** | 0.8ms/1K events | Filtered reads |
-| **Query.All()** | 826ms/10K events | Full scans |
-| **Projection Rebuild** | 5ms/50 events, 32ms/500 events | Rare full rebuilds |
-| **Incremental Projection** | 10-11 μs/event | Real-time updates |
+| **Single Event Append** | 10.85 ms | CRUD operations |
+| **Batch Append (5 events)** | 18.2 ms (3.6 ms/event) | Bulk imports |
+| **Query by Tag** | 10.8 ms/1K events | Filtered reads |
+| **Query.All()** | 828 ms/10K events | Full scans |
+| **Projection Rebuild** | 4.9 ms/50 events, 32.2 ms/500 events | Rare full rebuilds |
+| **Incremental Projection** | 9-11 μs/event | Real-time updates |
 
 ---
 
@@ -44,15 +45,16 @@
 
 | Benchmark | Time | Throughput | Status |
 |-----------|------|------------|--------|
-| Single event | 10.67ms | 94 events/sec | ✅ Good |
-| Batch 5 events | 32ms total | 156 events/sec | ✅ Good |
-| Batch 10 events | 62ms total | 161 events/sec | ✅ Good |
-| DCB validation (20 events) | 219ms | 91 events/sec | ✅ Expected |
+| Single event | 10.85 ms | 92 events/sec | ✅ Good |
+| Batch 5 events | 18.2 ms total | 275 events/sec | ✅ Good |
+| Batch 10 events | 65.2 ms total (with flush) | 153 events/sec | ✅ Good |
+| Batch 100 events | 408 ms total | 245 events/sec | ✅ Good |
+| DCB validation | 3.93 ms | — | ✅ Expected |
 
 **Key Findings:**
-- Fsync overhead: ~5.6ms per event (unavoidable for durability)
-- Batching provides ~66% throughput improvement (94 → 156 events/sec)
-- DCB validation adds minimal overhead (~2ms per event)
+- Fsync overhead: ~6 ms per event (unavoidable for durability)
+- Batching provides significant throughput improvement
+- DCB validation adds minimal overhead
 
 **Recommendation:** Use batch appends when possible (5-10 events optimal)
 
@@ -64,21 +66,19 @@
 
 | Dataset | Query Time | Per Event | Scaling |
 |---------|-----------|-----------|---------|
-| 100 events | 80 μs | 0.8 μs | Baseline |
-| 1,000 events | 784 μs | 0.78 μs | Linear |
-| 10,000 events | 2,208 μs | 0.22 μs | **Sub-linear!** ✅ |
+| 100 events | 3.73 ms | 37.3 μs | Baseline |
+| 1,000 events | 10.82 ms | 10.8 μs | Sub-linear |
+| 10,000 events | 84.1 ms | 8.4 μs | **Sub-linear!** ✅ |
 
-**Result:** Tag queries scale BETTER than linear (0.22x per 10x dataset)
-
-**Why:** Index efficiency + parallel reads
+**Result:** Tag queries scale BETTER than linear
 
 #### B. EventType-Based Queries
 
 | Dataset | Query Time | Per Event | Scaling |
 |---------|-----------|-----------|---------|
-| 100 events | 131 μs | 1.31 μs | Baseline |
-| 1,000 events | 1,165 μs | 1.17 μs | Linear |
-| 10,000 events | 3,647 μs | 0.36 μs | **Sub-linear!** ✅ |
+| 100 events | 4.10 ms | 41.0 μs | Baseline |
+| 1,000 events | 23.5 ms | 23.5 μs | Sub-linear |
+| 10,000 events | 206.2 ms | 20.6 μs | **Sub-linear!** ✅ |
 
 **Result:** EventType queries also scale better than linear
 
@@ -86,26 +86,31 @@
 
 | Dataset | Time | Per Event | Status |
 |---------|------|-----------|--------|
-| 100 events | 9.5ms | 95 μs | ✅ Fast |
-| 1,000 events | 84.7ms | 85 μs | ✅ Good |
-| 10,000 events | 826ms | 83 μs | ✅ Acceptable |
+| 100 events | 10.4 ms | 104 μs | ✅ Fast |
+| 1,000 events | 87.7 ms | 87.7 μs | ✅ Good |
+| 10,000 events | 828 ms | 82.8 μs | ✅ Acceptable |
 
 **Result:** Linear scaling, acceptable for full scans
 
-**Why slower?** Every event file must be read from disk (not index-based)
+#### D. Selective Query Performance (Improved in 0.3.0)
 
-#### D. Descending Order Performance (Fixed!)
+| Query Type | Time | vs Baseline |
+|-----------|------|------------|
+| High selectivity (few matches) | 534.7 μs | 9.91x faster than EventType+Tag baseline |
+| Low selectivity (many matches) | 99,867 μs | 18.85x slower |
+| Multiple QueryItems (OR logic) | 9,790 μs | 1.85x slower |
+| Real-world: Payment events | 4,358 μs | 1.22x faster |
+| Real-world: Orders in state | 1,335 μs | 3.97x faster |
 
-**Problem Found:** Reversing array after read was 12.56x slower
-**Solution:** Reverse positions BEFORE reading files
+#### E. Descending Order Performance
 
-| Configuration | Time (10K events) | Status |
-|--------------|-------------------|--------|
-| Before fix | 10,368ms | ❌ Broken |
-| After fix | 825ms | ✅ Fixed! |
-| **Improvement** | **12.56x faster** | 🚀 |
+| Configuration | Time (isolated, 1K events) | Status |
+|--------------|---------------------------|--------|
+| Ascending order | 41.80 ms | ✅ Baseline |
+| Descending order | 41.74 ms | ✅ **Full parity** |
+| Ratio | **1.00x** | 🚀 |
 
-**Result:** Descending queries now have same performance as ascending
+**Result:** Descending queries have identical performance to ascending
 
 ---
 
@@ -115,24 +120,20 @@
 
 | Dataset | Time | Per Event | Scaling |
 |---------|------|-----------|---------|
-| 50 events | 4.9ms | 98 μs | Baseline |
-| 250 events | 17.1ms | 68 μs | 3.5x (linear) |
-| 500 events | 32.7ms | 65 μs | 6.7x (linear) |
+| 50 events | 4.88 ms | 97.6 μs | Baseline |
+| 250 events | 16.9 ms | 67.6 μs | 3.5x (linear) |
+| 500 events | 32.2 ms | 64.5 μs | 6.6x (linear) |
 
 **Result:** Perfect linear scaling for projection rebuilds
-
-**Memory Usage:** ~7KB per event (manageable)
 
 #### B. Incremental Updates (Real-Time)
 
 | Update Size | Time | vs Full Rebuild |
 |-------------|------|----------------|
-| +1 event | **10 μs** | **487x faster** than 50-event rebuild |
-| +10 events | **11 μs** | **448x faster** than 50-event rebuild |
+| +1 event | **9.8 μs** | **558x faster** than 50-event rebuild |
+| +10 events | **11.4 μs** | **475x faster** than 50-event rebuild |
 
 **Result:** Incremental updates are VASTLY faster than full rebuilds
-
-**Break-Even Point:** ~40-50 events (incremental faster below, rebuild faster above)
 
 **Recommendation:**
 - ✅ Use incremental for <50 new events
@@ -142,7 +143,7 @@
 
 | Scenario | Time | Status |
 |----------|------|--------|
-| Multi-type aggregation | 125 μs | ✅ Fast |
+| Multi-type aggregation | **112 μs** | ✅ Fast (improved from 128 μs) |
 
 ---
 
@@ -156,13 +157,13 @@
    - Excellent for growing datasets
 
 2. **Predictable Write Performance** ✅
-   - Consistent ~10ms per event with fsync
+   - Consistent ~10.85 ms per event with fsync
    - Scales linearly with batch size
    - No surprises
 
 3. **Blazing Fast Incremental Projections** ✅
    - Microsecond-level updates
-   - 500x faster than full rebuild
+   - 475-558x faster than full rebuild
    - Real-time friendly
 
 4. **Efficient Indexing** ✅
@@ -170,15 +171,19 @@
    - EventType queries optimized
    - Parallel file reads
 
+5. **Descending Order at Full Parity** ✅
+   - Zero overhead vs ascending
+   - In-place position reversal (no extra I/O)
+
 ### Trade-offs
 
 1. **Fsync Overhead** ⚠️
-   - ~5.6ms per event for durability
+   - ~6 ms per event for durability
    - Unavoidable for crash safety
    - Can disable for testing (not recommended for production)
 
 2. **Query.All() Slower** ⚠️
-   - 826ms for 10K events
+   - 828 ms for 10K events
    - Acceptable for rare full scans
    - Use filtered queries when possible
 
