@@ -28,7 +28,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
         var enrollmentQuery = Query.FromItems(
             new QueryItem
             {
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }],
+                Tags = [new Tag("courseId", courseId.ToString())],
                 EventTypes = [
                     nameof(StudentEnrolledToCourseEvent),
                     nameof(StudentUnenrolledFromCourseEvent)
@@ -36,7 +36,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
             },
             new QueryItem
             {
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }],
+                Tags = [new Tag("studentId", studentId.ToString())],
                 EventTypes = [
                     nameof(StudentEnrolledToCourseEvent),
                     nameof(StudentUnenrolledFromCourseEvent)
@@ -69,7 +69,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
             t => t.Key == "studentId" && t.Value == studentId.ToString());
 
         // Assert - Aggregate can be built from course events
-        var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
+        var courseQuery = Query.FromTags(new Tag("courseId", courseId.ToString()));
         var courseEvents = await _eventStore.ReadAsync(courseQuery);
 
         var aggregate = BuildAggregate(courseEvents, courseId, studentId);
@@ -112,7 +112,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
         Assert.Equal("Course is at maximum capacity", result.ErrorMessage);
 
         // Verify only 2 students are enrolled
-        var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
+        var courseQuery = Query.FromTags(new Tag("courseId", courseId.ToString()));
         var courseEvents = await _eventStore.ReadAsync(courseQuery);
         var aggregate = BuildAggregate(courseEvents, courseId, student3Id);
 
@@ -165,7 +165,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
         var enrollmentQuery = Query.FromItems(
             new QueryItem
             {
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }],
+                Tags = [new Tag("studentId", studentId.ToString())],
                 EventTypes = [
                     nameof(StudentEnrolledToCourseEvent),
                     nameof(StudentUnenrolledFromCourseEvent)
@@ -200,7 +200,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
             new EnrollStudentToCourseCommand(courseId, student3Id));
 
         // Assert - Course should have 3 students enrolled
-        var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
+        var courseQuery = Query.FromTags(new Tag("courseId", courseId.ToString()));
         var courseEvents = await _eventStore.ReadAsync(courseQuery);
 
         // Build aggregate for student1's perspective

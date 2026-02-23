@@ -24,14 +24,14 @@ public class DescendingOrderIsolatedBenchmark
         // Create and populate store ONCE (not per iteration)
         var storePath = _tempHelper.CreateSubDirectory("TestStore");
         var options = new OpossumOptions { RootPath = storePath, FlushEventsImmediately = false };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = storePath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();

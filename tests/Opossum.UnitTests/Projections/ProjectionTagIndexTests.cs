@@ -27,7 +27,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task AddProjectionAsync_CreatesIndexFile()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Active" };
+        var tag = new Tag("Status", "Active");
         var projectionKey = "proj-1";
 
         // Act
@@ -43,7 +43,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task AddProjectionAsync_AddsKeyToExistingIndex()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Active" };
+        var tag = new Tag("Status", "Active");
 
         // Act
         await _index.AddProjectionAsync(_tempPath, tag, "proj-1");
@@ -62,7 +62,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task AddProjectionAsync_PreventsDuplicates()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Active" };
+        var tag = new Tag("Status", "Active");
 
         // Act - Add same key twice
         await _index.AddProjectionAsync(_tempPath, tag, "proj-1");
@@ -78,7 +78,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task RemoveProjectionAsync_RemovesKeyFromIndex()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Active" };
+        var tag = new Tag("Status", "Active");
         await _index.AddProjectionAsync(_tempPath, tag, "proj-1");
         await _index.AddProjectionAsync(_tempPath, tag, "proj-2");
 
@@ -95,7 +95,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task RemoveProjectionAsync_DeletesIndexFileWhenEmpty()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Active" };
+        var tag = new Tag("Status", "Active");
         await _index.AddProjectionAsync(_tempPath, tag, "proj-1");
 
         // Act
@@ -111,7 +111,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task GetProjectionKeysByTagAsync_ReturnsEmptyForNonExistentTag()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Inactive" };
+        var tag = new Tag("Status", "Inactive");
 
         // Act
         var keys = await _index.GetProjectionKeysByTagAsync(_tempPath, tag);
@@ -124,8 +124,8 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task GetProjectionKeysByTagsAsync_ReturnsIntersection()
     {
         // Arrange
-        var tag1 = new Tag { Key = "Status", Value = "Active" };
-        var tag2 = new Tag { Key = "Tier", Value = "Premium" };
+        var tag1 = new Tag("Status", "Active");
+        var tag2 = new Tag("Tier", "Premium");
 
         await _index.AddProjectionAsync(_tempPath, tag1, "proj-1");
         await _index.AddProjectionAsync(_tempPath, tag1, "proj-2");
@@ -147,8 +147,8 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task GetProjectionKeysByTagsAsync_ReturnsEmptyIfAnyTagHasNoMatches()
     {
         // Arrange
-        var tag1 = new Tag { Key = "Status", Value = "Active" };
-        var tag2 = new Tag { Key = "NonExistent", Value = "Value" };
+        var tag1 = new Tag("Status", "Active");
+        var tag2 = new Tag("NonExistent", "Value");
 
         await _index.AddProjectionAsync(_tempPath, tag1, "proj-1");
 
@@ -166,13 +166,13 @@ public class ProjectionTagIndexTests : IDisposable
         var projKey = "proj-1";
         var oldTags = new[]
         {
-            new Tag { Key = "Status", Value = "Pending" },
-            new Tag { Key = "Tier", Value = "Basic" }
+            new Tag("Status", "Pending"),
+            new Tag("Tier", "Basic")
         };
         var newTags = new[]
         {
-            new Tag { Key = "Status", Value = "Active" },
-            new Tag { Key = "Tier", Value = "Premium" }
+            new Tag("Status", "Active"),
+            new Tag("Tier", "Premium")
         };
 
         foreach (var tag in oldTags)
@@ -205,13 +205,13 @@ public class ProjectionTagIndexTests : IDisposable
         var projKey = "proj-1";
         var oldTags = new[]
         {
-            new Tag { Key = "Status", Value = "Active" },
-            new Tag { Key = "Tier", Value = "Basic" }
+            new Tag("Status", "Active"),
+            new Tag("Tier", "Basic")
         };
         var newTags = new[]
         {
-            new Tag { Key = "Status", Value = "Active" }, // Unchanged
-            new Tag { Key = "Tier", Value = "Premium" }   // Changed
+            new Tag("Status", "Active"), // Unchanged
+            new Tag("Tier", "Premium")   // Changed
         };
 
         foreach (var tag in oldTags)
@@ -254,7 +254,7 @@ public class ProjectionTagIndexTests : IDisposable
     public async Task ConcurrentAddition_SameTag_NoLostUpdates()
     {
         // Arrange
-        var tag = new Tag { Key = "Status", Value = "Active" };
+        var tag = new Tag("Status", "Active");
         var tasks = new List<Task>();
 
         // Act - Add 50 projections concurrently

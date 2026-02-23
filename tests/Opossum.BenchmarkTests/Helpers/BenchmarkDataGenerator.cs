@@ -61,11 +61,7 @@ public static class BenchmarkDataGenerator
 
         for (int i = 0; i < count && i < tagKeys.Length; i++)
         {
-            tags.Add(new Tag
-            {
-                Key = tagKeys[i],
-                Value = tagValues[_random.Next(tagValues.Length)]
-            });
+            tags.Add(new Tag(tagKeys[i], tagValues[_random.Next(tagValues.Length)]));
         }
 
         return tags;
@@ -92,7 +88,7 @@ public static class BenchmarkDataGenerator
     /// </summary>
     public static Query GenerateTagQuery(string key, string value)
     {
-        return Query.FromTags([new Tag { Key = key, Value = value }]);
+        return Query.FromTags([new Tag(key, value)]);
     }
 
     /// <summary>

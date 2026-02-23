@@ -159,6 +159,22 @@ internal class IndexManager
     }
 
     /// <summary>
+    /// Adds the specified tags to the index for an already-persisted event position.
+    /// Used by maintenance operations to retroactively index newly-added tags.
+    /// </summary>
+    public async Task AddTagsToIndexAsync(string contextPath, IReadOnlyList<Tag> tags, long position)
+    {
+        ArgumentNullException.ThrowIfNull(contextPath);
+        ArgumentNullException.ThrowIfNull(tags);
+
+        var indexPath = GetIndexPath(contextPath);
+        foreach (var tag in tags)
+        {
+            await _tagIndex.AddPositionAsync(indexPath, tag, position).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
     /// Gets the index directory path for a context.
     /// </summary>
     private static string GetIndexPath(string contextPath)

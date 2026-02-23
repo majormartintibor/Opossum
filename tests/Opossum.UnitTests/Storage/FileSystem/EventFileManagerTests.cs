@@ -183,7 +183,7 @@ public class EventFileManagerTests : IDisposable
     {
         // Arrange
         var original = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test data" });
-        original.Event.Tags.Add(new Tag { Key = "key1", Value = "value1" });
+        original = original with { Event = original.Event with { Tags = [new Tag("key1", "value1")] } };
         await _manager.WriteEventAsync(_tempEventsPath, original);
 
         // Act

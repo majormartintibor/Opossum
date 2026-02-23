@@ -49,7 +49,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         _appendLock.Dispose();
     }
 
-    public async Task AppendAsync(NewEvent[] events, AppendCondition? condition)
+    public async Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)
     {
         // 1. Validation
         ArgumentNullException.ThrowIfNull(events);
@@ -73,24 +73,21 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
             }
         }
 
-        // 2. Get context path (use first context, or throw if none configured)
-        // MVP LIMITATION: Only Contexts[0] is used. Multi-context support planned for future release.
-        // See docs/limitations/mvp-single-context.md for details.
-        if (_options.Contexts.Count == 0)
+        // 2. Get context path — Opossum is single-context by design (see ADR-004)
+        if (_options.StoreName is null)
         {
-            throw new InvalidOperationException("No contexts configured. Add at least one context using OpossumOptions.AddContext()");
+            throw new InvalidOperationException("No store configured. Call options.UseStore(\"YourStoreName\") in the configuration.");
         }
 
-        // TODO: Multi-context support - accept context parameter and route to correct storage
-        var contextPath = GetContextPath(_options.Contexts[0]);
+        var contextPath = GetContextPath(_options.StoreName);
 
         using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.Append);
         activity?.SetTag("db.operation", "append");
         activity?.SetTag("opossum.event_count", events.Length);
-        activity?.SetTag("opossum.context", _options.Contexts[0]);
+        activity?.SetTag("opossum.context", _options.StoreName);
 
         // 3. Use semaphore for atomic operation (one append at a time)
-        await _appendLock.WaitAsync().ConfigureAwait(false);
+        await _appendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             // 4. Check AppendCondition
@@ -105,11 +102,11 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
             var sequencedEvents = new SequencedEvent[events.Length];
             for (int i = 0; i < events.Length; i++)
             {
-                var metadata = events[i].Metadata;
-                if (metadata.Timestamp == default)
-                {
-                    metadata.Timestamp = DateTimeOffset.UtcNow;
-                }
+                // Metadata is immutable — create a new instance with Timestamp defaulted to UtcNow
+                // if the caller did not supply one, rather than mutating the caller's object.
+                var metadata = events[i].Metadata.Timestamp == default
+                    ? events[i].Metadata with { Timestamp = DateTimeOffset.UtcNow }
+                    : events[i].Metadata;
 
                 sequencedEvents[i] = new SequencedEvent
                 {
@@ -143,7 +140,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         }
         catch (Exception ex)
         {
-            LogAppendError(ex, _options.Contexts[0]);
+            LogAppendError(ex, _options.StoreName ?? string.Empty);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             throw;
         }
@@ -158,20 +155,17 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         // 1. Validation
         ArgumentNullException.ThrowIfNull(query);
 
-        // 2. Get context path (use first context, or throw if none configured)
-        // MVP LIMITATION: Only Contexts[0] is used. Multi-context support planned for future release.
-        // See docs/limitations/mvp-single-context.md for details.
-        if (_options.Contexts.Count == 0)
+        // 2. Get context path — Opossum is single-context by design (see ADR-004)
+        if (_options.StoreName is null)
         {
-            throw new InvalidOperationException("No contexts configured. Add at least one context using OpossumOptions.AddContext()");
+            throw new InvalidOperationException("No store configured. Call options.UseStore(\"YourStoreName\") in the configuration.");
         }
 
-        // TODO: Multi-context support - accept context parameter and route to correct storage
-        var contextPath = GetContextPath(_options.Contexts[0]);
+        var contextPath = GetContextPath(_options.StoreName);
 
         using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.Read);
         activity?.SetTag("db.operation", "read");
-        activity?.SetTag("opossum.context", _options.Contexts[0]);
+        activity?.SetTag("opossum.context", _options.StoreName);
 
         try
         {
@@ -199,7 +193,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         }
         catch (Exception ex)
         {
-            LogReadError(ex, _options.Contexts[0]);
+            LogReadError(ex, _options.StoreName);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             throw;
         }

@@ -139,7 +139,7 @@ static IServiceProvider ConfigureServices(IConfiguration configuration)
         {
             foreach (var context in contexts)
             {
-                options.AddContext(context);
+                options.UseStore(context);
             }
         }
 

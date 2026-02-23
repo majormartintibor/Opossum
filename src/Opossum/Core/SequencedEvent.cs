@@ -10,17 +10,17 @@ namespace Opossum.Core;
 /// It is used as the <see cref="AppendCondition.AfterSequencePosition"/> guard
 /// when building a <see cref="Opossum.DecisionModel.DecisionModel{TState}"/>.
 /// </remarks>
-public class SequencedEvent
+public record SequencedEvent
 {
     /// <summary>The domain event payload and its type metadata.</summary>
-    public required DomainEvent Event { get; set; }
+    public required DomainEvent Event { get; init; }
 
     /// <summary>
     /// The 1-based sequence position assigned by the event store.
     /// Positions are contiguous and globally ordered within a context.
     /// </summary>
-    public long Position { get; set; }
+    public long Position { get; init; }
 
     /// <summary>Metadata attached to the event (timestamp, correlation IDs, etc.).</summary>
-    public Metadata Metadata { get; set; } = new();
+    public Metadata Metadata { get; init; } = new();
 }

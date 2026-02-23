@@ -30,7 +30,7 @@ public class ParallelRebuildLockingTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("LockingTestContext");
+            options.UseStore("LockingTestContext");
         });
 
         services.AddProjections(options =>
@@ -249,7 +249,7 @@ public class ParallelRebuildLockingTests : IDisposable
         public string[] EventTypes => [nameof(LongRunningEvent)];
         public string KeySelector(SequencedEvent evt) => "key";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
             // Simulate slow processing
             Thread.Sleep(10);
@@ -263,7 +263,7 @@ public class ParallelRebuildLockingTests : IDisposable
         public string[] EventTypes => [nameof(SlowEvent1)];
         public string KeySelector(SequencedEvent evt) => "key1";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
             Thread.Sleep(5);
             return new TestState { Value = "slow1" };
@@ -276,7 +276,7 @@ public class ParallelRebuildLockingTests : IDisposable
         public string[] EventTypes => [nameof(SlowEvent2)];
         public string KeySelector(SequencedEvent evt) => "key2";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
             Thread.Sleep(5);
             return new TestState { Value = "slow2" };
@@ -289,7 +289,7 @@ public class ParallelRebuildLockingTests : IDisposable
         public string[] EventTypes => [nameof(SlowEvent3)];
         public string KeySelector(SequencedEvent evt) => "key3";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
             Thread.Sleep(5);
             return new TestState { Value = "slow3" };
@@ -302,7 +302,7 @@ public class ParallelRebuildLockingTests : IDisposable
         public string[] EventTypes => [nameof(SlowEvent4)];
         public string KeySelector(SequencedEvent evt) => "key4";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
             Thread.Sleep(5);
             return new TestState { Value = "slow4" };
@@ -315,7 +315,7 @@ public class ParallelRebuildLockingTests : IDisposable
         public string[] EventTypes => [nameof(FastEvent)];
         public string KeySelector(SequencedEvent evt) => "fast";
 
-        public TestState? Apply(TestState? current, IEvent @event)
+        public TestState? Apply(TestState? current, SequencedEvent @event)
         {
             return new TestState { Value = "fast" };
         }

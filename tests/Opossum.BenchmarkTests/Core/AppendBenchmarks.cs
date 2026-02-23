@@ -39,7 +39,7 @@ public class AppendBenchmarks
             RootPath = iterationPath,
             FlushEventsImmediately = false // Will be overridden by specific benchmarks
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         // Use DI to create event store (same as production usage)
         var services = new ServiceCollection();
@@ -47,7 +47,7 @@ public class AppendBenchmarks
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = options.FlushEventsImmediately;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();
@@ -82,14 +82,14 @@ public class AppendBenchmarks
             RootPath = _tempHelper.CreateSubDirectory($"Flush_{Guid.NewGuid():N}"),
             FlushEventsImmediately = true
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = true;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -121,14 +121,14 @@ public class AppendBenchmarks
             RootPath = _tempHelper.CreateSubDirectory($"FlushBatch_{Guid.NewGuid():N}"),
             FlushEventsImmediately = true
         };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = options.RootPath;
             opt.FlushEventsImmediately = true;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -207,10 +207,10 @@ public class AppendBenchmarks
         var studentId = Guid.NewGuid();
 
         var evt = BenchmarkDataGenerator.GenerateEvents(1, tagCount: 0)[0];
-        evt.Event.Tags.Add(new Tag { Key = "studentEmail", Value = email });
+        evt.Event = evt.Event with { Tags = [new Tag("studentEmail", email)] };
 
         // DCB condition: Fail if any event with this email already exists
-        var validationQuery = Query.FromTags([new Tag { Key = "studentEmail", Value = email }]);
+        var validationQuery = Query.FromTags([new Tag("studentEmail", email)]);
         var condition = new AppendCondition { FailIfEventsMatch = validationQuery };
 
         await _store.AppendAsync([evt], condition);

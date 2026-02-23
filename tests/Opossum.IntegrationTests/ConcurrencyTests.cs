@@ -90,7 +90,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         }
 
         // Verify we have 9 students enrolled
-        var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
+        var courseQuery = Query.FromTags(new Tag("courseId", courseId.ToString()));
         var events = await eventStore.ReadAsync(courseQuery);
         var enrolledCount = events.Count(e => e.Event.EventType == nameof(StudentEnrolledToCourseEvent));
         Assert.Equal(9, enrolledCount);
@@ -175,7 +175,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var studentQuery = Query.FromItems(
             new QueryItem
             {
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }],
+                Tags = [new Tag("studentId", studentId.ToString())],
                 EventTypes = [nameof(StudentEnrolledToCourseEvent)]
             }
         );
@@ -218,8 +218,8 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             new QueryItem
             {
                 Tags = [
-                    new Tag { Key = "courseId", Value = courseId.ToString() },
-                    new Tag { Key = "studentId", Value = studentId.ToString() }
+                    new Tag("courseId", courseId.ToString()),
+                    new Tag("studentId", studentId.ToString())
                 ],
                 EventTypes = [nameof(StudentEnrolledToCourseEvent)]
             }
@@ -281,7 +281,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         Assert.Equal(attemptCount - capacity, failureCount);
 
         // Verify exactly 10 enrollment events exist
-        var courseQuery = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
+        var courseQuery = Query.FromTags(new Tag("courseId", courseId.ToString()));
         var events = await eventStore.ReadAsync(courseQuery);
         var enrolledCount = events.Count(e => e.Event.EventType == nameof(StudentEnrolledToCourseEvent));
 
@@ -351,7 +351,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 EventType = nameof(CourseCreated),
                 Event = new CourseCreated(courseId, 10),
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             },
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
@@ -359,7 +359,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         await eventStore.AppendAsync([createEvent], null);
 
         // Read events and note the position
-        var query = Query.FromTags(new Tag { Key = "courseId", Value = courseId.ToString() });
+        var query = Query.FromTags(new Tag("courseId", courseId.ToString()));
         var events = await eventStore.ReadAsync(query);
         var lastPosition = events[^1].Position;
 
@@ -370,7 +370,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 EventType = nameof(StudentEnrolledToCourseEvent),
                 Event = new StudentEnrolledToCourseEvent(courseId, Guid.NewGuid()),
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             },
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
@@ -390,7 +390,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 EventType = nameof(StudentEnrolledToCourseEvent),
                 Event = new StudentEnrolledToCourseEvent(courseId, studentId),
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             },
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
@@ -421,7 +421,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 EventType = nameof(CourseCreated),
                 Event = new CourseCreated(courseId, 10),
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             },
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
@@ -435,7 +435,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 EventType = nameof(StudentEnrolledToCourseEvent),
                 Event = new StudentEnrolledToCourseEvent(courseId, Guid.NewGuid()),
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             },
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };
@@ -446,7 +446,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
         var conflictQuery = Query.FromItems(
             new QueryItem
             {
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }],
+                Tags = [new Tag("courseId", courseId.ToString())],
                 EventTypes = [nameof(StudentEnrolledToCourseEvent)]
             }
         );
@@ -462,7 +462,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
             {
                 EventType = nameof(StudentEnrolledToCourseEvent),
                 Event = new StudentEnrolledToCourseEvent(courseId, Guid.NewGuid()),
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             },
             Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
         };

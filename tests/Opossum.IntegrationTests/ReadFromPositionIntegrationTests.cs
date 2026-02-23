@@ -31,7 +31,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
         {
             opt.RootPath = _tempPath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("TestContext");
+            opt.UseStore("TestContext");
         });
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
@@ -52,11 +52,11 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
 
     private Task AppendOrderAsync(string orderId) =>
         _eventStore.AppendEventAsync(new OrderEvent(orderId),
-            tags: [new Tag { Key = "orderId", Value = orderId }]);
+            tags: [new Tag("orderId", orderId)]);
 
     private Task AppendShipmentAsync(string shipmentId) =>
         _eventStore.AppendEventAsync(new ShipmentEvent(shipmentId),
-            tags: [new Tag { Key = "shipmentId", Value = shipmentId }]);
+            tags: [new Tag("shipmentId", shipmentId)]);
 
     // ── tests ─────────────────────────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     [Fact]
     public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingTagsAfterPosition()
     {
-        var tag = new Tag { Key = "orderId", Value = "o-special" };
+        var tag = new Tag("orderId", "o-special");
 
         await _eventStore.AppendEventAsync(new OrderEvent("o-special"),
             tags: [tag]);  // pos 1

@@ -48,7 +48,7 @@ public sealed class RegisterStudentCommandHandler()
         var validateEmailNotTakenQuery = Query.FromItems(
                 new QueryItem
                 {
-                    Tags = [new Tag { Key = "studentEmail", Value = command.Email.ToString() }],
+                    Tags = [new Tag("studentEmail", command.Email.ToString())],
                     EventTypes = []
                 });
 

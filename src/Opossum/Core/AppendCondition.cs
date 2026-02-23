@@ -56,12 +56,12 @@ namespace Opossum.Core;
 ///     new QueryItem
 ///     {
 ///         EventTypes = [nameof(CourseCreatedEvent), nameof(StudentEnrolledToCourseEvent)],
-///         Tags       = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+///         Tags       = [new Tag("courseId", courseId.ToString())]
 ///     },
 ///     new QueryItem
 ///     {
 ///         EventTypes = [nameof(StudentRegisteredEvent)],
-///         Tags       = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+///         Tags       = [new Tag("studentId", studentId.ToString())]
 ///     });
 ///
 /// var events      = await eventStore.ReadAsync(query, ReadOption.None);

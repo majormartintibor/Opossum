@@ -202,17 +202,17 @@ namespace Opossum.DependencyInjection;
 
 ```csharp
 [Fact]
-public void AddContext_WithValidName_AddsContext()
+public void UseStore_WithValidName_SetsStoreName()
 {
     // Arrange
     var options = new OpossumOptions();
 
     // Act
-    var result = options.AddContext("CourseManagement");
+    var result = options.UseStore("CourseManagement");
 
     // Assert
-    Assert.Single(options.Contexts);
-    Assert.Contains("CourseManagement", options.Contexts);
+    Assert.Equal("CourseManagement", options.StoreName);
+    Assert.Same(options, result);
 }
 ```
 
@@ -238,7 +238,7 @@ public class MyIntegrationTests : IDisposable
         {
             RootPath = _testDirectory
         };
-        options.AddContext("TestContext");
+        options.UseStore("TestContext");
         
         // Test logic...
     }

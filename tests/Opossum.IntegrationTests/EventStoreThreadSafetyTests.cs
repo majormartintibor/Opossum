@@ -29,7 +29,7 @@ public class EventStoreThreadSafetyTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("ThreadSafetyContext");
+            options.UseStore("ThreadSafetyContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();
@@ -131,7 +131,7 @@ public class EventStoreThreadSafetyTests : IDisposable
 
         await _eventStore.AppendAsync([initialEvent], null);
 
-        var query = Query.FromTags(new Tag { Key = "resourceId", Value = resourceId.ToString() });
+        var query = Query.FromTags(new Tag("resourceId", resourceId.ToString()));
         var initialEvents = await _eventStore.ReadAsync(query);
         var initialPosition = initialEvents[^1].Position;
 
@@ -213,7 +213,7 @@ public class EventStoreThreadSafetyTests : IDisposable
         for (int i = 0; i < entityCount; i++)
         {
             var entityEvents = await _eventStore.ReadAsync(
-                Query.FromTags(new Tag { Key = "entityId", Value = i.ToString() }));
+                Query.FromTags(new Tag("entityId", i.ToString())));
             Assert.Equal(eventsPerEntity, entityEvents.Length);
         }
     }
@@ -225,8 +225,8 @@ public class EventStoreThreadSafetyTests : IDisposable
         // For now, testing within single context demonstrates locking works
 
         // Arrange
-        var context1Tag = new Tag { Key = "context", Value = "context1" };
-        var context2Tag = new Tag { Key = "context", Value = "context2" };
+        var context1Tag = new Tag("context", "context1");
+        var context2Tag = new Tag("context", "context2");
         var eventsPerContext = 50;
 
         // Act - Concurrent appends tagged for different logical contexts
@@ -320,8 +320,8 @@ public class EventStoreThreadSafetyTests : IDisposable
                         FailIfEventsMatch = Query.FromItems(new QueryItem
                         {
                             Tags = [
-                                new Tag { Key = "userId", Value = userId.ToString() },
-                                new Tag { Key = "type", Value = "FirstLogin" }
+                                new Tag("userId", userId.ToString()),
+                                new Tag("type", "FirstLogin")
                             ]
                         })
                     };
@@ -345,8 +345,8 @@ public class EventStoreThreadSafetyTests : IDisposable
             Query.FromItems(new QueryItem
             {
                 Tags = [
-                    new Tag { Key = "userId", Value = userId.ToString() },
-                    new Tag { Key = "type", Value = "FirstLogin" }
+                    new Tag("userId", userId.ToString()),
+                    new Tag("type", "FirstLogin")
                 ]
             }));
 

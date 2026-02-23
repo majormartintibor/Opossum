@@ -95,7 +95,7 @@ public sealed class GetCoursesShortInfoCommandHandler()
         {
             // Use tag index - only loads courses matching the IsFull filter
             courses = await projectionStore.QueryByTagAsync(
-                new Tag { Key = "IsFull", Value = query.IsFull.Value.ToString() });
+                new Tag("IsFull", query.IsFull.Value.ToString()));
         }
         else
         {

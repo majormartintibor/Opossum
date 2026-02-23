@@ -20,39 +20,31 @@ internal sealed class StorageInitializer
     }
 
     /// <summary>
-    /// Initializes the storage directory structure for all configured contexts.
-    /// Creates the following structure for each context:
+    /// Initializes the storage directory structure for the configured store.
+    /// Creates the following structure:
     /// /RootPath
-    ///   /ContextName
+    ///   /StoreName
     ///     .ledger
     ///     /Events
     ///     /Indices
     ///       /EventType
     ///       /Tags
-    /// 
-    /// ⚠️ MVP LIMITATION: While this method initializes ALL contexts, only the first context
-    /// is actually used by FileSystemEventStore. See docs/limitations/mvp-single-context.md
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when no contexts are configured</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no store is configured</exception>
     /// <exception cref="IOException">Thrown when directory creation fails</exception>
     public void Initialize()
     {
-        if (_options.Contexts.Count == 0)
+        if (_options.StoreName is null)
         {
             throw new InvalidOperationException(
-                "Cannot initialize storage: no contexts configured. " +
-                "Use options.AddContext(\"ContextName\") to add at least one context.");
+                "Cannot initialize storage: store name not configured. " +
+                "Call options.UseStore(\"YourStoreName\") to configure the store.");
         }
 
         // Create root directory if it doesn't exist
         EnsureDirectoryExists(_options.RootPath);
 
-        // Initialize each context
-        // TODO: Multi-context support - currently only Contexts[0] is used
-        foreach (var contextName in _options.Contexts)
-        {
-            InitializeContext(contextName);
-        }
+        InitializeContext(_options.StoreName);
     }
 
     /// <summary>

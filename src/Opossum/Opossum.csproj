@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.2.0-preview.2</Version>
+    <Version>0.3.0-preview.1</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -19,12 +19,21 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>opossum.png</PackageIcon>
-    <PackageReleaseNotes>Second preview release of Opossum event store. See CHANGELOG.md for full details.</PackageReleaseNotes>
+    <PackageReleaseNotes>Breaking changes:
+- Apply() now receives SequencedEvent instead of IEvent (tags, metadata, position available in projections)
+- AppendAsync() gains a CancellationToken parameter
+- Tag, QueryItem, Metadata, DomainEvent, SequencedEvent are now immutable record types
+- options.AddContext() renamed to options.UseStore(); Contexts list replaced by StoreName string
+
+Added:
+- IEventStoreMaintenance.AddTagsAsync — retroactively add tags to stored events (additive-only, no overwrites)
+
+Full changelog: https://github.com/majormartintibor/Opossum/blob/main/CHANGELOG.md</PackageReleaseNotes>
 
     <!-- Assembly Versioning -->
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
-    <InformationalVersion>0.2.0-preview.2</InformationalVersion>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
+    <InformationalVersion>0.3.0-preview.1</InformationalVersion>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

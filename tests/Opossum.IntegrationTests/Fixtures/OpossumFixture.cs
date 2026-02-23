@@ -33,8 +33,7 @@ public class OpossumFixture : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _baseStoragePath;
-            options.AddContext("CourseManagement");
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         // Add mediator
@@ -78,8 +77,7 @@ public class OpossumFixture : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = testStoragePath;
-            options.AddContext("CourseManagement");
-            options.AddContext("TestContext");
+            options.UseStore("TestContext");
         });
 
         services.AddMediator();

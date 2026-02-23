@@ -12,7 +12,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     {
         _tempPath = Path.Combine(Path.GetTempPath(), $"ProjectionStoreMetadataTests_{Guid.NewGuid():N}");
         _options = new OpossumOptions { RootPath = _tempPath };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
     }
 
     public void Dispose()

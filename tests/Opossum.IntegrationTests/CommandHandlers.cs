@@ -23,7 +23,7 @@ public class CreateCourseCommandHandler
                 Event = @event,
                 Tags =
                 [
-                    new Tag { Key = "courseId", Value = command.CourseId.ToString() }
+                    new Tag("courseId", command.CourseId.ToString())
                 ]
             },
             Metadata = new Metadata
@@ -63,7 +63,7 @@ public class EnrollStudentToCourseCommandHandler
             var query = Query.FromItems(
                 new QueryItem
                 {
-                    Tags = [new Tag { Key = "courseId", Value = command.CourseId.ToString() }],
+                    Tags = [new Tag("courseId", command.CourseId.ToString())],
                     EventTypes =
                     [
                         nameof(CourseCreated),
@@ -74,7 +74,7 @@ public class EnrollStudentToCourseCommandHandler
                 },
                 new QueryItem
                 {
-                    Tags = [new Tag { Key = "studentId", Value = command.StudentId.ToString() }],
+                    Tags = [new Tag("studentId", command.StudentId.ToString())],
                     EventTypes =
                     [
                         nameof(StudentEnrolledToCourseEvent),
@@ -125,8 +125,8 @@ public class EnrollStudentToCourseCommandHandler
                     Event = @event,
                     Tags =
                     [
-                        new Tag { Key = "courseId", Value = command.CourseId.ToString() },
-                        new Tag { Key = "studentId", Value = command.StudentId.ToString() }
+                        new Tag("courseId", command.CourseId.ToString()),
+                        new Tag("studentId", command.StudentId.ToString())
                     ]
                 },
                 Metadata = new Metadata
@@ -224,7 +224,7 @@ public class RegisterStudentCommandHandler
                 Event = @event,
                 Tags =
                 [
-                    new Tag { Key = "studentId", Value = command.StudentId.ToString() }
+                    new Tag("studentId", command.StudentId.ToString())
                 ]
             },
             Metadata = new Metadata

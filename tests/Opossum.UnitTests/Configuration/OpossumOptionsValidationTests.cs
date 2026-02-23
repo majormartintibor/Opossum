@@ -34,7 +34,7 @@ public sealed class OpossumOptionsValidationTests
         {
             RootPath = GetValidAbsolutePath()
         };
-        options.AddContext("ValidContext");
+        options.UseStore("ValidContext");
 
         var validator = new OpossumOptionsValidator();
 
@@ -49,11 +49,8 @@ public sealed class OpossumOptionsValidationTests
     public void Validate_EmptyRootPath_ReturnsFail()
     {
         // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = ""
-        };
-        options.AddContext("ValidContext");
+        var options = new OpossumOptions { RootPath = "" };
+        options.UseStore("ValidContext");
 
         var validator = new OpossumOptionsValidator();
 
@@ -73,7 +70,7 @@ public sealed class OpossumOptionsValidationTests
         {
             RootPath = null!
         };
-        options.AddContext("ValidContext");
+        options.UseStore("ValidContext");
 
         var validator = new OpossumOptionsValidator();
 
@@ -89,11 +86,8 @@ public sealed class OpossumOptionsValidationTests
     public void Validate_RelativePath_ReturnsFail()
     {
         // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = "relative/path"
-        };
-        options.AddContext("ValidContext");
+        var options = new OpossumOptions { RootPath = "relative/path" };
+        options.UseStore("ValidContext");
 
         var validator = new OpossumOptionsValidator();
 
@@ -113,7 +107,7 @@ public sealed class OpossumOptionsValidationTests
         {
             RootPath = GetPathWithInvalidCharacters()
         };
-        options.AddContext("ValidContext");
+        options.UseStore("ValidContext");
 
         var validator = new OpossumOptionsValidator();
 
@@ -126,14 +120,14 @@ public sealed class OpossumOptionsValidationTests
     }
 
     [Fact]
-    public void Validate_NoContexts_ReturnsFail()
+    public void Validate_NoStoreName_ReturnsFail()
     {
         // Arrange
         var options = new OpossumOptions
         {
             RootPath = GetValidAbsolutePath()
         };
-        // Don't add any contexts
+        // UseStore not called
 
         var validator = new OpossumOptionsValidator();
 
@@ -142,86 +136,52 @@ public sealed class OpossumOptionsValidationTests
 
         // Assert
         Assert.True(result.Failed);
-        Assert.Contains("At least one context must be configured", string.Join(", ", result.Failures));
+        Assert.Contains("StoreName must be configured", string.Join(", ", result.Failures));
     }
 
     [Fact]
-    public void Validate_EmptyContextName_ReturnsFail()
+    public void UseStore_WithEmptyName_ThrowsArgumentException()
     {
         // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = GetValidAbsolutePath()
-        };
+        var options = new OpossumOptions { RootPath = GetValidAbsolutePath() };
 
-        // Manually add invalid context (bypassing AddContext validation)
-        options.Contexts.Add("");
+        // Act & Assert — UseStore validates before setting, so the validator is never reached
+        Assert.Throws<ArgumentException>(() => options.UseStore(""));
+    }
 
+    [Fact]
+    public void UseStore_WithInvalidCharacters_ThrowsArgumentException()
+    {
+        // Arrange
+        var options = new OpossumOptions { RootPath = GetValidAbsolutePath() };
+
+        // Act & Assert — UseStore validates before setting, so the validator is never reached
+        Assert.Throws<ArgumentException>(() => options.UseStore("Invalid\0Name"));
+    }
+
+    [Fact]
+    public void UseStore_WithReservedName_ThrowsArgumentException()
+    {
+        // Arrange — CON is a Windows-reserved device name, rejected by IsValidDirectoryName
+        var options = new OpossumOptions { RootPath = GetValidAbsolutePath() };
+
+        // Act & Assert
+        // CON passes Opossum's forbidden-char check (no /, \, :, *, ?, ", <, >, |, \0)
+        // but is caught by the validator's reserved-name check
+        var validOptions = new OpossumOptions { RootPath = GetValidAbsolutePath() };
+        validOptions.UseStore("CON");
         var validator = new OpossumOptionsValidator();
-
-        // Act
-        var result = validator.Validate(null, options);
-
-        // Assert
+        var result = validator.Validate(null, validOptions);
         Assert.True(result.Failed);
-        Assert.Contains("cannot be null or whitespace", string.Join(", ", result.Failures));
+        Assert.Contains("Invalid store name 'CON'", string.Join(", ", result.Failures));
     }
 
     [Fact]
-    public void Validate_InvalidContextName_ReturnsFail()
+    public void Validate_ValidStoreName_ReturnsSuccess()
     {
         // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = GetValidAbsolutePath()
-        };
-
-        // Manually add invalid context with null character (invalid on ALL platforms)
-        options.Contexts.Add("Invalid\0Context");  // \0 (null) is invalid on Windows AND Linux
-
-        var validator = new OpossumOptionsValidator();
-
-        // Act
-        var result = validator.Validate(null, options);
-
-        // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("Invalid context name", string.Join(", ", result.Failures));
-    }
-
-    [Fact]
-    public void Validate_ReservedContextName_ReturnsFail()
-    {
-        // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = GetValidAbsolutePath()
-        };
-
-        // Try to use Windows reserved name
-        options.Contexts.Add("CON");  // Reserved Windows name
-
-        var validator = new OpossumOptionsValidator();
-
-        // Act
-        var result = validator.Validate(null, options);
-
-        // Assert
-        Assert.True(result.Failed);
-        Assert.Contains("Invalid context name 'CON'", string.Join(", ", result.Failures));
-    }
-
-    [Fact]
-    public void Validate_MultipleValidContexts_ReturnsSuccess()
-    {
-        // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = GetValidAbsolutePath()
-        };
-        options.AddContext("Context1");
-        options.AddContext("Context2");
-        options.AddContext("Context3");
+        var options = new OpossumOptions { RootPath = GetValidAbsolutePath() };
+        options.UseStore("CourseManagement");
 
         var validator = new OpossumOptionsValidator();
 
@@ -235,12 +195,8 @@ public sealed class OpossumOptionsValidationTests
     [Fact]
     public void Validate_MultipleFailures_ReturnsAllErrors()
     {
-        // Arrange
-        var options = new OpossumOptions
-        {
-            RootPath = "relative/path"  // Invalid: relative
-        };
-        // No contexts added - also invalid
+        // Arrange — invalid RootPath AND no StoreName
+        var options = new OpossumOptions { RootPath = "relative/path" };
 
         var validator = new OpossumOptionsValidator();
 
@@ -249,6 +205,6 @@ public sealed class OpossumOptionsValidationTests
 
         // Assert
         Assert.True(result.Failed);
-        Assert.True(result.Failures.Count() >= 2, "Should have multiple validation failures");
+        Assert.True(result.Failures.Count() >= 2, "Should report both RootPath and StoreName failures");
     }
 }

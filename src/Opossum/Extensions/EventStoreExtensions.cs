@@ -44,7 +44,7 @@ public class DomainEventBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(value);
 
-        _tags.Add(new Tag { Key = key, Value = value });
+        _tags.Add(new Tag(key, value));
         return this;
     }
 
@@ -80,7 +80,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithCorrelationId(Guid correlationId)
     {
         EnsureMetadata();
-        _metadata!.CorrelationId = correlationId;
+        _metadata = _metadata! with { CorrelationId = correlationId };
         return this;
     }
 
@@ -92,7 +92,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithCausationId(Guid causationId)
     {
         EnsureMetadata();
-        _metadata!.CausationId = causationId;
+        _metadata = _metadata! with { CausationId = causationId };
         return this;
     }
 
@@ -104,7 +104,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithOperationId(Guid operationId)
     {
         EnsureMetadata();
-        _metadata!.OperationId = operationId;
+        _metadata = _metadata! with { OperationId = operationId };
         return this;
     }
 
@@ -116,7 +116,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithUserId(Guid userId)
     {
         EnsureMetadata();
-        _metadata!.UserId = userId;
+        _metadata = _metadata! with { UserId = userId };
         return this;
     }
 
@@ -128,7 +128,7 @@ public class DomainEventBuilder
     public DomainEventBuilder WithTimestamp(DateTimeOffset timestamp)
     {
         EnsureMetadata();
-        _metadata!.Timestamp = timestamp;
+        _metadata = _metadata! with { Timestamp = timestamp };
         return this;
     }
 
@@ -181,16 +181,18 @@ public static class EventStoreExtensions
     /// <param name="eventStore">The event store</param>
     /// <param name="event">The new event to append</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
         NewEvent @event,
-        AppendCondition? condition = null)
+        AppendCondition? condition = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(@event);
 
-        return eventStore.AppendAsync([@event], condition);
+        return eventStore.AppendAsync([@event], condition, cancellationToken);
     }
 
     /// <summary>
@@ -198,15 +200,17 @@ public static class EventStoreExtensions
     /// </summary>
     /// <param name="eventStore">The event store</param>
     /// <param name="events">The new events to append</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendAsync(
         this IEventStore eventStore,
-        NewEvent[] events)
+        NewEvent[] events,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(events);
 
-        return eventStore.AppendAsync(events, condition: null);
+        return eventStore.AppendAsync(events, condition: null, cancellationToken);
     }
 
     /// <summary>
@@ -273,13 +277,15 @@ public static class EventStoreExtensions
     /// <param name="tags">Optional tags to attach to the event</param>
     /// <param name="metadata">Optional metadata (timestamp and correlation ID auto-generated if not provided)</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendEventAsync(
         this IEventStore eventStore,
         IEvent @event,
         IEnumerable<Tag>? tags = null,
         Metadata? metadata = null,
-        AppendCondition? condition = null)
+        AppendCondition? condition = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(@event);
@@ -299,7 +305,7 @@ public static class EventStoreExtensions
             }
         };
 
-        return eventStore.AppendAsync([newEvent], condition);
+        return eventStore.AppendAsync([newEvent], condition, cancellationToken);
     }
 
     /// <summary>
@@ -310,13 +316,15 @@ public static class EventStoreExtensions
     /// <param name="tags">Optional tags to attach to all events</param>
     /// <param name="metadata">Optional metadata (timestamp and correlation ID auto-generated if not provided)</param>
     /// <param name="condition">Optional append condition for optimistic concurrency control</param>
+    /// <param name="cancellationToken">A token to cancel the asynchronous operation</param>
     /// <returns>A task representing the asynchronous operation</returns>
     public static Task AppendEventsAsync(
         this IEventStore eventStore,
         IEvent[] events,
         IEnumerable<Tag>? tags = null,
         Metadata? metadata = null,
-        AppendCondition? condition = null)
+        AppendCondition? condition = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(events);
@@ -339,7 +347,7 @@ public static class EventStoreExtensions
             Metadata = sharedMetadata
         }).ToArray();
 
-        return eventStore.AppendAsync(newEvents, condition);
+        return eventStore.AppendAsync(newEvents, condition, cancellationToken);
     }
 
     /// <summary>

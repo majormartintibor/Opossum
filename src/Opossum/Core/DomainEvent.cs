@@ -10,7 +10,7 @@ namespace Opossum.Core;
 /// (e.g. <c>"StudentRegisteredEvent"</c>). Override it only when you want to decouple
 /// the stored type name from the CLR class name.
 /// </remarks>
-public class DomainEvent
+public record DomainEvent
 {
     /// <summary>
     /// The event type name used for indexing and querying.
@@ -28,9 +28,11 @@ public class DomainEvent
     public string EventType
     {
         get => field ?? (Event?.GetType().Name ?? string.Empty);
-        set;
+        init;
     }
 
-    public required IEvent Event { get; set; }
-    public List<Tag> Tags { get; set; } = [];
+    public required IEvent Event { get; init; }
+
+    /// <summary>Tags attached to this event for indexing and querying. Immutable after construction; use <c>IEventStoreMaintenance.AddTagsAsync</c> to add tags retroactively.</summary>
+    public IReadOnlyList<Tag> Tags { get; init; } = [];
 }

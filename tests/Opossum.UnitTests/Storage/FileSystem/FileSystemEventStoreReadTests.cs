@@ -17,7 +17,7 @@ public class FileSystemEventStoreReadTests : IDisposable
         {
             RootPath = _tempRootPath
         };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
 
         _store = new FileSystemEventStore(_options);
     }
@@ -162,9 +162,9 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithSingleTag_ReturnsMatchingEvents()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
         await AppendEventWithTags(tag);
-        await AppendEventWithTags(new Tag { Key = "Environment", Value = "Development" });
+        await AppendEventWithTags(new Tag("Environment", "Development"));
         await AppendEventWithTags(tag);
 
         // Act
@@ -180,8 +180,8 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithMultipleTags_ReturnsIntersectionOfMatches()
     {
         // Arrange
-        var tag1 = new Tag { Key = "Environment", Value = "Production" };
-        var tag2 = new Tag { Key = "Region", Value = "US-West" };
+        var tag1 = new Tag("Environment", "Production");
+        var tag2 = new Tag("Region", "US-West");
 
         await AppendEventWithTags(tag1); // Only tag1
         await AppendEventWithTags(tag1, tag2); // Both tags
@@ -201,11 +201,11 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithNonExistentTag_ReturnsEmpty()
     {
         // Arrange
-        await AppendEventWithTags(new Tag { Key = "Environment", Value = "Production" });
+        await AppendEventWithTags(new Tag("Environment", "Production"));
 
         // Act
         var events = await _store.ReadAsync(
-            Query.FromTags(new Tag { Key = "NonExistent", Value = "Value" }),
+            Query.FromTags(new Tag("NonExistent", "Value")),
             null);
 
         // Assert
@@ -220,16 +220,16 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithEventTypesAndTags_ReturnsIntersection()
     {
         // Arrange
-        var tag = new Tag { Key = "Environment", Value = "Production" };
+        var tag = new Tag("Environment", "Production");
 
         // Event 1: OrderCreated + Production tag
         var event1 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "1" });
-        event1.Event.Tags.Add(tag);
+        event1.Event = event1.Event with { Tags = [tag] };
         await _store.AppendAsync([event1], null);
 
         // Event 2: OrderShipped + Production tag
         var event2 = CreateTestEvent("OrderShipped", new TestDomainEvent { Data = "2" });
-        event2.Event.Tags.Add(tag);
+        event2.Event = event2.Event with { Tags = [tag] };
         await _store.AppendAsync([event2], null);
 
         // Event 3: OrderCreated (no tag)
@@ -253,8 +253,8 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithMultipleQueryItems_ReturnsUnion()
     {
         // Arrange
-        var prodTag = new Tag { Key = "Environment", Value = "Production" };
-        var devTag = new Tag { Key = "Environment", Value = "Development" };
+        var prodTag = new Tag("Environment", "Production");
+        var devTag = new Tag("Environment", "Development");
 
         await AppendEventWithType("OrderCreated"); // Pos 1
         await AppendEventWithTags(prodTag); // Pos 2
@@ -281,23 +281,22 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithComplexQuery_ReturnsCorrectMatches()
     {
         // Arrange - Create diverse events
-        var prodTag = new Tag { Key = "Environment", Value = "Production" };
-        var usWestTag = new Tag { Key = "Region", Value = "US-West" };
+        var prodTag = new Tag("Environment", "Production");
+        var usWestTag = new Tag("Region", "US-West");
 
         // Event 1: OrderCreated + Production
         var event1 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "1" });
-        event1.Event.Tags.Add(prodTag);
+        event1.Event = event1.Event with { Tags = [prodTag] };
         await _store.AppendAsync([event1], null);
 
         // Event 2: OrderShipped + Production + US-West
         var event2 = CreateTestEvent("OrderShipped", new TestDomainEvent { Data = "2" });
-        event2.Event.Tags.Add(prodTag);
-        event2.Event.Tags.Add(usWestTag);
+        event2.Event = event2.Event with { Tags = [prodTag, usWestTag] };
         await _store.AppendAsync([event2], null);
 
         // Event 3: CustomerRegistered + Production
         var event3 = CreateTestEvent("CustomerRegistered", new TestDomainEvent { Data = "3" });
-        event3.Event.Tags.Add(prodTag);
+        event3.Event = event3.Event with { Tags = [prodTag] };
         await _store.AppendAsync([event3], null);
 
         // Event 4: OrderCreated (no tags)
@@ -400,7 +399,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     {
         // Arrange
         var originalEvent = CreateTestEvent("TestEvent", new TestDomainEvent { Data = "Important Data" });
-        originalEvent.Event.Tags.Add(new Tag { Key = "Key1", Value = "Value1" });
+        originalEvent.Event = originalEvent.Event with { Tags = [new Tag("Key1", "Value1")] };
         await _store.AppendAsync([originalEvent], null);
 
         // Act
@@ -424,8 +423,7 @@ public class FileSystemEventStoreReadTests : IDisposable
         var timestamp = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
 
         var originalEvent = CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" });
-        originalEvent.Metadata.CorrelationId = correlationId;
-        originalEvent.Metadata.Timestamp = timestamp;
+        originalEvent.Metadata = new Metadata { CorrelationId = correlationId, Timestamp = timestamp };
 
         await _store.AppendAsync([originalEvent], null);
 
@@ -446,22 +444,21 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task Integration_AppendAndRead_CompleteWorkflow()
     {
         // Arrange - Create diverse events
-        var prodTag = new Tag { Key = "Environment", Value = "Production" };
-        var devTag = new Tag { Key = "Environment", Value = "Development" };
-        var usWestTag = new Tag { Key = "Region", Value = "US-West" };
+        var prodTag = new Tag("Environment", "Production");
+        var devTag = new Tag("Environment", "Development");
+        var usWestTag = new Tag("Region", "US-West");
 
         var event1 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "Order1" });
-        event1.Event.Tags.Add(prodTag);
-        event1.Event.Tags.Add(usWestTag);
+        event1.Event = event1.Event with { Tags = [prodTag, usWestTag] };
 
         var event2 = CreateTestEvent("OrderShipped", new TestDomainEvent { Data = "Order1" });
-        event2.Event.Tags.Add(prodTag);
+        event2.Event = event2.Event with { Tags = [prodTag] };
 
         var event3 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "Order2" });
-        event3.Event.Tags.Add(devTag);
+        event3.Event = event3.Event with { Tags = [devTag] };
 
         var event4 = CreateTestEvent("CustomerRegistered", new TestDomainEvent { Data = "Customer1" });
-        event4.Event.Tags.Add(prodTag);
+        event4.Event = event4.Event with { Tags = [prodTag] };
 
         // Act - Append all events
         await _store.AppendAsync([event1, event2, event3, event4], null);
@@ -591,9 +588,9 @@ public class FileSystemEventStoreReadTests : IDisposable
     public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingEventsAfterPosition()
     {
         // Arrange
-        var tag = new Tag { Key = "env", Value = "prod" };
+        var tag = new Tag("env", "prod");
         await AppendEventWithTags(tag);                              // pos 1
-        await AppendEventWithTags(new Tag { Key = "env", Value = "dev" }); // pos 2
+        await AppendEventWithTags(new Tag("env", "dev")); // pos 2
         await AppendEventWithTags(tag);                              // pos 3
         await AppendEventWithTags(tag);                              // pos 4
 
@@ -654,10 +651,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     private async Task AppendEventWithTags(params Tag[] tags)
     {
         var evt = CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" });
-        foreach (var tag in tags)
-        {
-            evt.Event.Tags.Add(tag);
-        }
+        evt.Event = evt.Event with { Tags = tags };
         await _store.AppendAsync([evt], null);
     }
 

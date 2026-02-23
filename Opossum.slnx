@@ -56,18 +56,31 @@
     <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
     <File Path="docs/benchmarking/results/20260222/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
   </Folder>
+  <Folder Name="/docs/benchmarking/results/20260223/">
+    <File Path="docs/benchmarking/results/20260223/ANALYSIS.md" />
+    <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Core.AppendBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Core.DescendingOrderIsolatedBenchmark-report-github.md" />
+    <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Core.QueryBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Core.ReadBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
+  </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
+    <File Path="docs/decisions/003-iasyncenumerable-not-implemented.md" />
+    <File Path="docs/decisions/004-single-context-by-design.md" />
     <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
   <Folder Name="/docs/features/">
+    <File Path="docs/features/immutablemetadata.md" />
     <File Path="docs/features/ledger.md" />
     <File Path="docs/features/parallel-projection-rebuilding.md" />
     <File Path="docs/features/projection-tag-indexing.md" />
   </Folder>
   <Folder Name="/docs/future-plans/">
     <File Path="docs/future-plans/0.3.0-preview.1-roadmap.md" />
+    <File Path="docs/future-plans/0.4.0-roadmap.md" />
     <File Path="docs/future-plans/batched-flush-redesign-plan.md" />
   </Folder>
   <Folder Name="/docs/guides/">

@@ -28,7 +28,7 @@ public class ProjectionRebuildTests : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("RebuildContext");
+            options.UseStore("RebuildContext");
         });
 
         services.AddProjections(options =>
@@ -378,9 +378,9 @@ public class AccountBalanceProjection : IProjectionDefinition<AccountBalanceStat
         };
     }
 
-    public AccountBalanceState? Apply(AccountBalanceState? current, IEvent evt)
+    public AccountBalanceState? Apply(AccountBalanceState? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             AccountCreatedEvent ace => new AccountBalanceState
             {

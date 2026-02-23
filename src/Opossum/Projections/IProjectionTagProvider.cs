@@ -19,9 +19,9 @@ public interface IProjectionTagProvider<in TState> where TState : class
     /// <remarks>
     /// Tags should be stable and deterministic - the same state should always produce the same tags.
     /// Common tag patterns:
-    /// - Status flags: new Tag { Key = "IsActive", Value = "true" }
-    /// - Enum values: new Tag { Key = "Status", Value = state.Status.ToString() }
-    /// - Boolean flags: new Tag { Key = "IsMaxedOut", Value = state.IsMaxedOut.ToString() }
+    /// - Status flags: new Tag("IsActive", "true")
+    /// - Enum values: new Tag("Status", state.Status.ToString())
+    /// - Boolean flags: new Tag("IsMaxedOut", state.IsMaxedOut.ToString())
     /// </remarks>
     IEnumerable<Tag> GetTags(TState state);
 }

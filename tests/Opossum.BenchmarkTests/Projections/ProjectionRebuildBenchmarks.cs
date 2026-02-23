@@ -52,7 +52,7 @@ public class ProjectionRebuildBenchmarks
         {
             opt.RootPath = storePath;
             opt.FlushEventsImmediately = false; // Faster setup
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         _serviceProvider = services.BuildServiceProvider();
@@ -208,8 +208,8 @@ public class ProjectionRebuildBenchmarks
                         Email: $"student{startIndex + i}@test.com"
                     ),
                     Tags = [
-                        new Tag { Key = "studentId", Value = studentId.ToString() },
-                        new Tag { Key = "studentEmail", Value = $"student{startIndex + i}@test.com" }
+                        new Tag("studentId", studentId.ToString()),
+                        new Tag("studentEmail", $"student{startIndex + i}@test.com")
                     ]
                 },
                 Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }

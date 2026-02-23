@@ -14,7 +14,7 @@
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "D:\\Database";
-    options.AddContext("Production");
+    options.UseStore("Production");
     // FlushEventsImmediately = true (default)
 });
 
@@ -22,7 +22,7 @@ builder.Services.AddOpossum(options =>
 builder.Services.AddOpossum(options =>
 {
     options.RootPath = "TestData";
-    options.AddContext("TestContext");
+    options.UseStore("TestContext");
     options.FlushEventsImmediately = false; // ← 2-3x faster tests
 });
 ```
@@ -94,7 +94,7 @@ public class TestFixture
             RootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()),
             FlushEventsImmediately = false // ← Faster tests
         };
-        options.AddContext("TestContext");
+        options.UseStore("TestContext");
         
         _eventStore = new FileSystemEventStore(options);
     }

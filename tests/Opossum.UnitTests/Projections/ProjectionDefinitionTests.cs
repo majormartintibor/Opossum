@@ -40,7 +40,7 @@ public class ProjectionDefinitionTests
         // Arrange
         var projection = new TestOrderProjection();
         var orderId = Guid.NewGuid();
-        var evt = new OrderCreatedEvent(orderId, "Customer A");
+        var evt = CreateSequencedEvent(new OrderCreatedEvent(orderId, "Customer A"), orderId);
 
         // Act
         var result = projection.Apply(null, evt);
@@ -60,7 +60,7 @@ public class ProjectionDefinitionTests
         var projection = new TestOrderProjection();
         var orderId = Guid.NewGuid();
         var current = new OrderSummary(orderId, "Customer A", 100m, 1);
-        var evt = new ItemAddedEvent(orderId, 50m);
+        var evt = CreateSequencedEvent(new ItemAddedEvent(orderId, 50m), orderId);
 
         // Act
         var result = projection.Apply(current, evt);
@@ -78,7 +78,7 @@ public class ProjectionDefinitionTests
         var projection = new TestOrderProjection();
         var orderId = Guid.NewGuid();
         var current = new OrderSummary(orderId, "Customer A", 100m, 1);
-        var evt = new OrderCancelledEvent(orderId);
+        var evt = CreateSequencedEvent(new OrderCancelledEvent(orderId), orderId);
 
         // Act
         var result = projection.Apply(current, evt);
@@ -94,7 +94,7 @@ public class ProjectionDefinitionTests
         var projection = new TestOrderProjection();
         var orderId = Guid.NewGuid();
         var current = new OrderSummary(orderId, "Customer A", 100m, 1);
-        var evt = new UnknownEvent();
+        var evt = CreateSequencedEvent(new UnknownEvent(), orderId);
 
         // Act
         var result = projection.Apply(current, evt);
@@ -108,7 +108,8 @@ public class ProjectionDefinitionTests
     {
         // Arrange
         var projection = new TestOrderProjection();
-        var evt = new ItemAddedEvent(Guid.NewGuid(), 50m);
+        var orderId = Guid.NewGuid();
+        var evt = CreateSequencedEvent(new ItemAddedEvent(orderId, 50m), orderId);
 
         // Act
         var result = projection.Apply(null, evt);
@@ -128,7 +129,7 @@ public class ProjectionDefinitionTests
                 Event = evt,
                 Tags =
                 [
-                    new Tag { Key = "orderId", Value = orderId.ToString() }
+                    new Tag("orderId", orderId.ToString())
                 ]
             },
             Metadata = new Metadata()
@@ -154,9 +155,9 @@ public class ProjectionDefinitionTests
             return orderIdTag?.Value ?? throw new InvalidOperationException("Missing orderId");
         }
 
-        public OrderSummary? Apply(OrderSummary? current, IEvent evt)
+        public OrderSummary? Apply(OrderSummary? current, SequencedEvent evt)
         {
-            return evt switch
+            return evt.Event.Event switch
             {
                 OrderCreatedEvent created => new OrderSummary(
                     created.OrderId,

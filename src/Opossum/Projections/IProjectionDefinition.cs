@@ -26,10 +26,13 @@ public interface IProjectionDefinition<TState> where TState : class
     string KeySelector(SequencedEvent evt);
 
     /// <summary>
-    /// Applies an event to the current projection state
+    /// Applies an event to the current projection state.
+    /// The full event envelope (payload, tags, metadata, position) is available via
+    /// <see cref="SequencedEvent.Event"/>, <see cref="SequencedEvent.Metadata"/>, and
+    /// <see cref="SequencedEvent.Position"/>.
     /// </summary>
     /// <param name="current">Current state (null for new projection instance)</param>
-    /// <param name="evt">Event to apply</param>
+    /// <param name="evt">The full sequenced event including payload, tags, metadata, and position</param>
     /// <returns>Updated state, or null to delete the projection instance</returns>
-    TState? Apply(TState? current, IEvent evt);
+    TState? Apply(TState? current, SequencedEvent evt);
 }

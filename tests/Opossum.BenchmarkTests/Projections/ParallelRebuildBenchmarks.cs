@@ -29,7 +29,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath;
-            options.AddContext("BenchmarkContext");
+            options.UseStore("BenchmarkContext");
         });
 
         services.AddProjections(options =>
@@ -91,7 +91,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         services.AddOpossum(options =>
         {
             options.RootPath = _testStoragePath!;
-            options.AddContext("BenchmarkContext");
+            options.UseStore("BenchmarkContext");
         });
 
         services.AddProjections(options =>
@@ -154,7 +154,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         public string[] EventTypes => [nameof(BenchEvent1)];
         public string KeySelector(SequencedEvent evt) => "bench1";
 
-        public BenchState? Apply(BenchState? current, IEvent @event)
+        public BenchState? Apply(BenchState? current, SequencedEvent @event)
         {
             // Simulate some work
             var result = 0;
@@ -172,7 +172,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         public string[] EventTypes => [nameof(BenchEvent2)];
         public string KeySelector(SequencedEvent evt) => "bench2";
 
-        public BenchState? Apply(BenchState? current, IEvent @event)
+        public BenchState? Apply(BenchState? current, SequencedEvent @event)
         {
             var result = 0;
             for (int i = 0; i < 100; i++)
@@ -189,7 +189,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         public string[] EventTypes => [nameof(BenchEvent3)];
         public string KeySelector(SequencedEvent evt) => "bench3";
 
-        public BenchState? Apply(BenchState? current, IEvent @event)
+        public BenchState? Apply(BenchState? current, SequencedEvent @event)
         {
             var result = 0;
             for (int i = 0; i < 100; i++)
@@ -206,7 +206,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         public string[] EventTypes => [nameof(BenchEvent4)];
         public string KeySelector(SequencedEvent evt) => "bench4";
 
-        public BenchState? Apply(BenchState? current, IEvent @event)
+        public BenchState? Apply(BenchState? current, SequencedEvent @event)
         {
             var result = 0;
             for (int i = 0; i < 100; i++)

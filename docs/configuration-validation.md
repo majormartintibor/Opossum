@@ -245,10 +245,10 @@ try
     builder.Services.AddOpossum(options =>
     {
         options.RootPath = configuration["Opossum:RootPath"] ?? "D:\\Database";
-        var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>();
-        foreach (var context in contexts)
+        var storeName = configuration["Opossum:StoreName"];
+        if (storeName != null)
         {
-            options.AddContext(context);
+            options.UseStore(storeName);
         }
     });
 }

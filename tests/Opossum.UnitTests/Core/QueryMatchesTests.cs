@@ -18,7 +18,7 @@ public class QueryMatchesTests
             {
                 EventType = eventType,
                 Event = new TestEvent(),
-                Tags = [.. tags.Select(t => new Tag { Key = t.Key, Value = t.Value })]
+                Tags = [.. tags.Select(t => new Tag(t.Key, t.Value))]
             }
         };
 
@@ -94,7 +94,7 @@ public class QueryMatchesTests
     [Fact]
     public void Matches_SingleTagMatch_ReturnsTrue()
     {
-        var query = Query.FromTags(new Tag { Key = "courseId", Value = "abc" });
+        var query = Query.FromTags(new Tag("courseId", "abc"));
         var evt = MakeEvent("CourseCreated", ("courseId", "abc"));
 
         Assert.True(query.Matches(evt));
@@ -103,7 +103,7 @@ public class QueryMatchesTests
     [Fact]
     public void Matches_SingleTag_KeyMismatch_ReturnsFalse()
     {
-        var query = Query.FromTags(new Tag { Key = "courseId", Value = "abc" });
+        var query = Query.FromTags(new Tag("courseId", "abc"));
         var evt = MakeEvent("CourseCreated", ("studentId", "abc"));
 
         Assert.False(query.Matches(evt));
@@ -112,7 +112,7 @@ public class QueryMatchesTests
     [Fact]
     public void Matches_SingleTag_ValueMismatch_ReturnsFalse()
     {
-        var query = Query.FromTags(new Tag { Key = "courseId", Value = "abc" });
+        var query = Query.FromTags(new Tag("courseId", "abc"));
         var evt = MakeEvent("CourseCreated", ("courseId", "xyz"));
 
         Assert.False(query.Matches(evt));
@@ -124,8 +124,8 @@ public class QueryMatchesTests
         var query = Query.FromItems(new QueryItem
         {
             Tags = [
-                new Tag { Key = "courseId", Value = "c1" },
-                new Tag { Key = "studentId", Value = "s1" }
+                new Tag("courseId", "c1"),
+                new Tag("studentId", "s1")
             ]
         });
         var evt = MakeEvent("Enrolled", ("courseId", "c1"), ("studentId", "s1"));
@@ -139,8 +139,8 @@ public class QueryMatchesTests
         var query = Query.FromItems(new QueryItem
         {
             Tags = [
-                new Tag { Key = "courseId", Value = "c1" },
-                new Tag { Key = "studentId", Value = "s1" }
+                new Tag("courseId", "c1"),
+                new Tag("studentId", "s1")
             ]
         });
         var evt = MakeEvent("Enrolled", ("courseId", "c1")); // studentId tag missing
@@ -160,7 +160,7 @@ public class QueryMatchesTests
     [Fact]
     public void Matches_EventHasExtraUnrelatedTags_StillMatchesRequired()
     {
-        var query = Query.FromTags(new Tag { Key = "courseId", Value = "c1" });
+        var query = Query.FromTags(new Tag("courseId", "c1"));
         var evt = MakeEvent("CourseCreated", ("courseId", "c1"), ("region", "EU"), ("tenantId", "t1"));
 
         Assert.True(query.Matches(evt));
@@ -176,7 +176,7 @@ public class QueryMatchesTests
         var query = Query.FromItems(new QueryItem
         {
             EventTypes = ["StudentEnrolled"],
-            Tags = [new Tag { Key = "courseId", Value = "c1" }]
+            Tags = [new Tag("courseId", "c1")]
         });
         var evt = MakeEvent("StudentEnrolled", ("courseId", "c1"));
 
@@ -189,7 +189,7 @@ public class QueryMatchesTests
         var query = Query.FromItems(new QueryItem
         {
             EventTypes = ["StudentEnrolled"],
-            Tags = [new Tag { Key = "courseId", Value = "c1" }]
+            Tags = [new Tag("courseId", "c1")]
         });
         var evt = MakeEvent("StudentEnrolled", ("courseId", "c2"));
 
@@ -202,7 +202,7 @@ public class QueryMatchesTests
         var query = Query.FromItems(new QueryItem
         {
             EventTypes = ["StudentEnrolled"],
-            Tags = [new Tag { Key = "courseId", Value = "c1" }]
+            Tags = [new Tag("courseId", "c1")]
         });
         var evt = MakeEvent("CourseCreated", ("courseId", "c1"));
 
@@ -242,12 +242,12 @@ public class QueryMatchesTests
             new QueryItem
             {
                 EventTypes = ["StudentEnrolled"],
-                Tags = [new Tag { Key = "courseId", Value = "c1" }]
+                Tags = [new Tag("courseId", "c1")]
             },
             new QueryItem
             {
                 EventTypes = ["StudentRegistered"],
-                Tags = [new Tag { Key = "studentId", Value = "s1" }]
+                Tags = [new Tag("studentId", "s1")]
             });
 
         // Matches item 1

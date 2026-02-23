@@ -14,7 +14,7 @@ public class ProjectionWithRelatedEventsTests
     {
         // Arrange
         var projection = new TestProjectionWithRelatedEvents();
-        var evt = new TestEvent("test");
+        var evt = CreateSequencedEvent(new TestEvent("test"));
 
         // Act & Assert
         Assert.Throws<NotImplementedException>(() =>
@@ -26,7 +26,7 @@ public class ProjectionWithRelatedEventsTests
     {
         // Arrange
         var projection = new TestProjectionWithRelatedEvents();
-        var evt = new TestEventWithRelation("test", Guid.NewGuid());
+        var evt = CreateSequencedEvent(new TestEventWithRelation("test", Guid.NewGuid()));
 
         // Act
         var query = projection.GetRelatedEventsQuery(evt);
@@ -42,7 +42,7 @@ public class ProjectionWithRelatedEventsTests
     {
         // Arrange
         var projection = new TestProjectionWithRelatedEvents();
-        var evt = new TestEvent("test");
+        var evt = CreateSequencedEvent(new TestEvent("test"));
 
         // Act
         var query = projection.GetRelatedEventsQuery(evt);
@@ -57,7 +57,7 @@ public class ProjectionWithRelatedEventsTests
         // Arrange
         var projection = new TestProjectionWithRelatedEvents();
         var relatedId = Guid.NewGuid();
-        var evt = new TestEventWithRelation("main", relatedId);
+        var evt = CreateSequencedEvent(new TestEventWithRelation("main", relatedId));
 
         var relatedEvent = new SequencedEvent
         {
@@ -87,7 +87,7 @@ public class ProjectionWithRelatedEventsTests
     {
         // Arrange
         var projection = new TestProjectionWithRelatedEvents();
-        var evt = new TestEventWithRelation("main", Guid.NewGuid());
+        var evt = CreateSequencedEvent(new TestEventWithRelation("main", Guid.NewGuid()));
         var emptyRelatedEvents = Array.Empty<SequencedEvent>();
 
         // Act & Assert
@@ -109,7 +109,7 @@ public class ProjectionWithRelatedEventsTests
             UpdateCount = 1
         };
 
-        var evt = new TestEvent("updated");
+        var evt = CreateSequencedEvent(new TestEvent("updated"));
 
         // Act
         var newState = projection.Apply(existingState, evt, []);
@@ -127,7 +127,7 @@ public class ProjectionWithRelatedEventsTests
         // Arrange
         var projection = new TestProjectionWithRelatedEvents();
         var relatedId = Guid.NewGuid();
-        var evt = new TestEventWithRelation("main", relatedId);
+        var evt = CreateSequencedEvent(new TestEventWithRelation("main", relatedId));
 
         var evt1 = new SequencedEvent
         {
@@ -159,6 +159,19 @@ public class ProjectionWithRelatedEventsTests
         Assert.NotNull(state);
         Assert.Equal("Latest", state.RelatedData); // Should use last one
     }
+
+    private static SequencedEvent CreateSequencedEvent(IEvent innerEvent) =>
+        new()
+        {
+            Position = 1,
+            Event = new DomainEvent
+            {
+                EventType = innerEvent.GetType().Name,
+                Event = innerEvent,
+                Tags = []
+            },
+            Metadata = new Metadata { Timestamp = DateTimeOffset.UtcNow }
+        };
 }
 
 // ============================================================================
@@ -176,7 +189,6 @@ public record TestEvent(string Data) : IEvent;
 public record TestEventWithRelation(string Data, Guid RelatedId) : IEvent;
 public record RelatedEvent(Guid Id, string Data) : IEvent;
 
-[ProjectionDefinition("TestProjectionWithRelatedEvents")]
 public class TestProjectionWithRelatedEvents : IProjectionWithRelatedEvents<TestState>
 {
     public string ProjectionName => "TestProjectionWithRelatedEvents";
@@ -191,22 +203,22 @@ public class TestProjectionWithRelatedEvents : IProjectionWithRelatedEvents<Test
         return evt.Position.ToString(); // Simple key for testing
     }
 
-    public Query? GetRelatedEventsQuery(IEvent evt)
+    public Query? GetRelatedEventsQuery(SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             TestEventWithRelation twr => Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "relatedId", Value = twr.RelatedId.ToString() }],
+                Tags = [new Tag("relatedId", twr.RelatedId.ToString())],
                 EventTypes = [nameof(RelatedEvent)]
             }),
             _ => null
         };
     }
 
-    public TestState? Apply(TestState? current, IEvent evt, SequencedEvent[] relatedEvents)
+    public TestState? Apply(TestState? current, SequencedEvent evt, SequencedEvent[] relatedEvents)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             TestEvent te => ApplyTestEvent(current, te),
             TestEventWithRelation twr => ApplyTestEventWithRelation(twr, relatedEvents),

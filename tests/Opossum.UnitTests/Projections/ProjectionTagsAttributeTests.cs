@@ -53,7 +53,7 @@ public class ProjectionTagsAttributeTests
     {
         public IEnumerable<Tag> GetTags(TestState state)
         {
-            yield return new Tag { Key = "Status", Value = state.Status };
+            yield return new Tag("Status", state.Status);
         }
     }
 }

@@ -5,6 +5,65 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-preview.1] - Unreleased
+
+### Fixed
+- **Sample app startup crash when `Contexts` config key was used after `UseStore` refactor** —
+  `appsettings.json` and `appsettings.Development.json` still used the old `Contexts: [...]`
+  array. The base `appsettings.json` had `Contexts: [""]`, so any launch profile that does
+  not load `appsettings.Development.json` (e.g. the Docker profile, which sets no
+  `ASPNETCORE_ENVIRONMENT`) would call `options.UseStore("")`, throw `ArgumentException`
+  during DI registration, and crash before the web server could bind — making Scalar UI
+  unreachable and preventing projection auto-rebuild. Fixed by replacing `Contexts: [...]`
+  with `StoreName: "..."` in both appsettings files and updating `Program.cs` to read
+  `Opossum:StoreName` and call `UseStore` once.
+
+### Added
+- **`IEventStoreMaintenance.AddTagsAsync`** — new public interface that exposes additive-only
+  tag migration. Retroactively adds tags to all stored events of a given event type; any tag
+  whose key already exists on an event is silently skipped, so existing data is never modified
+  or deleted. The tag index is updated atomically per-event under the append lock. Returns a
+  `TagMigrationResult(TagsAdded, EventsProcessed)` summary. Registered in DI alongside
+  `IEventStore` (same singleton instance).
+- `TagMigrationResult` record — carries the outcome of an `AddTagsAsync` call.
+- `CancellationToken` parameter on `AppendAsync` — all async operations in the public API
+  now accept a `CancellationToken`.
+
+### Changed
+- **Breaking: `OpossumOptions.AddContext(string)` renamed to `UseStore(string)`** —
+  `AddContext` and the `Contexts` list are removed. Call `options.UseStore("MyApp")` instead.
+  `UseStore` throws `InvalidOperationException` if called more than once per options instance,
+  enforcing the single-store-per-instance contract. The corresponding internal field is now
+  `StoreName` (string?) instead of `Contexts` (List\<string\>).
+  Migration: replace every `options.AddContext("Name")` with `options.UseStore("Name")`.
+- **Breaking: `IEventStoreMaintenance.AddTagsAsync`** — removed the unused `string? context`
+  parameter (single-store design makes it meaningless).
+- **Breaking: `IProjectionDefinition<TState>.Apply` now receives `SequencedEvent` instead of `IEvent`** —
+  the full event envelope (tags, metadata, position) is available in every `Apply` call,
+  removing the asymmetry with `KeySelector(SequencedEvent)`.
+- **Breaking: `IProjectionWithRelatedEvents<TState>.Apply` and `GetRelatedEventsQuery`** — both
+  methods updated to accept `SequencedEvent` for consistency with the base interface.
+- **Breaking: `Tag` and `QueryItem` are now immutable `record` types** — construction syntax
+  changes; existing positional or property-init call sites are unaffected.
+- **Breaking: `Metadata`, `DomainEvent`, and `SequencedEvent` are now immutable `record` types** —
+  all properties are `init`-only; use `with` expressions to derive modified copies.
+
+### Fixed
+- Metadata mutation side-effect in `AppendAsync` — the store no longer mutates the caller's
+  `NewEvent` instances while assigning derived metadata fields (`Timestamp`).
+
+### Internal
+- Extracted duplicated file I/O plumbing from `TagIndex` and `EventTypeIndex` into a shared
+  `PositionIndexFile` static utility — atomic writes, retry logic, and `IndexData` now live
+  in one place, eliminating the risk of durability fixes being applied to one index but not
+  the other. No public API changes; `ProjectionTagIndex` is unaffected.
+
+### Removed
+- `Contexts` property and `AddContext()` method from `OpossumOptions` — replaced by
+  `StoreName` property and `UseStore()` method (see Changed above).
+
+---
+
 ## [0.2.0-preview.2] - 2026-02-22
 
 ### Fixed
@@ -110,6 +169,22 @@ at 2.7 s.
 The O(1) `HashSet` event-type matching and cached `Path.GetInvalidFileNameChars()` changes
 target the live **projection-polling hot path** (`ProcessNewEventsAsync`); their benefit is not
 captured by these one-shot rebuild or read benchmark suites.
+
+Benchmark run `20260223` confirms the 0.3.0-preview.1 release candidate — no regressions
+detected. Improvements vs `20260222`:
+
+| Suite | 20260222 | 20260223 | Δ |
+|---|---:|---:|---|
+| Query — low selectivity (many matches) | 111,330 μs | 99,867 μs | **−10.3%** |
+| Query — multiple QueryItems (OR logic) | 10,735 μs | 9,790 μs | **−8.8%** |
+| Query — high selectivity (few matches) | 588.5 μs | 534.7 μs | **−9.1%** |
+| Complex projection (multi-event types) | 127.75 μs | 111.70 μs | **−12.6%** |
+| Projection rebuild (500 events) | 34,079 μs | 32,245 μs | **−5.4%** |
+| Batch append (100 events, no flush) | 425.6 ms | 408.1 ms | **−4.1%** |
+| Descending order vs ascending ratio | 1.02× slower | **1.00× parity** | ✅ |
+
+All other benchmarks are within run-to-run noise (±2-4%). Full comparison in
+`docs/benchmarking/results/20260223/ANALYSIS.md`.
 
 Raw results: `docs/benchmarking/results/20260222/`
 

@@ -47,15 +47,10 @@ public class IntegrationTestFixture : IDisposable
                         RootPath = TestDatabasePath
                     };
 
-                    // Add context from configuration
+                    // Set store name from configuration (first entry used as single store name)
                     var contexts = context.Configuration.GetSection("Opossum:Contexts").Get<string[]>();
-                    if (contexts != null)
-                    {
-                        foreach (var ctx in contexts)
-                        {
-                            testOptions.AddContext(ctx);
-                        }
-                    }
+                    var storeName = contexts?.FirstOrDefault() ?? "TestContext";
+                    testOptions.UseStore(storeName);
 
                     // Register the test-specific options
                     services.AddSingleton(testOptions);

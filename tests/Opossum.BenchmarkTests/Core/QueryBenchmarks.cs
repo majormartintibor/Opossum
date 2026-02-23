@@ -32,14 +32,14 @@ public class QueryBenchmarks
     {
         var path = _tempHelper.CreateSubDirectory($"Store_{eventCount}Events");
         var options = new OpossumOptions { RootPath = path, FlushEventsImmediately = false };
-        options.AddContext("BenchmarkContext");
+        options.UseStore("BenchmarkContext");
 
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
         {
             opt.RootPath = path;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         using var sp = services.BuildServiceProvider();
@@ -69,7 +69,7 @@ public class QueryBenchmarks
         {
             opt.RootPath = _storePath;
             opt.FlushEventsImmediately = false;
-            opt.AddContext("BenchmarkContext");
+            opt.UseStore("BenchmarkContext");
         });
 
         return services.BuildServiceProvider().GetRequiredService<IEventStore>();
@@ -91,7 +91,7 @@ public class QueryBenchmarks
             new QueryItem
             {
                 EventTypes = ["OrderCreated"],
-                Tags = [new Tag { Key = "Region", Value = "US-West" }]
+                Tags = [new Tag("Region", "US-West")]
             }
         ]);
 
@@ -111,8 +111,8 @@ public class QueryBenchmarks
             {
                 EventTypes = ["OrderCreated", "OrderShipped"],
                 Tags = [
-                    new Tag { Key = "Region", Value = "US-West" },
-                    new Tag { Key = "Environment", Value = "Production" }
+                    new Tag("Region", "US-West"),
+                    new Tag("Environment", "Production")
                 ]
             }
         ]);
@@ -156,8 +156,8 @@ public class QueryBenchmarks
             {
                 EventTypes = ["OrderCancelled"], // ~20% of events
                 Tags = [
-                    new Tag { Key = "Priority", Value = "High" }, // ~10% of those
-                    new Tag { Key = "Status", Value = "Active" } // ~10% of those
+                    new Tag("Priority", "High"), // ~10% of those
+                    new Tag("Status", "Active") // ~10% of those
                 ]
                 // Result: ~0.2% of events (very selective)
             }
@@ -205,14 +205,14 @@ public class QueryBenchmarks
             new QueryItem
             {
                 EventTypes = ["OrderCreated"],
-                Tags = [new Tag { Key = "Region", Value = "US-West" }]
+                Tags = [new Tag("Region", "US-West")]
             },
             // OR
             // Item 2: OrderShipped in Production
             new QueryItem
             {
                 EventTypes = ["OrderShipped"],
-                Tags = [new Tag { Key = "Environment", Value = "Production" }]
+                Tags = [new Tag("Environment", "Production")]
             }
         ]);
 
@@ -236,8 +236,8 @@ public class QueryBenchmarks
             {
                 EventTypes = ["PaymentProcessed", "OrderCreated"],
                 Tags = [
-                    new Tag { Key = "Tenant", Value = "Tenant123" },
-                    new Tag { Key = "Environment", Value = "Production" }
+                    new Tag("Tenant", "Tenant123"),
+                    new Tag("Environment", "Production")
                 ]
             }
         ]);
@@ -259,13 +259,13 @@ public class QueryBenchmarks
             new QueryItem
             {
                 EventTypes = ["OrderCreated", "OrderShipped"],
-                Tags = [new Tag { Key = "Status", Value = "Active" }]
+                Tags = [new Tag("Status", "Active")]
             },
             // OR High priority delivered orders
             new QueryItem
             {
                 EventTypes = ["OrderDelivered"],
-                Tags = [new Tag { Key = "Priority", Value = "High" }]
+                Tags = [new Tag("Priority", "High")]
             }
         ]);
 

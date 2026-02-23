@@ -343,8 +343,8 @@ public class EventStoreExtensionsTests
         var @event = new TestEventData { Id = Guid.NewGuid() };
         var tags = new[]
         {
-            new Tag { Key = "key1", Value = "value1" },
-            new Tag { Key = "key2", Value = "value2" }
+            new Tag("key1", "value1"),
+            new Tag("key2", "value2")
         };
 
         // Act
@@ -547,8 +547,8 @@ public class EventStoreExtensionsTests
         var @event = new TestEventData { Id = Guid.NewGuid() };
         var tags = new[]
         {
-            new Tag { Key = "studentId", Value = "123" },
-            new Tag { Key = "email", Value = "test@example.com" }
+            new Tag("studentId", "123"),
+            new Tag("email", "test@example.com")
         };
 
         // Act
@@ -684,7 +684,7 @@ public class EventStoreExtensionsTests
             new TestEventData { Id = Guid.NewGuid() },
             new TestEventData { Id = Guid.NewGuid() }
         };
-        var sharedTags = new[] { new Tag { Key = "batch", Value = "import-2024" } };
+        var sharedTags = new[] { new Tag("batch", "import-2024") };
 
         // Act
         await stub.AppendEventsAsync(events, tags: sharedTags);
@@ -820,7 +820,7 @@ public class EventStoreExtensionsTests
         public ReadOption[]? LastReadOptions { get; private set; }
         public SequencedEvent[] EventsToReturn { get; set; } = [];
 
-        public Task AppendAsync(NewEvent[] events, AppendCondition? condition)
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)
         {
             LastAppendedEvents = events;
             LastAppendCondition = condition;
@@ -852,7 +852,7 @@ public class EventStoreExtensionsTests
             _onAppend = onAppend;
         }
 
-        public Task AppendAsync(NewEvent[] events, AppendCondition? condition)
+        public Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)
         {
             _onAppend();
             return Task.CompletedTask;

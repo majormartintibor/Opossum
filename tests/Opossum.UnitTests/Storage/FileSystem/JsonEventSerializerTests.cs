@@ -71,8 +71,13 @@ public class JsonEventSerializerTests
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
-        sequencedEvent.Event.Tags.Add(new Tag { Key = "courseId", Value = "123" });
-        sequencedEvent.Event.Tags.Add(new Tag { Key = "studentId", Value = "456" });
+        sequencedEvent = sequencedEvent with
+        {
+            Event = sequencedEvent.Event with
+            {
+                Tags = [new Tag("courseId", "123"), new Tag("studentId", "456")]
+            }
+        };
 
         // Act
         var json = _serializer.Serialize(sequencedEvent);
@@ -90,8 +95,14 @@ public class JsonEventSerializerTests
         // Arrange
         var correlationId = Guid.Parse("00000000-0000-0000-0000-000000000123");
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
-        sequencedEvent.Metadata.Timestamp = DateTime.Parse("2024-12-01T12:00:00Z").ToUniversalTime();
-        sequencedEvent.Metadata.CorrelationId = correlationId;
+        sequencedEvent = sequencedEvent with
+        {
+            Metadata = new Metadata
+            {
+                Timestamp = DateTime.Parse("2024-12-01T12:00:00Z").ToUniversalTime(),
+                CorrelationId = correlationId
+            }
+        };
 
         // Act
         var json = _serializer.Serialize(sequencedEvent);
@@ -185,8 +196,13 @@ public class JsonEventSerializerTests
     {
         // Arrange
         var original = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
-        original.Event.Tags.Add(new Tag { Key = "courseId", Value = "123" });
-        original.Event.Tags.Add(new Tag { Key = "studentId", Value = "456" });
+        original = original with
+        {
+            Event = original.Event with
+            {
+                Tags = [new Tag("courseId", "123"), new Tag("studentId", "456")]
+            }
+        };
         var json = _serializer.Serialize(original);
 
         // Act
@@ -204,7 +220,7 @@ public class JsonEventSerializerTests
         // Arrange
         var correlationId = Guid.Parse("00000000-0000-0000-0000-000000000123");
         var original = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
-        original.Metadata.CorrelationId = correlationId;
+        original = original with { Metadata = new Metadata { CorrelationId = correlationId } };
         var json = _serializer.Serialize(original);
 
         // Act
@@ -264,10 +280,15 @@ public class JsonEventSerializerTests
     {
         // Arrange
         var original = CreateTestEvent(123, "CompleteEvent", new TestDomainEvent { Data = "complete" });
-        original.Event.Tags.Add(new Tag { Key = "tag1", Value = "value1" });
-        original.Event.Tags.Add(new Tag { Key = "tag2", Value = "value2" });
-        original.Metadata.Timestamp = DateTime.Parse("2024-12-01T12:00:00Z").ToUniversalTime();
-        original.Metadata.CorrelationId = Guid.Parse("00000000-0000-0000-0000-000000000456");
+        original = original with
+        {
+            Event = original.Event with { Tags = [new Tag("tag1", "value1"), new Tag("tag2", "value2")] },
+            Metadata = new Metadata
+            {
+                Timestamp = DateTime.Parse("2024-12-01T12:00:00Z").ToUniversalTime(),
+                CorrelationId = Guid.Parse("00000000-0000-0000-0000-000000000456")
+            }
+        };
 
         // Act
         var json = _serializer.Serialize(original);

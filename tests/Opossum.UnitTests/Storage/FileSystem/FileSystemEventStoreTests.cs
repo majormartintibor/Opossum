@@ -19,7 +19,7 @@ public class FileSystemEventStoreTests : IDisposable
             RootPath = _tempRootPath,
             FlushEventsImmediately = false // Faster tests
         };
-        _options.AddContext("TestContext");
+        _options.UseStore("TestContext");
 
         _store = new FileSystemEventStore(_options);
     }
@@ -139,7 +139,7 @@ public class FileSystemEventStoreTests : IDisposable
     {
         // Arrange
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "1" }) };
-        events[0].Event.Tags.Add(new Tag { Key = "Environment", Value = "Production" });
+        events[0].Event = events[0].Event with { Tags = [new Tag("Environment", "Production")] };
 
         // Act
         await _store.AppendAsync(events, null);
@@ -175,7 +175,7 @@ public class FileSystemEventStoreTests : IDisposable
         // Arrange
         var specificTime = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
-        events[0].Metadata.Timestamp = specificTime;
+        events[0].Metadata = events[0].Metadata with { Timestamp = specificTime };
 
         // Act
         await _store.AppendAsync(events, null);
@@ -396,13 +396,13 @@ public class FileSystemEventStoreTests : IDisposable
     {
         // Arrange - Append event with different tag
         var initialEvents = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
-        initialEvents[0].Event.Tags.Add(new Tag { Key = "Status", Value = "Completed" });
+        initialEvents[0].Event = initialEvents[0].Event with { Tags = [new Tag("Status", "Completed")] };
         await _store.AppendAsync(initialEvents, null);
 
         // Act - Append with condition checking for different tag
         var condition = new AppendCondition
         {
-            FailIfEventsMatch = Query.FromTags(new Tag { Key = "Status", Value = "Pending" })
+            FailIfEventsMatch = Query.FromTags(new Tag("Status", "Pending"))
         };
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
         await _store.AppendAsync(newEvents, condition);
@@ -418,13 +418,13 @@ public class FileSystemEventStoreTests : IDisposable
     {
         // Arrange - Append event with specific tag
         var initialEvents = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
-        initialEvents[0].Event.Tags.Add(new Tag { Key = "Status", Value = "Pending" });
+        initialEvents[0].Event = initialEvents[0].Event with { Tags = [new Tag("Status", "Pending")] };
         await _store.AppendAsync(initialEvents, null);
 
         // Act & Assert - Append with condition checking for same tag
         var condition = new AppendCondition
         {
-            FailIfEventsMatch = Query.FromTags(new Tag { Key = "Status", Value = "Pending" })
+            FailIfEventsMatch = Query.FromTags(new Tag("Status", "Pending"))
         };
         var newEvents = new[] { CreateTestEvent("Event2", new TestDomainEvent { Data = "2" }) };
 
@@ -463,14 +463,13 @@ public class FileSystemEventStoreTests : IDisposable
     {
         // Arrange - Create various events with different types and tags
         var event1 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "Order123" });
-        event1.Event.Tags.Add(new Tag { Key = "Environment", Value = "Production" });
-        event1.Event.Tags.Add(new Tag { Key = "Region", Value = "US-West" });
+        event1.Event = event1.Event with { Tags = [new Tag("Environment", "Production"), new Tag("Region", "US-West")] };
 
         var event2 = CreateTestEvent("OrderShipped", new TestDomainEvent { Data = "Order123" });
-        event2.Event.Tags.Add(new Tag { Key = "Environment", Value = "Production" });
+        event2.Event = event2.Event with { Tags = [new Tag("Environment", "Production")] };
 
         var event3 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "Order456" });
-        event3.Event.Tags.Add(new Tag { Key = "Environment", Value = "Development" });
+        event3.Event = event3.Event with { Tags = [new Tag("Environment", "Development")] };
 
         // Act - Append in batches
         await _store.AppendAsync([event1], null);
@@ -511,7 +510,7 @@ public class FileSystemEventStoreTests : IDisposable
             RootPath = tempPath,
             FlushEventsImmediately = true // Production mode
         };
-        options.AddContext("ProductionContext");
+        options.UseStore("ProductionContext");
 
         var store = new FileSystemEventStore(options);
         var events = new[] { CreateTestEvent("CriticalEvent", new TestDomainEvent { Data = "important" }) };
@@ -549,7 +548,7 @@ public class FileSystemEventStoreTests : IDisposable
             RootPath = tempPath,
             FlushEventsImmediately = false // Test mode (faster)
         };
-        options.AddContext("TestContext");
+        options.UseStore("TestContext");
 
         var store = new FileSystemEventStore(options);
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
@@ -581,7 +580,7 @@ public class FileSystemEventStoreTests : IDisposable
         var tempPath = Path.Combine(Path.GetTempPath(), $"DefaultFlushTest_{Guid.NewGuid():N}");
         var options = new OpossumOptions { RootPath = tempPath };
         // Note: NOT setting FlushEventsImmediately - should default to true
-        options.AddContext("DefaultContext");
+        options.UseStore("DefaultContext");
 
         try
         {
@@ -770,18 +769,18 @@ public class FileSystemEventStoreTests : IDisposable
     {
         // Arrange - Add events with tags
         var event1 = CreateTestEvent("Event1", new TestDomainEvent { Data = "1" });
-        event1.Event.Tags.Add(new Tag { Key = "Priority", Value = "High" });
+        event1.Event = event1.Event with { Tags = [new Tag("Priority", "High")] };
 
         var event2 = CreateTestEvent("Event2", new TestDomainEvent { Data = "2" });
-        event2.Event.Tags.Add(new Tag { Key = "Priority", Value = "Low" });
+        event2.Event = event2.Event with { Tags = [new Tag("Priority", "Low")] };
 
         var event3 = CreateTestEvent("Event3", new TestDomainEvent { Data = "3" });
-        event3.Event.Tags.Add(new Tag { Key = "Priority", Value = "High" });
+        event3.Event = event3.Event with { Tags = [new Tag("Priority", "High")] };
 
         await _store.AppendAsync([event1, event2, event3], null);
 
         // Act - Query High priority in descending order
-        var query = Query.FromTags([new Tag { Key = "Priority", Value = "High" }]);
+        var query = Query.FromTags([new Tag("Priority", "High")]);
         var result = await _store.ReadAsync(query, [ReadOption.Descending]);
 
         // Assert
