@@ -11,10 +11,10 @@ internal class IndexManager
     private readonly EventTypeIndex _eventTypeIndex;
     private readonly TagIndex _tagIndex;
 
-    public IndexManager()
+    public IndexManager(bool flushImmediately = false)
     {
-        _eventTypeIndex = new EventTypeIndex();
-        _tagIndex = new TagIndex();
+        _eventTypeIndex = new EventTypeIndex(flushImmediately);
+        _tagIndex = new TagIndex(flushImmediately);
     }
 
     // Constructor for testing with dependency injection

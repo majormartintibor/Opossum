@@ -141,6 +141,7 @@
     <File Path="docs/lessons-learned/batched-flush-failure.md" />
   </Folder>
   <Folder Name="/docs/limitations/">
+    <File Path="docs/limitations/crash-recovery-position-collision.md" />
     <File Path="docs/limitations/mvp-single-context.md" />
   </Folder>
   <Folder Name="/docs/performance/">

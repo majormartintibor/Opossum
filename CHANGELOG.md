@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Known Issues
+- **Crash-recovery position collision (pre-existing since v0.1.0)** — a process crash
+  between step 7 (event files written) and step 9 (ledger updated) leaves orphaned event
+  files on disk at positions the ledger does not record. On the next append, those positions
+  are reallocated and the orphaned files are silently overwritten. `WriteProtectEventFiles`
+  does not guard against this because the write path strips the `ReadOnly` attribute before
+  every overwrite. Full analysis in
+  [`docs/limitations/crash-recovery-position-collision.md`](docs/limitations/crash-recovery-position-collision.md).
+  Fix is tracked for 0.5.0.
+
+### Fixed
+- **Index files not flushed to disk when `FlushEventsImmediately = true`** — `PositionIndexFile.WritePositionsAsync`
+  now calls `RandomAccess.FlushToDisk` on the temp file before the atomic rename when the flush flag is set,
+  matching the durability guarantee already provided by event and ledger files. Previously, on a power failure
+  after an append, event-type and tag index queries could miss the last batch of appended events until a
+  manual reindex. `EventTypeIndex`, `TagIndex`, `IndexManager`, and `FileSystemEventStore` were updated to
+  propagate the `FlushEventsImmediately` option through the full index write path.
+- **`DeleteStoreAsync` race condition with `AppendAsync`** — `DeleteStoreAsync` now acquires
+  `_appendLock` before touching the store directory. Previously a concurrent `AppendAsync`
+  could encounter `IOException`/`DirectoryNotFoundException` mid-write because the deletion
+  bypassed the in-process semaphore entirely. The double-checked pattern (fast-path existence
+  check before the lock, re-check inside) ensures both concurrent deletes and the
+  append-vs-delete race complete cleanly.
+
 ### Performance
 - **Parallel event-type index loading** (`IndexManager`): `GetPositionsByEventTypesAsync` and
   `GetPositionsByTagsAsync` now load all per-type/per-tag index files concurrently via

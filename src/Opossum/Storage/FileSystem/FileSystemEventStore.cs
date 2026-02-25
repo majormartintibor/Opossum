@@ -23,7 +23,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         _logger = logger ?? NullLogger<FileSystemEventStore>.Instance;
         _ledgerManager = new LedgerManager(options.FlushEventsImmediately);
         _eventFileManager = new EventFileManager(options.FlushEventsImmediately, options.WriteProtectEventFiles);
-        _indexManager = new IndexManager();
+        _indexManager = new IndexManager(options.FlushEventsImmediately);
         _crossProcessLockManager = new CrossProcessLockManager(options.CrossProcessLockTimeout);
     }
 

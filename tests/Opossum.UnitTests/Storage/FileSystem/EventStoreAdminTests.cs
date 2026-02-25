@@ -148,6 +148,52 @@ public class EventStoreAdminTests : IDisposable
     }
 
     // ========================================================================
+    // DeleteStoreAsync — Concurrency
+    // ========================================================================
+
+    [Fact]
+    public async Task DeleteStoreAsync_ConcurrentWithAppendAsync_NeitherThrowsAndStoreIsConsistent()
+    {
+        // Arrange — seed the store so the directory exists before racing.
+        await _store.AppendAsync([CreateEvent("SeedEvent")], null);
+
+        // Act — fire append and delete simultaneously; at least one must succeed without
+        // throwing an IOException / DirectoryNotFoundException caused by a missing lock.
+        var appendTask = _store.AppendAsync([CreateEvent("RaceEvent")], null);
+        var deleteTask = _store.DeleteStoreAsync();
+
+        var exceptions = new List<Exception>();
+
+        try { await appendTask; }
+        catch (Exception ex) { exceptions.Add(ex); }
+
+        try { await deleteTask; }
+        catch (Exception ex) { exceptions.Add(ex); }
+
+        // Neither operation should surface a raw IO error — only expected domain
+        // exceptions (e.g. store directory gone during append) are acceptable.
+        Assert.DoesNotContain(exceptions, ex => ex is IOException or DirectoryNotFoundException);
+    }
+
+    [Fact]
+    public async Task DeleteStoreAsync_CalledTwiceConcurrently_BothCompleteWithoutError()
+    {
+        // Arrange
+        await _store.AppendAsync([CreateEvent("SeedEvent")], null);
+
+        // Act — two concurrent deletes; second one should be a graceful no-op.
+        var t1 = _store.DeleteStoreAsync();
+        var t2 = _store.DeleteStoreAsync();
+
+        // Assert — neither should throw
+        await t1;
+        await t2;
+
+        var storePath = Path.Combine(_tempRootPath, "TestContext");
+        Assert.False(Directory.Exists(storePath));
+    }
+
+    // ========================================================================
     // IEventStoreAdmin DI registration
     // ========================================================================
 
