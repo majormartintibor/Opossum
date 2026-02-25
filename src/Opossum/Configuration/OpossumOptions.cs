@@ -99,6 +99,20 @@ public sealed class OpossumOptions
     public bool WriteProtectProjectionFiles { get; set; } = false;
 
     /// <summary>
+    /// Maximum time to wait when acquiring the cross-process append lock.
+    /// When multiple application instances share the same store directory
+    /// (e.g. via a UNC path or mapped drive), Opossum serialises appends
+    /// across all processes using a file-system lock. If the lock is held
+    /// by another process for longer than this timeout, <see cref="AppendAsync"/>
+    /// throws <see cref="TimeoutException"/>.
+    ///
+    /// Default: 5 seconds — sufficient headroom for any business-operation
+    /// event rate; increase only if appends are consistently queued behind
+    /// large batch operations on a slow network share.
+    /// </summary>
+    public TimeSpan CrossProcessLockTimeout { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// Sets the name of this event store.
     /// <see cref="RootPath"/> and must be a valid directory name.
     /// </summary>

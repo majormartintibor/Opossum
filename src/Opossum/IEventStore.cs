@@ -28,6 +28,14 @@ public interface IEventStore
     /// </param>
     /// <exception cref="ArgumentNullException">When <paramref name="events"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">When <paramref name="events"/> is empty or contains an event with a null/empty <see cref="Core.DomainEvent.EventType"/>.</exception>
+    /// <exception cref="TimeoutException">
+    /// Thrown when the cross-process append lock cannot be acquired within
+    /// <see cref="Configuration.OpossumOptions.CrossProcessLockTimeout"/>. This can occur
+    /// when multiple application instances share the same store directory and one instance
+    /// holds the lock for an unusually long time. Increase
+    /// <see cref="Configuration.OpossumOptions.CrossProcessLockTimeout"/> if this occurs
+    /// regularly, or investigate the process that is holding the lock.
+    /// </exception>
     Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -48,6 +48,12 @@ public sealed class OpossumOptionsValidator : IValidateOptions<OpossumOptions>
             }
         }
 
+        // Validate CrossProcessLockTimeout
+        if (options.CrossProcessLockTimeout <= TimeSpan.Zero)
+        {
+            failures.Add("CrossProcessLockTimeout must be greater than zero.");
+        }
+
         return failures.Count > 0
             ? ValidateOptionsResult.Fail(failures)
             : ValidateOptionsResult.Success;

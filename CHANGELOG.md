@@ -8,6 +8,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cross-process append safety (ADR-005)** — `AppendAsync` is now safe when multiple
+  application instances share the same store directory over a network drive or UNC path.
+  A dedicated `.store.lock` file in the context directory is opened with `FileShare.None`
+  for the entire duration of every append. Windows SMB enforces this server-side across all
+  machines, eliminating the read-check-write race that could silently overwrite events when
+  two PCs submitted a form within the same ~10 ms window. The existing `SemaphoreSlim` is
+  retained as a fast within-process gate; the file lock is only contested across processes.
+  Lock acquisition on an uncontested local drive adds < 1 ms overhead per append.
+- **`CrossProcessLockManager`** — new internal class that acquires and releases the
+  `.store.lock` file with exponential backoff (10 ms → 500 ms cap) on sharing violations.
+  Throws `TimeoutException` with a diagnostic message when the configured timeout elapses.
+  Throws `OperationCanceledException` immediately when the caller's token is cancelled.
+- **`OpossumOptions.CrossProcessLockTimeout`** — new configuration property (default: 5 s).
+  Increase this value when appends are consistently queued behind large batch operations on
+  a slow network share. Validated at startup: must be > `TimeSpan.Zero`.
+- **`TimeoutException` documented on `IEventStore.AppendAsync`** — the XML comment now
+  describes when and why `TimeoutException` can surface, and references the configuration
+  option to adjust.
+- **`CrossProcessLockManagerTests`** (8 unit tests) — cover: successful acquisition, lock
+  file is created even when the context directory does not yet exist, second acquisition while
+  held throws `TimeoutException`, disposal releases the lock for re-acquisition, pre-cancelled
+  token throws immediately, mid-wait cancellation throws `OperationCanceledException`, and
+  exponential backoff stays within the configured timeout + max-backoff bounds.
+- **`CrossProcessAppendSafetyTests`** (5 integration tests) — cover: two store instances on
+  the same directory producing contiguous positions across 100 concurrent appends, no event
+  payload overwritten, exactly one winner under competing `AppendCondition`, `TimeoutException`
+  thrown when the lock is externally held for longer than `CrossProcessLockTimeout`, and
+  100 sequential single-instance appends completing within 5 s (performance sanity guard).
 - **`IEventStoreAdmin` interface with `DeleteStoreAsync`** — new public administrative interface
   that exposes destructive store-lifecycle operations. `DeleteStoreAsync` permanently removes
   all data owned by the store: events, indices, projections, checkpoints, and the ledger.

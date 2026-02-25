@@ -1,7 +1,7 @@
 # ADR-005: Cross-Process Append Safety via Exclusive File Lock
 
 **Date:** 2026  
-**Status:** ✅ Accepted — To Be Implemented
+**Status:** ✅ Accepted — Implemented in 0.4.0
 
 ---
 

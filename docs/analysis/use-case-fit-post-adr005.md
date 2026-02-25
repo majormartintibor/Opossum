@@ -7,6 +7,12 @@
 >
 > **Scope:** This document does not repeat the README. It starts from the actual
 > capability profile and reasons outward to real use cases.
+>
+> **Release state:** ADR-005 was delivered in 0.4.0. The throughput optimisations
+> (A, B, E) are planned for 0.5.0. The capability profile described in this document
+> reflects the **post-0.5.0 target state**. The 0.4.0 state is identical except
+> that throughput remains at the 0.3.0-preview.1 baseline (~92 events/sec flush=true,
+> ~205 events/sec no-flush), which is sufficient for all documented target use cases.
 
 ---
 
