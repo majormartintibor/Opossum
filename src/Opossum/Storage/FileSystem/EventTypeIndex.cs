@@ -62,12 +62,6 @@ internal class EventTypeIndex
         ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
 
         var indexFilePath = GetIndexFilePath(indexPath, eventType);
-
-        if (!File.Exists(indexFilePath))
-        {
-            return [];
-        }
-
         var positions = await PositionIndexFile.ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
         return [.. positions];
     }

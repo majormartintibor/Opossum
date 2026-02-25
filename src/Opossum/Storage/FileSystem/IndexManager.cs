@@ -74,21 +74,20 @@ internal class IndexManager
             return [];
         }
 
-        var indexPath = GetIndexPath(contextPath);
-        var allPositions = new HashSet<long>();
-
-        foreach (var eventType in eventTypes)
+        if (eventTypes.Length == 1)
         {
-            var positions = await _eventTypeIndex.GetPositionsAsync(indexPath, eventType).ConfigureAwait(false);
-            foreach (var position in positions)
-            {
-                allPositions.Add(position);
-            }
+            return await GetPositionsByEventTypeAsync(contextPath, eventTypes[0]).ConfigureAwait(false);
         }
 
-        var result = allPositions.ToArray();
-        Array.Sort(result);
-        return result;
+        var indexPath = GetIndexPath(contextPath);
+
+        // Load all event-type position arrays concurrently to minimise wall-clock I/O time.
+        // Each index file is independent so reads can safely run in parallel.
+        var positionArrays = await Task.WhenAll(
+            eventTypes.Select(et => _eventTypeIndex.GetPositionsAsync(indexPath, et))
+        ).ConfigureAwait(false);
+
+        return SortedMerge(positionArrays);
     }
 
     /// <summary>
@@ -117,21 +116,19 @@ internal class IndexManager
             return [];
         }
 
-        var indexPath = GetIndexPath(contextPath);
-        var allPositions = new HashSet<long>();
-
-        foreach (var tag in tags)
+        if (tags.Length == 1)
         {
-            var positions = await _tagIndex.GetPositionsAsync(indexPath, tag).ConfigureAwait(false);
-            foreach (var position in positions)
-            {
-                allPositions.Add(position);
-            }
+            return await GetPositionsByTagAsync(contextPath, tags[0]).ConfigureAwait(false);
         }
 
-        var result = allPositions.ToArray();
-        Array.Sort(result);
-        return result;
+        var indexPath = GetIndexPath(contextPath);
+
+        // Load all tag position arrays concurrently to minimise wall-clock I/O time.
+        var positionArrays = await Task.WhenAll(
+            tags.Select(t => _tagIndex.GetPositionsAsync(indexPath, t))
+        ).ConfigureAwait(false);
+
+        return SortedMerge(positionArrays);
     }
 
     /// <summary>
@@ -180,5 +177,54 @@ internal class IndexManager
     private static string GetIndexPath(string contextPath)
     {
         return Path.Combine(contextPath, "Indices");
+    }
+
+    /// <summary>
+    /// Merges multiple pre-sorted arrays into a single sorted array without duplicates.
+    /// Uses a k-way merge — O(N × K) where N is the total number of positions and K is the
+    /// number of arrays. Avoids the O(N log N) re-sort that a <see cref="HashSet{T}"/> approach requires.
+    /// Positions are always positive (validated at write time), so <see cref="long.MinValue"/> is a
+    /// safe sentinel for the deduplication guard.
+    /// </summary>
+    private static long[] SortedMerge(long[][] sortedArrays)
+    {
+        // Filter out empty arrays to simplify the merge loop.
+        var nonEmpty = sortedArrays.Where(a => a.Length > 0).ToArray();
+
+        if (nonEmpty.Length == 0) return [];
+        if (nonEmpty.Length == 1) return nonEmpty[0];
+
+        var totalCount = nonEmpty.Sum(a => a.Length);
+        var result = new long[totalCount];
+        var indices = new int[nonEmpty.Length];
+        var resultIdx = 0;
+        var last = long.MinValue;
+
+        while (true)
+        {
+            var minVal = long.MaxValue;
+            var minArr = -1;
+
+            for (var i = 0; i < nonEmpty.Length; i++)
+            {
+                if (indices[i] < nonEmpty[i].Length && nonEmpty[i][indices[i]] < minVal)
+                {
+                    minVal = nonEmpty[i][indices[i]];
+                    minArr = i;
+                }
+            }
+
+            if (minArr < 0) break;
+
+            indices[minArr]++;
+
+            if (minVal != last)
+            {
+                result[resultIdx++] = minVal;
+                last = minVal;
+            }
+        }
+
+        return resultIdx == totalCount ? result : result[..resultIdx];
     }
 }

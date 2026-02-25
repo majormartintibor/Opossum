@@ -25,8 +25,8 @@ internal static class PositionIndexFile
             return [];
         }
 
-        var maxRetries = 5;
-        var retryDelay = 10;
+        var maxRetries = 3;  // reads are non-destructive — fail fast
+        var retryDelay = 1;   // 1 ms is sufficient for transient read conflicts
 
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {

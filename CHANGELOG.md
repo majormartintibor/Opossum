@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Performance
+- **Parallel event-type index loading** (`IndexManager`): `GetPositionsByEventTypesAsync` and
+  `GetPositionsByTagsAsync` now load all per-type/per-tag index files concurrently via
+  `Task.WhenAll` instead of sequentially. Multi-type and multi-tag queries scale with
+  `max(T_file)` rather than `sum(T_file)`.
+- **Reduced read-retry overhead** (`PositionIndexFile`): `ReadPositionsAsync` now uses
+  `maxRetries = 3` with a `1 ms` initial back-off (was 5 retries / 10 ms). Reads are
+  non-destructive so a shorter back-off is sufficient, reducing worst-case retry latency by ~10×.
+- **Eliminated redundant `File.Exists` syscall** (`EventTypeIndex`, `TagIndex`):
+  `GetPositionsAsync` no longer calls `File.Exists` before delegating to
+  `PositionIndexFile.ReadPositionsAsync`, which already handles the missing-file case — saving
+  one kernel call per index file read.
+- **K-way sorted merge** (`IndexManager`): multi-type and multi-tag position merges now use a
+  k-way sorted merge that exploits pre-sorted index arrays, replacing the `HashSet<long>` +
+  `Array.Sort` approach (O(N log N) → O(N × K)).
+
 ### Added
 - **Cross-process append safety (ADR-005)** — `AppendAsync` is now safe when multiple
   application instances share the same store directory over a network drive or UNC path.

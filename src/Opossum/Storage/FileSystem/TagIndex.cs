@@ -66,12 +66,6 @@ internal class TagIndex
         ArgumentException.ThrowIfNullOrWhiteSpace(tag.Key);
 
         var indexFilePath = GetIndexFilePath(indexPath, tag);
-
-        if (!File.Exists(indexFilePath))
-        {
-            return [];
-        }
-
         var positions = await PositionIndexFile.ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
         return [.. positions];
     }
