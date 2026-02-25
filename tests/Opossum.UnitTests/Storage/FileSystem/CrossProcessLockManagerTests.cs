@@ -27,7 +27,7 @@ public class CrossProcessLockManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AcquiresLock_WhenFileIsNotHeld_ReturnsHandle()
+    public async Task AcquiresLock_WhenFileIsNotHeld_ReturnsHandleAsync()
     {
         var lockManager = new CrossProcessLockManager(TimeSpan.FromSeconds(1));
 
@@ -38,7 +38,7 @@ public class CrossProcessLockManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AcquiresLock_CreatesContextDirectory_WhenItDoesNotExist()
+    public async Task AcquiresLock_CreatesContextDirectory_WhenItDoesNotExistAsync()
     {
         var newDirectory = Path.Combine(_testDirectory, "NewContext");
         Assert.False(Directory.Exists(newDirectory));
@@ -56,7 +56,7 @@ public class CrossProcessLockManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task SecondAcquire_WhenLockIsHeld_ThrowsTimeoutException()
+    public async Task SecondAcquire_WhenLockIsHeld_ThrowsTimeoutExceptionAsync()
     {
         var lockManager = new CrossProcessLockManager(TimeSpan.FromMilliseconds(200));
 
@@ -67,7 +67,7 @@ public class CrossProcessLockManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task TimeoutException_ContainsLockPathAndConfigOption()
+    public async Task TimeoutException_ContainsLockPathAndConfigOptionAsync()
     {
         var lockManager = new CrossProcessLockManager(TimeSpan.FromMilliseconds(200));
 
@@ -87,7 +87,7 @@ public class CrossProcessLockManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReleasesLock_OnDispose_AllowsReacquisition()
+    public async Task ReleasesLock_OnDispose_AllowsReacquisitionAsync()
     {
         var lockManager = new CrossProcessLockManager(TimeSpan.FromSeconds(1));
 
@@ -105,7 +105,7 @@ public class CrossProcessLockManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AcquireAsync_WithAlreadyCancelledToken_ThrowsImmediately()
+    public async Task AcquireAsync_WithAlreadyCancelledToken_ThrowsImmediatelyAsync()
     {
         var lockManager = new CrossProcessLockManager(TimeSpan.FromSeconds(5));
         using var cts = new CancellationTokenSource();
@@ -116,7 +116,7 @@ public class CrossProcessLockManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AcquireAsync_CancellationDuringBackoff_ThrowsOperationCanceledException()
+    public async Task AcquireAsync_CancellationDuringBackoff_ThrowsOperationCanceledExceptionAsync()
     {
         var lockManager = new CrossProcessLockManager(TimeSpan.FromSeconds(10));
 
@@ -135,7 +135,7 @@ public class CrossProcessLockManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ExponentialBackoff_TotalWaitTime_IsWithinExpectedBounds()
+    public async Task ExponentialBackoff_TotalWaitTime_IsWithinExpectedBoundsAsync()
     {
         var timeout = TimeSpan.FromMilliseconds(300);
         var lockManager = new CrossProcessLockManager(timeout);

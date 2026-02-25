@@ -64,7 +64,7 @@ public class AppendBenchmarks
     /// Baseline: Single event append without flush (fastest)
     /// </summary>
     [Benchmark(Baseline = true, Description = "Single event append (no flush)")]
-    public async Task SingleEventAppend_NoFlush()
+    public async Task SingleEventAppend_NoFlushAsync()
     {
         var events = new[] { _singleEvent };
         await _store.AppendAsync(events, null);
@@ -74,7 +74,7 @@ public class AppendBenchmarks
     /// Single event append with flush (production mode)
     /// </summary>
     [Benchmark(Description = "Single event append (with flush)")]
-    public async Task SingleEventAppend_WithFlush()
+    public async Task SingleEventAppend_WithFlushAsync()
     {
         // Create new store with flush enabled
         var options = new OpossumOptions
@@ -103,7 +103,7 @@ public class AppendBenchmarks
     /// Batch append - 10 events without flush
     /// </summary>
     [Benchmark(Description = "Batch append (10 events, no flush)")]
-    public async Task BatchAppend_10Events_NoFlush()
+    public async Task BatchAppend_10Events_NoFlushAsync()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(10, tagCount: 2);
         await _store.AppendAsync([.. events], null);
@@ -113,7 +113,7 @@ public class AppendBenchmarks
     /// Batch append - 10 events with flush
     /// </summary>
     [Benchmark(Description = "Batch append (10 events, with flush)")]
-    public async Task BatchAppend_10Events_WithFlush()
+    public async Task BatchAppend_10Events_WithFlushAsync()
     {
         // Create new store with flush enabled
         var options = new OpossumOptions
@@ -146,7 +146,7 @@ public class AppendBenchmarks
     /// Batch append - 2 events (minimal batch)
     /// </summary>
     [Benchmark(Description = "Batch append (2 events, no flush)")]
-    public async Task BatchAppend_2Events_NoFlush()
+    public async Task BatchAppend_2Events_NoFlushAsync()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(2, tagCount: 2);
         await _store.AppendAsync([.. events], null);
@@ -156,7 +156,7 @@ public class AppendBenchmarks
     /// Batch append - 5 events
     /// </summary>
     [Benchmark(Description = "Batch append (5 events, no flush)")]
-    public async Task BatchAppend_5Events_NoFlush()
+    public async Task BatchAppend_5Events_NoFlushAsync()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(5, tagCount: 2);
         await _store.AppendAsync([.. events], null);
@@ -166,7 +166,7 @@ public class AppendBenchmarks
     /// Batch append - 20 events
     /// </summary>
     [Benchmark(Description = "Batch append (20 events, no flush)")]
-    public async Task BatchAppend_20Events_NoFlush()
+    public async Task BatchAppend_20Events_NoFlushAsync()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(20, tagCount: 2);
         await _store.AppendAsync([.. events], null);
@@ -176,7 +176,7 @@ public class AppendBenchmarks
     /// Batch append - 50 events (larger batch)
     /// </summary>
     [Benchmark(Description = "Batch append (50 events, no flush)")]
-    public async Task BatchAppend_50Events_NoFlush()
+    public async Task BatchAppend_50Events_NoFlushAsync()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(50, tagCount: 2);
         await _store.AppendAsync([.. events], null);
@@ -186,7 +186,7 @@ public class AppendBenchmarks
     /// Batch append - 100 events (large batch)
     /// </summary>
     [Benchmark(Description = "Batch append (100 events, no flush)")]
-    public async Task BatchAppend_100Events_NoFlush()
+    public async Task BatchAppend_100Events_NoFlushAsync()
     {
         var events = BenchmarkDataGenerator.GenerateEvents(100, tagCount: 2);
         await _store.AppendAsync([.. events], null);
@@ -201,7 +201,7 @@ public class AppendBenchmarks
     /// Simulates email uniqueness check like in RegisterStudent
     /// </summary>
     [Benchmark(Description = "Append with DCB (FailIfEventsMatch)")]
-    public async Task AppendWithDCB_FailIfEventsMatch()
+    public async Task AppendWithDCB_FailIfEventsMatchAsync()
     {
         var email = $"test-{Guid.NewGuid()}@example.com";
         var studentId = Guid.NewGuid();

@@ -21,7 +21,7 @@ public class CourseManagementIntegrationTests
     }
 
     [Fact]
-    public async Task CreateCourse_ValidRequest_ReturnsCreated()
+    public async Task CreateCourse_ValidRequest_ReturnsCreatedAsync()
     {
         // Arrange
         var request = new
@@ -44,7 +44,7 @@ public class CourseManagementIntegrationTests
     }
 
     [Fact]
-    public async Task ModifyCourseStudentLimit_ValidRequest_ReturnsOk()
+    public async Task ModifyCourseStudentLimit_ValidRequest_ReturnsOkAsync()
     {
         // Arrange - Create course first
         var createRequest = new
@@ -68,7 +68,7 @@ public class CourseManagementIntegrationTests
     }
 
     [Fact]
-    public async Task ModifyCourseStudentLimit_NonExistentCourse_ReturnsBadRequest()
+    public async Task ModifyCourseStudentLimit_NonExistentCourse_ReturnsBadRequestAsync()
     {
         // Arrange
         var nonExistentCourseId = Guid.NewGuid();
@@ -85,7 +85,7 @@ public class CourseManagementIntegrationTests
     }
 
     [Fact]
-    public async Task ModifyCourseStudentLimit_InvalidLimit_ReturnsBadRequest()
+    public async Task ModifyCourseStudentLimit_InvalidLimit_ReturnsBadRequestAsync()
     {
         // Arrange - Create course first
         var createRequest = new
@@ -112,7 +112,7 @@ public class CourseManagementIntegrationTests
     }
 
     [Fact]
-    public async Task GetCourses_AfterCreation_ReturnsCreatedCourse()
+    public async Task GetCourses_AfterCreation_ReturnsCreatedCourseAsync()
     {
         // Arrange - Create a course
         var createRequest = new

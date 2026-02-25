@@ -70,7 +70,7 @@ public class DescendingOrderIsolatedBenchmark
     /// Baseline: Query with ascending order (default)
     /// </summary>
     [Benchmark(Baseline = true, Description = "Ascending order (baseline)")]
-    public async Task Query_AscendingOrder()
+    public async Task Query_AscendingOrderAsync()
     {
         var results = await _store.ReadAsync(_testQuery, null);
     }
@@ -80,7 +80,7 @@ public class DescendingOrderIsolatedBenchmark
     /// Should be close to baseline if fix worked!
     /// </summary>
     [Benchmark(Description = "Descending order")]
-    public async Task Query_DescendingOrder()
+    public async Task Query_DescendingOrderAsync()
     {
         var results = await _store.ReadAsync(_testQuery, [ReadOption.Descending]);
     }

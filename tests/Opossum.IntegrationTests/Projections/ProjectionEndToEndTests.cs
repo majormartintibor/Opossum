@@ -48,7 +48,7 @@ public class ProjectionEndToEndTests : IDisposable
     }
 
     [Fact]
-    public async Task EndToEnd_CreateAndQueryOrder_WorksCorrectly()
+    public async Task EndToEnd_CreateAndQueryOrder_WorksCorrectlyAsync()
     {
         // Arrange - Register projection
         var projection = new E2EOrderProjection();
@@ -96,7 +96,7 @@ public class ProjectionEndToEndTests : IDisposable
     }
 
     [Fact]
-    public async Task EndToEnd_MultipleOrders_QueriesWork()
+    public async Task EndToEnd_MultipleOrders_QueriesWorkAsync()
     {
         // Arrange
         var projection = new E2EOrderProjection();
@@ -144,7 +144,7 @@ public class ProjectionEndToEndTests : IDisposable
     }
 
     [Fact]
-    public async Task EndToEnd_IncrementalUpdate_UpdatesProjection()
+    public async Task EndToEnd_IncrementalUpdate_UpdatesProjectionAsync()
     {
         // Arrange
         var projection = new E2EOrderProjection();
@@ -190,7 +190,7 @@ public class ProjectionEndToEndTests : IDisposable
     }
 
     [Fact]
-    public async Task EndToEnd_OrderCancellation_RemovesProjection()
+    public async Task EndToEnd_OrderCancellation_RemovesProjectionAsync()
     {
         // Arrange
         var projection = new E2EOrderProjection();
@@ -220,7 +220,7 @@ public class ProjectionEndToEndTests : IDisposable
     }
 
     [Fact]
-    public async Task EndToEnd_CheckpointManagement_TracksProgress()
+    public async Task EndToEnd_CheckpointManagement_TracksProgressAsync()
     {
         // Arrange
         var projection = new E2EOrderProjection();

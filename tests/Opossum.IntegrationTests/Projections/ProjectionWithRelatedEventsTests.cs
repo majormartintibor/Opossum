@@ -43,7 +43,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
     }
 
     [Fact]
-    public async Task ProjectionWithRelatedEvents_WithRelatedEvents_BuildsCorrectState()
+    public async Task ProjectionWithRelatedEvents_WithRelatedEvents_BuildsCorrectStateAsync()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -86,7 +86,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
     }
 
     [Fact]
-    public async Task ProjectionWithRelatedEvents_WithMissingRelatedEvents_ThrowsException()
+    public async Task ProjectionWithRelatedEvents_WithMissingRelatedEvents_ThrowsExceptionAsync()
     {
         // Arrange
         var postId = Guid.NewGuid();
@@ -110,7 +110,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
     }
 
     [Fact]
-    public async Task ProjectionWithRelatedEvents_WithMultipleRelatedEvents_UsesLatest()
+    public async Task ProjectionWithRelatedEvents_WithMultipleRelatedEvents_UsesLatestAsync()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -156,7 +156,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
     }
 
     [Fact]
-    public async Task ProjectionWithRelatedEvents_WithNoRelatedEventsNeeded_WorksCorrectly()
+    public async Task ProjectionWithRelatedEvents_WithNoRelatedEventsNeeded_WorksCorrectlyAsync()
     {
         // Arrange
         var postId = Guid.NewGuid();
@@ -188,7 +188,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
     }
 
     [Fact]
-    public async Task ProjectionWithRelatedEvents_WithComplexRelationships_BuildsCorrectly()
+    public async Task ProjectionWithRelatedEvents_WithComplexRelationships_BuildsCorrectlyAsync()
     {
         // Arrange
         var orderId = Guid.NewGuid();

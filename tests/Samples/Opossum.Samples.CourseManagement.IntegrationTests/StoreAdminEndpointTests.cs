@@ -22,7 +22,7 @@ public class StoreAdminEndpointTests
     }
 
     [Fact]
-    public async Task DELETE_Store_WithoutConfirm_ReturnsBadRequest()
+    public async Task DELETE_Store_WithoutConfirm_ReturnsBadRequestAsync()
     {
         // Act
         var response = await _client.DeleteAsync("/admin/store");
@@ -32,7 +32,7 @@ public class StoreAdminEndpointTests
     }
 
     [Fact]
-    public async Task DELETE_Store_WithConfirmFalse_ReturnsBadRequest()
+    public async Task DELETE_Store_WithConfirmFalse_ReturnsBadRequestAsync()
     {
         // Act
         var response = await _client.DeleteAsync("/admin/store?confirm=false");
@@ -42,7 +42,7 @@ public class StoreAdminEndpointTests
     }
 
     [Fact]
-    public async Task DELETE_Store_WithConfirmTrue_ReturnsNoContent()
+    public async Task DELETE_Store_WithConfirmTrue_ReturnsNoContentAsync()
     {
         // Act
         var response = await _client.DeleteAsync("/admin/store?confirm=true");
@@ -52,7 +52,7 @@ public class StoreAdminEndpointTests
     }
 
     [Fact]
-    public async Task DELETE_Store_WithConfirmTrue_DeletesStoreDirectory()
+    public async Task DELETE_Store_WithConfirmTrue_DeletesStoreDirectoryAsync()
     {
         // Arrange — create a course to ensure the store directory exists, regardless
         // of which other tests in this collection ran first and may have deleted the store.
@@ -77,7 +77,7 @@ public class StoreAdminEndpointTests
     }
 
     [Fact]
-    public async Task DELETE_Store_ThenAppendEvent_StoreIsRecreated()
+    public async Task DELETE_Store_ThenAppendEvent_StoreIsRecreatedAsync()
     {
         // Arrange — delete the store
         var deleteResponse = await _client.DeleteAsync("/admin/store?confirm=true");
@@ -100,7 +100,7 @@ public class StoreAdminEndpointTests
     }
 
     [Fact]
-    public async Task DELETE_Store_CalledTwice_SecondCallAlsoSucceeds()
+    public async Task DELETE_Store_CalledTwice_SecondCallAlsoSucceedsAsync()
     {
         // Arrange — first deletion
         var first = await _client.DeleteAsync("/admin/store?confirm=true");

@@ -33,7 +33,7 @@ public class EventStoreAdminTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task DeleteStoreAsync_WithEvents_DeletesStoreDirectory()
+    public async Task DeleteStoreAsync_WithEvents_DeletesStoreDirectoryAsync()
     {
         // Arrange — write one event so the directory exists
         await _store.AppendAsync([CreateEvent("TestEvent")], null);
@@ -49,7 +49,7 @@ public class EventStoreAdminTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStoreAsync_WhenStoreDoesNotExist_CompletesGracefully()
+    public async Task DeleteStoreAsync_WhenStoreDoesNotExist_CompletesGracefullyAsync()
     {
         // Arrange — ensure the store directory does not exist
         var storePath = Path.Combine(_tempRootPath, "TestContext");
@@ -61,7 +61,7 @@ public class EventStoreAdminTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStoreAsync_WithWriteProtectedEvents_DeletesFilesSuccessfully()
+    public async Task DeleteStoreAsync_WithWriteProtectedEvents_DeletesFilesSuccessfullyAsync()
     {
         // Arrange — enable write protection and write an event
         var protectedOptions = new OpossumOptions
@@ -90,7 +90,7 @@ public class EventStoreAdminTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStoreAsync_WithWriteProtectedProjections_DeletesFilesSuccessfully()
+    public async Task DeleteStoreAsync_WithWriteProtectedProjections_DeletesFilesSuccessfullyAsync()
     {
         // Arrange — enable write protection and create a protected projection file manually
         var protectedOptions = new OpossumOptions
@@ -119,7 +119,7 @@ public class EventStoreAdminTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStoreAsync_ThenAppend_RecreatesStoreFromScratch()
+    public async Task DeleteStoreAsync_ThenAppend_RecreatesStoreFromScratchAsync()
     {
         // Arrange — seed an event then delete
         await _store.AppendAsync([CreateEvent("OldEvent")], null);
@@ -136,7 +136,7 @@ public class EventStoreAdminTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStoreAsync_WhenNoStoreConfigured_ThrowsInvalidOperationException()
+    public async Task DeleteStoreAsync_WhenNoStoreConfigured_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange — create a store without calling UseStore
         var unconfiguredOptions = new OpossumOptions { RootPath = _tempRootPath };
@@ -152,7 +152,7 @@ public class EventStoreAdminTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task DeleteStoreAsync_ConcurrentWithAppendAsync_NeitherThrowsAndStoreIsConsistent()
+    public async Task DeleteStoreAsync_ConcurrentWithAppendAsync_NeitherThrowsAndStoreIsConsistentAsync()
     {
         // Arrange — seed the store so the directory exists before racing.
         await _store.AppendAsync([CreateEvent("SeedEvent")], null);
@@ -176,7 +176,7 @@ public class EventStoreAdminTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteStoreAsync_CalledTwiceConcurrently_BothCompleteWithoutError()
+    public async Task DeleteStoreAsync_CalledTwiceConcurrently_BothCompleteWithoutErrorAsync()
     {
         // Arrange
         await _store.AppendAsync([CreateEvent("SeedEvent")], null);

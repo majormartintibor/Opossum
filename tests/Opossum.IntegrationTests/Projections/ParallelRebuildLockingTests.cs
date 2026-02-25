@@ -46,7 +46,7 @@ public class ParallelRebuildLockingTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentRebuilds_OfDifferentProjections_ExecuteInParallel()
+    public async Task ConcurrentRebuilds_OfDifferentProjections_ExecuteInParallelAsync()
     {
         // Arrange - Register 4 projections
         _projectionManager.RegisterProjection(new SlowProjection1());
@@ -84,7 +84,7 @@ public class ParallelRebuildLockingTests : IDisposable
     }
 
     [Fact]
-    public async Task DuplicateRebuild_SameProjection_ThrowsInvalidOperationException()
+    public async Task DuplicateRebuild_SameProjection_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new LongRunningProjection());
@@ -119,7 +119,7 @@ public class ParallelRebuildLockingTests : IDisposable
     }
 
     [Fact]
-    public async Task Update_DuringRebuild_IsSkippedGracefully()
+    public async Task Update_DuringRebuild_IsSkippedGracefullyAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new LongRunningProjection());
@@ -154,7 +154,7 @@ public class ParallelRebuildLockingTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAfterRebuild_SameProjection_Succeeds()
+    public async Task RebuildAfterRebuild_SameProjection_SucceedsAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new FastProjection());
@@ -173,7 +173,7 @@ public class ParallelRebuildLockingTests : IDisposable
     }
 
     [Fact]
-    public async Task ParallelRebuildAll_WithDifferentProjections_AllComplete()
+    public async Task ParallelRebuildAll_WithDifferentProjections_AllCompleteAsync()
     {
         // Arrange - Register multiple projections
         _projectionManager.RegisterProjection(new FastProjection());

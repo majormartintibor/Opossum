@@ -39,7 +39,7 @@ public class DescendingPerformanceTests : IDisposable
     }
 
     [Fact]
-    public async Task Descending_Order_Should_Be_Fast_With_Many_Events()
+    public async Task Descending_Order_Should_Be_Fast_With_Many_EventsAsync()
     {
         // Arrange - Create 500 events
         var events = new NewEvent[500];

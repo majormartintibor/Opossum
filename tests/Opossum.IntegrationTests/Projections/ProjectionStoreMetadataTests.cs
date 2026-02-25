@@ -22,7 +22,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_CreatesMetadataOnFirstSave()
+    public async Task SaveAsync_CreatesMetadataOnFirstSaveAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -43,7 +43,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_WrapsProjectionWithMetadata()
+    public async Task SaveAsync_WrapsProjectionWithMetadataAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -70,7 +70,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAsync_UnwrapsMetadata()
+    public async Task GetAsync_UnwrapsMetadataAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -87,7 +87,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_IncrementsVersionOnUpdate()
+    public async Task SaveAsync_IncrementsVersionOnUpdateAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -114,7 +114,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_UpdatesLastUpdatedAt()
+    public async Task SaveAsync_UpdatesLastUpdatedAtAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -137,7 +137,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_MaintainsCreatedAt()
+    public async Task SaveAsync_MaintainsCreatedAtAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -160,7 +160,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_UpdatesSizeInBytes()
+    public async Task SaveAsync_UpdatesSizeInBytesAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -185,7 +185,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesMetadata()
+    public async Task DeleteAsync_RemovesMetadataAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");
@@ -204,7 +204,7 @@ public class ProjectionStoreMetadataTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAllAsync_UnwrapsAllProjections()
+    public async Task GetAllAsync_UnwrapsAllProjectionsAsync()
     {
         // Arrange
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection");

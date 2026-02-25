@@ -26,7 +26,7 @@ public class EventTypeIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddPositionAsync_CreatesIndexFile()
+    public async Task AddPositionAsync_CreatesIndexFileAsync()
     {
         // Act
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
@@ -36,7 +36,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_CreatesIndexDirectory()
+    public async Task AddPositionAsync_CreatesIndexDirectoryAsync()
     {
         // Act
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
@@ -47,7 +47,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_AddsPosition()
+    public async Task AddPositionAsync_AddsPositionAsync()
     {
         // Act
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
@@ -59,7 +59,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_AddsMultiplePositions()
+    public async Task AddPositionAsync_AddsMultiplePositionsAsync()
     {
         // Act
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
@@ -73,7 +73,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_IgnoresDuplicatePositions()
+    public async Task AddPositionAsync_IgnoresDuplicatePositionsAsync()
     {
         // Act
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
@@ -87,7 +87,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNullIndexPath_ThrowsArgumentNullException()
+    public async Task AddPositionAsync_WithNullIndexPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -95,7 +95,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNullEventType_ThrowsArgumentException()
+    public async Task AddPositionAsync_WithNullEventType_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -103,7 +103,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithEmptyEventType_ThrowsArgumentException()
+    public async Task AddPositionAsync_WithEmptyEventType_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -111,7 +111,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithWhitespaceEventType_ThrowsArgumentException()
+    public async Task AddPositionAsync_WithWhitespaceEventType_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -119,7 +119,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithZeroPosition_ThrowsArgumentOutOfRangeException()
+    public async Task AddPositionAsync_WithZeroPosition_ThrowsArgumentOutOfRangeExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
@@ -127,7 +127,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeException()
+    public async Task AddPositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentOutOfRangeException>(
@@ -139,7 +139,7 @@ public class EventTypeIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsAsync_WithNonExistentIndex_ReturnsEmptyArray()
+    public async Task GetPositionsAsync_WithNonExistentIndex_ReturnsEmptyArrayAsync()
     {
         // Act
         var positions = await _index.GetPositionsAsync(_tempIndexPath, "NonExistent");
@@ -150,7 +150,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_ReturnsPositionsInSortedOrder()
+    public async Task GetPositionsAsync_ReturnsPositionsInSortedOrderAsync()
     {
         // Arrange
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 10);
@@ -165,7 +165,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithMultipleEventTypes_ReturnsCorrectPositions()
+    public async Task GetPositionsAsync_WithMultipleEventTypes_ReturnsCorrectPositionsAsync()
     {
         // Arrange
         await _index.AddPositionAsync(_tempIndexPath, "EventA", 1);
@@ -182,7 +182,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithNullIndexPath_ThrowsArgumentNullException()
+    public async Task GetPositionsAsync_WithNullIndexPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -190,7 +190,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithNullEventType_ThrowsArgumentNullException()
+    public async Task GetPositionsAsync_WithNullEventType_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -198,7 +198,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithEmptyEventType_ThrowsArgumentException()
+    public async Task GetPositionsAsync_WithEmptyEventType_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -210,7 +210,7 @@ public class EventTypeIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task IndexExists_ReturnsTrueForExistingIndex()
+    public async Task IndexExists_ReturnsTrueForExistingIndexAsync()
     {
         // Arrange
         await _index.AddPositionAsync(_tempIndexPath, "TestEvent", 1);
@@ -251,7 +251,7 @@ public class EventTypeIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddPositionAsync_WithSpecialCharactersInEventType_CreatesSafeFileName()
+    public async Task AddPositionAsync_WithSpecialCharactersInEventType_CreatesSafeFileNameAsync()
     {
         // Arrange
         var eventType = "Test/Event:With*Special?Characters";
@@ -266,7 +266,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithDotInEventType_CreatesSafeFileName()
+    public async Task AddPositionAsync_WithDotInEventType_CreatesSafeFileNameAsync()
     {
         // Arrange
         var eventType = "Namespace.Event.Created";
@@ -283,7 +283,7 @@ public class EventTypeIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsAsync_WithCorruptedIndexFile_ReturnsEmptyArray()
+    public async Task GetPositionsAsync_WithCorruptedIndexFile_ReturnsEmptyArrayAsync()
     {
         // Arrange
         var eventTypeDir = Path.Combine(_tempIndexPath, "eventtype");
@@ -300,7 +300,7 @@ public class EventTypeIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_AfterCorruption_RebuildsIndex()
+    public async Task AddPositionAsync_AfterCorruption_RebuildsIndexAsync()
     {
         // Arrange
         var eventTypeDir = Path.Combine(_tempIndexPath, "eventtype");
@@ -322,7 +322,7 @@ public class EventTypeIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddPositionAsync_MultipleSequentialWrites_AllPositionsAdded()
+    public async Task AddPositionAsync_MultipleSequentialWrites_AllPositionsAddedAsync()
     {
         // Arrange
         var expectedPositions = Enumerable.Range(1, 20).Select(x => (long)x).ToArray();

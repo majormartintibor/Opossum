@@ -8,7 +8,7 @@ internal sealed class LedgerManager
 {
     private readonly bool _flushImmediately;
     private const string LedgerFileName = ".ledger";
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true
     };
@@ -143,7 +143,7 @@ internal sealed class LedgerManager
                 FileAccess.Write,
                 FileShare.None))
             {
-                await JsonSerializer.SerializeAsync(fileStream, ledgerData, JsonOptions).ConfigureAwait(false);
+                await JsonSerializer.SerializeAsync(fileStream, ledgerData, _jsonOptions).ConfigureAwait(false);
                 await fileStream.FlushAsync().ConfigureAwait(false);
 
                 // DURABILITY GUARANTEE: Flush ledger to disk before moving
@@ -228,7 +228,7 @@ internal sealed class LedgerManager
             };
 
             await File.WriteAllTextAsync(ledgerPath,
-                JsonSerializer.Serialize(initialData, JsonOptions)).ConfigureAwait(false);
+                JsonSerializer.Serialize(initialData, _jsonOptions)).ConfigureAwait(false);
         }
 
         // Open file with exclusive access

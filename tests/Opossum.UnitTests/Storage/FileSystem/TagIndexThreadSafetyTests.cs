@@ -22,7 +22,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_SameTag_NoLostUpdates()
+    public async Task ConcurrentAddPosition_SameTag_NoLostUpdatesAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -45,7 +45,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_DifferentTags_NoConflicts()
+    public async Task ConcurrentAddPosition_DifferentTags_NoConflictsAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -79,7 +79,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_SameKeyDifferentValues_Isolated()
+    public async Task ConcurrentAddPosition_SameKeyDifferentValues_IsolatedAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -113,7 +113,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_DuplicatePositions_NoDuplicatesInResult()
+    public async Task ConcurrentAddPosition_DuplicatePositions_NoDuplicatesInResultAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -137,7 +137,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentReadAndWrite_NoCorruption()
+    public async Task ConcurrentReadAndWrite_NoCorruptionAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -199,7 +199,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task StressTest_MultipleTagsHighConcurrency_MaintainsIntegrity()
+    public async Task StressTest_MultipleTagsHighConcurrency_MaintainsIntegrityAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -234,7 +234,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_WithSpecialCharacters_HandlesCorrectly()
+    public async Task ConcurrentAddPosition_WithSpecialCharacters_HandlesCorrectlyAsync()
     {
         // Arrange
         var index = new TagIndex();
@@ -265,7 +265,7 @@ public class TagIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_NullTagValue_HandlesCorrectly()
+    public async Task ConcurrentAddPosition_NullTagValue_HandlesCorrectlyAsync()
     {
         // Arrange
         var index = new TagIndex();

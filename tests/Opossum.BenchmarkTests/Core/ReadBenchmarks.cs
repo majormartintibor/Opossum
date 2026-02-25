@@ -112,7 +112,7 @@ public class ReadBenchmarks
     /// Query by single event type from 100 events (baseline)
     /// </summary>
     [Benchmark(Baseline = true, Description = "Query by event type (100 events)")]
-    public async Task QueryByEventType_100Events()
+    public async Task QueryByEventType_100EventsAsync()
     {
         // Recreate store with 100 events
         var services = new ServiceCollection();
@@ -134,7 +134,7 @@ public class ReadBenchmarks
     /// Query by single event type from 1K events
     /// </summary>
     [Benchmark(Description = "Query by event type (1K events)")]
-    public async Task QueryByEventType_1KEvents()
+    public async Task QueryByEventType_1KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -155,7 +155,7 @@ public class ReadBenchmarks
     /// Query by single event type from 10K events
     /// </summary>
     [Benchmark(Description = "Query by event type (10K events)")]
-    public async Task QueryByEventType_10KEvents()
+    public async Task QueryByEventType_10KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -180,7 +180,7 @@ public class ReadBenchmarks
     /// Query by multiple event types (OR logic) from 1K events
     /// </summary>
     [Benchmark(Description = "Query by multiple event types (1K events)")]
-    public async Task QueryByMultipleEventTypes_1KEvents()
+    public async Task QueryByMultipleEventTypes_1KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -205,7 +205,7 @@ public class ReadBenchmarks
     /// Query by single tag from 100 events
     /// </summary>
     [Benchmark(Description = "Query by tag (100 events)")]
-    public async Task QueryByTag_100Events()
+    public async Task QueryByTag_100EventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -226,7 +226,7 @@ public class ReadBenchmarks
     /// Query by single tag from 1K events
     /// </summary>
     [Benchmark(Description = "Query by tag (1K events)")]
-    public async Task QueryByTag_1KEvents()
+    public async Task QueryByTag_1KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -247,7 +247,7 @@ public class ReadBenchmarks
     /// Query by single tag from 10K events
     /// </summary>
     [Benchmark(Description = "Query by tag (10K events)")]
-    public async Task QueryByTag_10KEvents()
+    public async Task QueryByTag_10KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -272,7 +272,7 @@ public class ReadBenchmarks
     /// Query by multiple tags (AND logic) from 1K events
     /// </summary>
     [Benchmark(Description = "Query by multiple tags (1K events)")]
-    public async Task QueryByMultipleTags_1KEvents()
+    public async Task QueryByMultipleTags_1KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -300,7 +300,7 @@ public class ReadBenchmarks
     /// Query.All() from 100 events
     /// </summary>
     [Benchmark(Description = "Query.All() (100 events)")]
-    public async Task QueryAll_100Events()
+    public async Task QueryAll_100EventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -321,7 +321,7 @@ public class ReadBenchmarks
     /// Query.All() from 1K events
     /// </summary>
     [Benchmark(Description = "Query.All() (1K events)")]
-    public async Task QueryAll_1KEvents()
+    public async Task QueryAll_1KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>
@@ -342,7 +342,7 @@ public class ReadBenchmarks
     /// Query.All() from 10K events
     /// </summary>
     [Benchmark(Description = "Query.All() (10K events)")]
-    public async Task QueryAll_10KEvents()
+    public async Task QueryAll_10KEventsAsync()
     {
         var services = new ServiceCollection();
         services.AddOpossum(opt =>

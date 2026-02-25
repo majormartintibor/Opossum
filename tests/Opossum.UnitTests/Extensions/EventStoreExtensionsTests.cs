@@ -14,7 +14,7 @@ public class EventStoreExtensionsTests
     #region AppendAsync - Single Event Tests
 
     [Fact]
-    public async Task AppendAsync_SingleEvent_CallsCoreMethodWithArray()
+    public async Task AppendAsync_SingleEvent_CallsCoreMethodWithArrayAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -30,7 +30,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_SingleEvent_PassesNullCondition()
+    public async Task AppendAsync_SingleEvent_PassesNullConditionAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -44,7 +44,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_SingleEventWithCondition_PassesCondition()
+    public async Task AppendAsync_SingleEventWithCondition_PassesConditionAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -63,7 +63,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_SingleEvent_ThrowsIfEventStoreIsNull()
+    public async Task AppendAsync_SingleEvent_ThrowsIfEventStoreIsNullAsync()
     {
         // Arrange
         IEventStore? nullStore = null;
@@ -75,7 +75,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_SingleEvent_ThrowsIfEventIsNull()
+    public async Task AppendAsync_SingleEvent_ThrowsIfEventIsNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -91,7 +91,7 @@ public class EventStoreExtensionsTests
     #region AppendAsync - Array Without Condition Tests
 
     [Fact]
-    public async Task AppendAsync_ArrayWithoutCondition_CallsCoreMethodWithNullCondition()
+    public async Task AppendAsync_ArrayWithoutCondition_CallsCoreMethodWithNullConditionAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -111,7 +111,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_ArrayWithoutCondition_ThrowsIfEventStoreIsNull()
+    public async Task AppendAsync_ArrayWithoutCondition_ThrowsIfEventStoreIsNullAsync()
     {
         // Arrange
         IEventStore? nullStore = null;
@@ -123,7 +123,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_ArrayWithoutCondition_ThrowsIfEventsIsNull()
+    public async Task AppendAsync_ArrayWithoutCondition_ThrowsIfEventsIsNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -139,7 +139,7 @@ public class EventStoreExtensionsTests
     #region ReadAsync - Single ReadOption Tests
 
     [Fact]
-    public async Task ReadAsync_SingleReadOption_CallsCoreMethodWithArray()
+    public async Task ReadAsync_SingleReadOption_CallsCoreMethodWithArrayAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -156,7 +156,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task ReadAsync_SingleReadOption_ThrowsIfEventStoreIsNull()
+    public async Task ReadAsync_SingleReadOption_ThrowsIfEventStoreIsNullAsync()
     {
         // Arrange
         IEventStore? nullStore = null;
@@ -168,7 +168,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task ReadAsync_SingleReadOption_ThrowsIfQueryIsNull()
+    public async Task ReadAsync_SingleReadOption_ThrowsIfQueryIsNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -184,7 +184,7 @@ public class EventStoreExtensionsTests
     #region ReadAsync - No Options Tests
 
     [Fact]
-    public async Task ReadAsync_NoOptions_CallsCoreMethodWithNull()
+    public async Task ReadAsync_NoOptions_CallsCoreMethodWithNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -199,7 +199,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task ReadAsync_NoOptions_ReturnsEventsFromCoreMethod()
+    public async Task ReadAsync_NoOptions_ReturnsEventsFromCoreMethodAsync()
     {
         // Arrange
         var query = Query.All();
@@ -218,7 +218,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task ReadAsync_NoOptions_ThrowsIfEventStoreIsNull()
+    public async Task ReadAsync_NoOptions_ThrowsIfEventStoreIsNullAsync()
     {
         // Arrange
         IEventStore? nullStore = null;
@@ -230,7 +230,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task ReadAsync_NoOptions_ThrowsIfQueryIsNull()
+    public async Task ReadAsync_NoOptions_ThrowsIfQueryIsNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -523,7 +523,7 @@ public class EventStoreExtensionsTests
     #region AppendEventAsync Tests
 
     [Fact]
-    public async Task AppendEventAsync_WithMinimalParameters_CreatesSequencedEvent()
+    public async Task AppendEventAsync_WithMinimalParameters_CreatesSequencedEventAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -540,7 +540,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventAsync_WithTags_AttachesTags()
+    public async Task AppendEventAsync_WithTags_AttachesTagsAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -562,7 +562,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventAsync_WithMetadata_UsesProvidedMetadata()
+    public async Task AppendEventAsync_WithMetadata_UsesProvidedMetadataAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -582,7 +582,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventAsync_WithCondition_PassesCondition()
+    public async Task AppendEventAsync_WithCondition_PassesConditionAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -601,7 +601,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventAsync_ThrowsIfEventStoreIsNull()
+    public async Task AppendEventAsync_ThrowsIfEventStoreIsNullAsync()
     {
         // Arrange
         IEventStore? nullStore = null;
@@ -613,7 +613,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventAsync_ThrowsIfEventIsNull()
+    public async Task AppendEventAsync_ThrowsIfEventIsNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -629,7 +629,7 @@ public class EventStoreExtensionsTests
     #region AppendEventsAsync Tests
 
     [Fact]
-    public async Task AppendEventsAsync_WithMinimalParameters_CreatesSequencedEvents()
+    public async Task AppendEventsAsync_WithMinimalParameters_CreatesSequencedEventsAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -650,7 +650,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventsAsync_WithSharedMetadata_UsesSameMetadataForAll()
+    public async Task AppendEventsAsync_WithSharedMetadata_UsesSameMetadataForAllAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -675,7 +675,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventsAsync_WithSharedTags_UsesTagsForAllEvents()
+    public async Task AppendEventsAsync_WithSharedTags_UsesTagsForAllEventsAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -698,7 +698,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventsAsync_ThrowsIfEventStoreIsNull()
+    public async Task AppendEventsAsync_ThrowsIfEventStoreIsNullAsync()
     {
         // Arrange
         IEventStore? nullStore = null;
@@ -710,7 +710,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendEventsAsync_ThrowsIfEventsIsNull()
+    public async Task AppendEventsAsync_ThrowsIfEventsIsNullAsync()
     {
         // Arrange
         var stub = new EventStoreStub();
@@ -726,7 +726,7 @@ public class EventStoreExtensionsTests
     #region Integration Tests
 
     [Fact]
-    public async Task Extensions_WorkWithStubEventStore()
+    public async Task Extensions_WorkWithStubEventStoreAsync()
     {
         // Arrange
         var stub = new EventStoreStub
@@ -750,7 +750,7 @@ public class EventStoreExtensionsTests
     }
 
     [Fact]
-    public async Task AppendAsync_SingleEvent_WorksWithRealEventStoreImplementation()
+    public async Task AppendAsync_SingleEvent_WorksWithRealEventStoreImplementationAsync()
     {
         // This test verifies extensions work with any IEventStore implementation
         // Arrange

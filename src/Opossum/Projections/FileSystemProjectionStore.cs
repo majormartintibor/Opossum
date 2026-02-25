@@ -166,7 +166,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         ArgumentNullException.ThrowIfNull(predicate);
 
         var all = await GetAllAsync(cancellationToken).ConfigureAwait(false);
-        return all.Where(predicate).ToList();
+        return [..all.Where(predicate)];
     }
 
     public async Task<IReadOnlyList<TState>> QueryByTagAsync(Tag tag, CancellationToken cancellationToken = default)

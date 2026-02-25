@@ -61,7 +61,7 @@ public sealed class CrossProcessAppendSafetyTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task TwoInstances_ConcurrentAppends_ProduceContiguousPositions()
+    public async Task TwoInstances_ConcurrentAppends_ProduceContiguousPositionsAsync()
     {
         const int appendsPerInstance = 50;
         const int totalAppends = appendsPerInstance * 2;
@@ -104,7 +104,7 @@ public sealed class CrossProcessAppendSafetyTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task TwoInstances_ConcurrentAppends_NoEventOverwrite()
+    public async Task TwoInstances_ConcurrentAppends_NoEventOverwriteAsync()
     {
         const int appendsPerInstance = 50;
 
@@ -145,7 +145,7 @@ public sealed class CrossProcessAppendSafetyTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task TwoInstances_AppendCondition_ExactlyOneSucceeds()
+    public async Task TwoInstances_AppendCondition_ExactlyOneSucceedsAsync()
     {
         // Both instances read an empty store (position 0) and decide to append.
         // FailIfEventsMatch = Query.FromItems() (empty) means:
@@ -211,7 +211,7 @@ public sealed class CrossProcessAppendSafetyTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task LockTimeout_WhenLockHeldExternally_ThrowsTimeoutException()
+    public async Task LockTimeout_WhenLockHeldExternally_ThrowsTimeoutExceptionAsync()
     {
         var options = new OpossumOptions
         {
@@ -257,7 +257,7 @@ public sealed class CrossProcessAppendSafetyTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task SingleInstance_SequentialAppends_CompletesWithinReasonableTime()
+    public async Task SingleInstance_SequentialAppends_CompletesWithinReasonableTimeAsync()
     {
         const int eventCount = 100;
 

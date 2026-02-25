@@ -8,7 +8,7 @@ namespace Opossum.Storage.FileSystem;
 /// </summary>
 internal sealed class JsonEventSerializer
 {
-    private static readonly JsonSerializerOptions SerializerOptions = new()
+    private static readonly JsonSerializerOptions _serializerOptions = new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -30,7 +30,7 @@ internal sealed class JsonEventSerializer
         ArgumentNullException.ThrowIfNull(sequencedEvent);
         ArgumentNullException.ThrowIfNull(sequencedEvent.Event);
 
-        return JsonSerializer.Serialize(sequencedEvent, SerializerOptions);
+        return JsonSerializer.Serialize(sequencedEvent, _serializerOptions);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ internal sealed class JsonEventSerializer
             throw new ArgumentNullException(nameof(json), "JSON string cannot be null or empty");
         }
 
-        var sequencedEvent = JsonSerializer.Deserialize<SequencedEvent>(json, SerializerOptions) ?? throw new JsonException("Failed to deserialize SequencedEvent - result was null");
+        var sequencedEvent = JsonSerializer.Deserialize<SequencedEvent>(json, _serializerOptions) ?? throw new JsonException("Failed to deserialize SequencedEvent - result was null");
 
         return sequencedEvent;
     }

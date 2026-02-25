@@ -21,7 +21,7 @@ public class ExecuteDecisionAsyncTests
     private static IEventStore Store => new StubEventStore();
 
     [Fact]
-    public async Task ExecuteDecisionAsync_SucceedsOnFirstAttempt_ReturnsResult()
+    public async Task ExecuteDecisionAsync_SucceedsOnFirstAttempt_ReturnsResultAsync()
     {
         var callCount = 0;
 
@@ -36,7 +36,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_RetriesOnConcurrencyException_SucceedsOnSecondAttempt()
+    public async Task ExecuteDecisionAsync_RetriesOnConcurrencyException_SucceedsOnSecondAttemptAsync()
     {
         var callCount = 0;
 
@@ -53,7 +53,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_RetriesOnAppendConditionFailedException_SucceedsOnSecondAttempt()
+    public async Task ExecuteDecisionAsync_RetriesOnAppendConditionFailedException_SucceedsOnSecondAttemptAsync()
     {
         var callCount = 0;
 
@@ -70,7 +70,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_RethrowsConcurrencyException_AfterMaxRetries()
+    public async Task ExecuteDecisionAsync_RethrowsConcurrencyException_AfterMaxRetriesAsync()
     {
         await Assert.ThrowsAsync<ConcurrencyException>(() =>
             Store.ExecuteDecisionAsync<string>((_, _) =>
@@ -80,7 +80,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_RethrowsAppendConditionFailedException_AfterMaxRetries()
+    public async Task ExecuteDecisionAsync_RethrowsAppendConditionFailedException_AfterMaxRetriesAsync()
     {
         await Assert.ThrowsAsync<AppendConditionFailedException>(() =>
             Store.ExecuteDecisionAsync<string>((_, _) =>
@@ -90,7 +90,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_InvokesOperationExactlyMaxRetries_BeforeRethrowing()
+    public async Task ExecuteDecisionAsync_InvokesOperationExactlyMaxRetries_BeforeRethrowingAsync()
     {
         var callCount = 0;
 
@@ -105,7 +105,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_NonRetriableException_PropagatesImmediately()
+    public async Task ExecuteDecisionAsync_NonRetriableException_PropagatesImmediatelyAsync()
     {
         var callCount = 0;
 
@@ -120,7 +120,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_CancellationRequested_ThrowsOperationCanceledException()
+    public async Task ExecuteDecisionAsync_CancellationRequested_ThrowsOperationCanceledExceptionAsync()
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
@@ -132,7 +132,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_PassesEventStoreToOperation()
+    public async Task ExecuteDecisionAsync_PassesEventStoreToOperationAsync()
     {
         IEventStore? received = null;
 
@@ -146,7 +146,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_NullEventStore_ThrowsArgumentNullException()
+    public async Task ExecuteDecisionAsync_NullEventStore_ThrowsArgumentNullExceptionAsync()
     {
         IEventStore? nullStore = null;
 
@@ -156,7 +156,7 @@ public class ExecuteDecisionAsyncTests
     }
 
     [Fact]
-    public async Task ExecuteDecisionAsync_NullOperation_ThrowsArgumentNullException()
+    public async Task ExecuteDecisionAsync_NullOperation_ThrowsArgumentNullExceptionAsync()
     {
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
             Store.ExecuteDecisionAsync<string>(null!));

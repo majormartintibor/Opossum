@@ -27,7 +27,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddEventToIndicesAsync_AddsToEventTypeIndex()
+    public async Task AddEventToIndicesAsync_AddsToEventTypeIndexAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -43,7 +43,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AddEventToIndicesAsync_AddsToTagIndices()
+    public async Task AddEventToIndicesAsync_AddsToTagIndicesAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" },
@@ -69,7 +69,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AddEventToIndicesAsync_WithNoTags_OnlyAddsToEventTypeIndex()
+    public async Task AddEventToIndicesAsync_WithNoTags_OnlyAddsToEventTypeIndexAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -82,7 +82,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AddEventToIndicesAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task AddEventToIndicesAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -93,7 +93,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AddEventToIndicesAsync_WithNullSequencedEvent_ThrowsArgumentNullException()
+    public async Task AddEventToIndicesAsync_WithNullSequencedEvent_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -105,7 +105,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsByEventTypeAsync_ReturnsCorrectPositions()
+    public async Task GetPositionsByEventTypeAsync_ReturnsCorrectPositionsAsync()
     {
         // Arrange
         await _manager.AddEventToIndicesAsync(_tempContextPath, CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "1" }));
@@ -121,7 +121,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypeAsync_WithNonExistentType_ReturnsEmptyArray()
+    public async Task GetPositionsByEventTypeAsync_WithNonExistentType_ReturnsEmptyArrayAsync()
     {
         // Act
         var positions = await _manager.GetPositionsByEventTypeAsync(_tempContextPath, "NonExistent");
@@ -132,7 +132,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypeAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task GetPositionsByEventTypeAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -140,7 +140,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypeAsync_WithNullEventType_ThrowsArgumentNullException()
+    public async Task GetPositionsByEventTypeAsync_WithNullEventType_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -148,7 +148,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypeAsync_WithEmptyEventType_ThrowsArgumentException()
+    public async Task GetPositionsByEventTypeAsync_WithEmptyEventType_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -160,7 +160,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsByEventTypesAsync_ReturnsUnionOfPositions()
+    public async Task GetPositionsByEventTypesAsync_ReturnsUnionOfPositionsAsync()
     {
         // Arrange
         await _manager.AddEventToIndicesAsync(_tempContextPath, CreateTestEvent(1, "EventA", new TestDomainEvent { Data = "1" }));
@@ -177,7 +177,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypesAsync_RemovesDuplicates()
+    public async Task GetPositionsByEventTypesAsync_RemovesDuplicatesAsync()
     {
         // Arrange
         await _manager.AddEventToIndicesAsync(_tempContextPath, CreateTestEvent(1, "EventA", new TestDomainEvent { Data = "1" }));
@@ -191,7 +191,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypesAsync_WithEmptyArray_ReturnsEmptyArray()
+    public async Task GetPositionsByEventTypesAsync_WithEmptyArray_ReturnsEmptyArrayAsync()
     {
         // Act
         var positions = await _manager.GetPositionsByEventTypesAsync(_tempContextPath, []);
@@ -202,7 +202,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypesAsync_ReturnsSortedPositions()
+    public async Task GetPositionsByEventTypesAsync_ReturnsSortedPositionsAsync()
     {
         // Arrange
         await _manager.AddEventToIndicesAsync(_tempContextPath, CreateTestEvent(5, "EventA", new TestDomainEvent { Data = "5" }));
@@ -217,7 +217,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypesAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task GetPositionsByEventTypesAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -225,7 +225,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByEventTypesAsync_WithNullArray_ThrowsArgumentNullException()
+    public async Task GetPositionsByEventTypesAsync_WithNullArray_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -237,7 +237,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsByTagAsync_ReturnsCorrectPositions()
+    public async Task GetPositionsByTagAsync_ReturnsCorrectPositionsAsync()
     {
         // Arrange
         var tag1 = new Tag("Environment", "Production");
@@ -260,7 +260,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagAsync_WithNonExistentTag_ReturnsEmptyArray()
+    public async Task GetPositionsByTagAsync_WithNonExistentTag_ReturnsEmptyArrayAsync()
     {
         // Arrange
         var tag = new Tag("NonExistent", "Value");
@@ -274,7 +274,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task GetPositionsByTagAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -285,7 +285,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagAsync_WithNullTag_ThrowsArgumentNullException()
+    public async Task GetPositionsByTagAsync_WithNullTag_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -297,7 +297,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsByTagsAsync_ReturnsUnionOfPositions()
+    public async Task GetPositionsByTagsAsync_ReturnsUnionOfPositionsAsync()
     {
         // Arrange
         var tag1 = new Tag("Environment", "Production");
@@ -320,7 +320,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagsAsync_RemovesDuplicates()
+    public async Task GetPositionsByTagsAsync_RemovesDuplicatesAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -338,7 +338,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagsAsync_WithEmptyArray_ReturnsEmptyArray()
+    public async Task GetPositionsByTagsAsync_WithEmptyArray_ReturnsEmptyArrayAsync()
     {
         // Act
         var positions = await _manager.GetPositionsByTagsAsync(_tempContextPath, []);
@@ -349,7 +349,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagsAsync_ReturnsSortedPositions()
+    public async Task GetPositionsByTagsAsync_ReturnsSortedPositionsAsync()
     {
         // Arrange
         var tag1 = new Tag("Environment", "Production");
@@ -371,7 +371,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagsAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task GetPositionsByTagsAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -382,7 +382,7 @@ public class IndexManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsByTagsAsync_WithNullArray_ThrowsArgumentNullException()
+    public async Task GetPositionsByTagsAsync_WithNullArray_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -394,7 +394,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task EventTypeIndexExists_ReturnsTrueForExistingIndex()
+    public async Task EventTypeIndexExists_ReturnsTrueForExistingIndexAsync()
     {
         // Arrange
         await _manager.AddEventToIndicesAsync(_tempContextPath, CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "1" }));
@@ -435,7 +435,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task TagIndexExists_ReturnsTrueForExistingIndex()
+    public async Task TagIndexExists_ReturnsTrueForExistingIndexAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -484,7 +484,7 @@ public class IndexManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task Integration_ComplexScenario_AllIndicesWork()
+    public async Task Integration_ComplexScenario_AllIndicesWorkAsync()
     {
         // Arrange - Create events with various types and tags
         var event1 = CreateTestEvent(1, "OrderCreated", new TestDomainEvent { Data = "1" },

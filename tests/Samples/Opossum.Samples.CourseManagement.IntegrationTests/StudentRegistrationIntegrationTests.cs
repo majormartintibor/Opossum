@@ -21,7 +21,7 @@ public class StudentRegistrationIntegrationTests
     }
 
     [Fact]
-    public async Task RegisterStudent_ValidRequest_ReturnsCreated()
+    public async Task RegisterStudent_ValidRequest_ReturnsCreatedAsync()
     {
         // Arrange
         var request = new
@@ -44,7 +44,7 @@ public class StudentRegistrationIntegrationTests
     }
 
     [Fact]
-    public async Task RegisterStudent_DuplicateEmail_ReturnsBadRequest()
+    public async Task RegisterStudent_DuplicateEmail_ReturnsBadRequestAsync()
     {
         // Arrange
         var email = $"duplicate.{Guid.NewGuid()}@example.com";
@@ -64,7 +64,7 @@ public class StudentRegistrationIntegrationTests
     }
 
     [Fact]
-    public async Task RegisterStudent_ConcurrentDuplicateEmail_OnlyOneSucceeds()
+    public async Task RegisterStudent_ConcurrentDuplicateEmail_OnlyOneSucceedsAsync()
     {
         // Arrange
         var email = $"concurrent.{Guid.NewGuid()}@example.com";
@@ -94,7 +94,7 @@ public class StudentRegistrationIntegrationTests
     }
 
     [Fact]
-    public async Task RegisterStudent_Then_GetStudent_ReturnsCorrectData()
+    public async Task RegisterStudent_Then_GetStudent_ReturnsCorrectDataAsync()
     {
         // Arrange
         var email = $"test.{Guid.NewGuid()}@example.com";

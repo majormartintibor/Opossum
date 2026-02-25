@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using Opossum;
 using Opossum.Projections;
 
 namespace Opossum.Samples.CourseManagement;

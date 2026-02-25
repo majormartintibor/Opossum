@@ -35,7 +35,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AppendAsync_WithSingleEvent_SuccessfullyAppendsEvent()
+    public async Task AppendAsync_WithSingleEvent_SuccessfullyAppendsEventAsync()
     {
         // Arrange
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
@@ -51,7 +51,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithMultipleEvents_AssignsSequentialPositions()
+    public async Task AppendAsync_WithMultipleEvents_AssignsSequentialPositionsAsync()
     {
         // Arrange
         var events = new[]
@@ -73,7 +73,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WritesAllEventFiles()
+    public async Task AppendAsync_WritesAllEventFilesAsync()
     {
         // Arrange
         var events = new[]
@@ -94,7 +94,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_UpdatesLedger()
+    public async Task AppendAsync_UpdatesLedgerAsync()
     {
         // Arrange
         var events = new[]
@@ -115,7 +115,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_UpdatesIndices()
+    public async Task AppendAsync_UpdatesIndicesAsync()
     {
         // Arrange
         var events = new[]
@@ -133,7 +133,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithTags_UpdatesTagIndices()
+    public async Task AppendAsync_WithTags_UpdatesTagIndicesAsync()
     {
         // Arrange
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "1" }) };
@@ -148,7 +148,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_SetsTimestampIfNotProvided()
+    public async Task AppendAsync_SetsTimestampIfNotProvidedAsync()
     {
         // Arrange
         var beforeAppend = DateTimeOffset.UtcNow;
@@ -168,7 +168,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_PreservesExistingTimestamp()
+    public async Task AppendAsync_PreservesExistingTimestampAsync()
     {
         // Arrange
         var specificTime = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -189,7 +189,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AppendAsync_WithNullEvents_ThrowsArgumentNullException()
+    public async Task AppendAsync_WithNullEvents_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -197,7 +197,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithEmptyArray_ThrowsArgumentException()
+    public async Task AppendAsync_WithEmptyArray_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var events = Array.Empty<NewEvent>();
@@ -208,7 +208,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithNullEvent_ThrowsArgumentException()
+    public async Task AppendAsync_WithNullEvent_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var events = new[] { CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" }) };
@@ -221,7 +221,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithEmptyEventType_ThrowsArgumentException()
+    public async Task AppendAsync_WithEmptyEventType_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var events = new[] { CreateTestEvent("", new TestDomainEvent { Data = "test" }) };
@@ -233,7 +233,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithNoContextsConfigured_ThrowsInvalidOperationException()
+    public async Task AppendAsync_WithNoContextsConfigured_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
         var optionsNoContext = new OpossumOptions { RootPath = _tempRootPath };
@@ -250,7 +250,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AppendAsync_MultipleSequentialAppends_MaintainsContinuousSequence()
+    public async Task AppendAsync_MultipleSequentialAppends_MaintainsContinuousSequenceAsync()
     {
         // Arrange & Act
         var batch1 = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
@@ -271,7 +271,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_LargerBatch_AssignsCorrectPositions()
+    public async Task AppendAsync_LargerBatch_AssignsCorrectPositionsAsync()
     {
         // Arrange
         var events = new NewEvent[10];
@@ -296,7 +296,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AppendAsync_WithAfterSequencePositionCondition_Success()
+    public async Task AppendAsync_WithAfterSequencePositionCondition_SuccessAsync()
     {
         // Arrange - Append initial events
         var initialEvents = new[]
@@ -322,7 +322,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithAfterSequencePositionCondition_FailsOnMismatch()
+    public async Task AppendAsync_WithAfterSequencePositionCondition_FailsOnMismatchAsync()
     {
         // Arrange - Append initial events
         var initialEvents = new[]
@@ -351,7 +351,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithFailIfEventsMatchCondition_SuccessWhenNoMatch()
+    public async Task AppendAsync_WithFailIfEventsMatchCondition_SuccessWhenNoMatchAsync()
     {
         // Arrange - Append initial event
         var initialEvents = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
@@ -372,7 +372,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithFailIfEventsMatchCondition_FailsWhenMatches()
+    public async Task AppendAsync_WithFailIfEventsMatchCondition_FailsWhenMatchesAsync()
     {
         // Arrange - Append initial event
         var initialEvents = new[] { CreateTestEvent("ConflictingEvent", new TestDomainEvent { Data = "1" }) };
@@ -390,7 +390,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithTagMatchCondition_SuccessWhenNoMatch()
+    public async Task AppendAsync_WithTagMatchCondition_SuccessWhenNoMatchAsync()
     {
         // Arrange - Append event with different tag
         var initialEvents = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
@@ -412,7 +412,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithTagMatchCondition_FailsWhenMatches()
+    public async Task AppendAsync_WithTagMatchCondition_FailsWhenMatchesAsync()
     {
         // Arrange - Append event with specific tag
         var initialEvents = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
@@ -431,7 +431,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task AppendAsync_WithBothConditions_SuccessWhenAllPass()
+    public async Task AppendAsync_WithBothConditions_SuccessWhenAllPassAsync()
     {
         // Arrange - Append initial event
         var initialEvents = new[] { CreateTestEvent("Event1", new TestDomainEvent { Data = "1" }) };
@@ -457,7 +457,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task Integration_CompleteWorkflow_AllComponentsWork()
+    public async Task Integration_CompleteWorkflow_AllComponentsWorkAsync()
     {
         // Arrange - Create various events with different types and tags
         var event1 = CreateTestEvent("OrderCreated", new TestDomainEvent { Data = "Order123" });
@@ -499,7 +499,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task EventStore_WithFlushTrue_EventsAreDurable()
+    public async Task EventStore_WithFlushTrue_EventsAreDurableAsync()
     {
         // Arrange
         var tempPath = Path.Combine(Path.GetTempPath(), $"FlushTest_{Guid.NewGuid():N}");
@@ -534,7 +534,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task EventStore_WithFlushFalse_EventsStillPersisted()
+    public async Task EventStore_WithFlushFalse_EventsStillPersistedAsync()
     {
         // Arrange
         var tempPath = Path.Combine(Path.GetTempPath(), $"NoFlushTest_{Guid.NewGuid():N}");
@@ -566,7 +566,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task EventStore_DefaultFlushSetting_IsTrue()
+    public async Task EventStore_DefaultFlushSetting_IsTrueAsync()
     {
         // Arrange
         var tempPath = Path.Combine(Path.GetTempPath(), $"DefaultFlushTest_{Guid.NewGuid():N}");
@@ -601,7 +601,7 @@ public class FileSystemEventStoreTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithDescendingOrder_ReturnsEventsInReverseOrder()
+    public async Task ReadAsync_WithDescendingOrder_ReturnsEventsInReverseOrderAsync()
     {
         // Arrange - Add 10 events
         var events = new[]
@@ -636,7 +636,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithDescendingOrder_AndEventTypeQuery_ReturnsCorrectOrder()
+    public async Task ReadAsync_WithDescendingOrder_AndEventTypeQuery_ReturnsCorrectOrderAsync()
     {
         // Arrange - Add events with different types
         var events = new[]
@@ -665,7 +665,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_QueryAll_HandlesLargeDatasets()
+    public async Task ReadAsync_QueryAll_HandlesLargeDatasetsAsync()
     {
         // Arrange - Add 1000 events
         var events = new NewEvent[1000];
@@ -693,7 +693,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_QueryAll_WithDescending_HandlesLargeDatasets()
+    public async Task ReadAsync_QueryAll_WithDescending_HandlesLargeDatasetsAsync()
     {
         // Arrange - Add 1000 events
         var events = new NewEvent[1000];
@@ -718,7 +718,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_Descending_WithSmallResultSet_WorksCorrectly()
+    public async Task ReadAsync_Descending_WithSmallResultSet_WorksCorrectlyAsync()
     {
         // Arrange - Add 3 events
         var events = new[]
@@ -741,7 +741,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_Descending_WithEmptyResult_ReturnsEmptyArray()
+    public async Task ReadAsync_Descending_WithEmptyResult_ReturnsEmptyArrayAsync()
     {
         // Arrange - No events
 
@@ -754,7 +754,7 @@ public class FileSystemEventStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_Descending_WithTagQuery_ReturnsCorrectOrder()
+    public async Task ReadAsync_Descending_WithTagQuery_ReturnsCorrectOrderAsync()
     {
         // Arrange - Add events with tags
         var event1 = CreateTestEvent("Event1", new TestDomainEvent { Data = "1" });

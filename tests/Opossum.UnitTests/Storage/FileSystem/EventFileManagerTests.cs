@@ -25,7 +25,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task WriteEventAsync_CreatesEventFile()
+    public async Task WriteEventAsync_CreatesEventFileAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -39,7 +39,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_CreatesEventsDirectoryIfMissing()
+    public async Task WriteEventAsync_CreatesEventsDirectoryIfMissingAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -52,7 +52,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_WithNullEventsPath_ThrowsArgumentNullException()
+    public async Task WriteEventAsync_WithNullEventsPath_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -63,7 +63,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_WithNullSequencedEvent_ThrowsArgumentNullException()
+    public async Task WriteEventAsync_WithNullSequencedEvent_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -71,7 +71,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_WithZeroPosition_ThrowsArgumentException()
+    public async Task WriteEventAsync_WithZeroPosition_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(0, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -82,7 +82,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_WithNegativePosition_ThrowsArgumentException()
+    public async Task WriteEventAsync_WithNegativePosition_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(-1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -93,7 +93,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_CreatesCorrectFileName()
+    public async Task WriteEventAsync_CreatesCorrectFileNameAsync()
     {
         // Arrange
         var sequencedEvent = CreateTestEvent(42, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -108,7 +108,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_OverwritesExistingFile()
+    public async Task WriteEventAsync_OverwritesExistingFileAsync()
     {
         // Arrange
         var event1 = CreateTestEvent(1, "FirstEvent", new TestDomainEvent { Data = "first" });
@@ -128,7 +128,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadEventAsync_ReturnsCorrectEvent()
+    public async Task ReadEventAsync_ReturnsCorrectEventAsync()
     {
         // Arrange
         var original = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test" });
@@ -144,7 +144,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventAsync_WithNullEventsPath_ThrowsArgumentNullException()
+    public async Task ReadEventAsync_WithNullEventsPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -152,7 +152,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventAsync_WithZeroPosition_ThrowsArgumentException()
+    public async Task ReadEventAsync_WithZeroPosition_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -160,7 +160,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventAsync_WithNegativePosition_ThrowsArgumentException()
+    public async Task ReadEventAsync_WithNegativePosition_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(
@@ -168,7 +168,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventAsync_WithNonExistentFile_ThrowsFileNotFoundException()
+    public async Task ReadEventAsync_WithNonExistentFile_ThrowsFileNotFoundExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<FileNotFoundException>(
@@ -176,7 +176,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventAsync_PreservesEventData()
+    public async Task ReadEventAsync_PreservesEventDataAsync()
     {
         // Arrange
         var original = CreateTestEvent(1, "TestEvent", new TestDomainEvent { Data = "test data" });
@@ -198,7 +198,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadEventsAsync_ReturnsMultipleEvents()
+    public async Task ReadEventsAsync_ReturnsMultipleEventsAsync()
     {
         // Arrange
         await _manager.WriteEventAsync(_tempEventsPath, CreateTestEvent(1, "Event1", new TestDomainEvent { Data = "1" }));
@@ -216,7 +216,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventsAsync_PreservesPositionOrder()
+    public async Task ReadEventsAsync_PreservesPositionOrderAsync()
     {
         // Arrange
         await _manager.WriteEventAsync(_tempEventsPath, CreateTestEvent(1, "Event1", new TestDomainEvent { Data = "1" }));
@@ -233,7 +233,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventsAsync_WithEmptyArray_ReturnsEmptyArray()
+    public async Task ReadEventsAsync_WithEmptyArray_ReturnsEmptyArrayAsync()
     {
         // Act
         var events = await _manager.ReadEventsAsync(_tempEventsPath, []);
@@ -244,7 +244,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventsAsync_WithNullEventsPath_ThrowsArgumentNullException()
+    public async Task ReadEventsAsync_WithNullEventsPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -252,7 +252,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventsAsync_WithNullPositions_ThrowsArgumentNullException()
+    public async Task ReadEventsAsync_WithNullPositions_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -260,7 +260,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventsAsync_WithMissingEvent_ThrowsFileNotFoundException()
+    public async Task ReadEventsAsync_WithMissingEvent_ThrowsFileNotFoundExceptionAsync()
     {
         // Arrange
         await _manager.WriteEventAsync(_tempEventsPath, CreateTestEvent(1, "Event1", new TestDomainEvent { Data = "1" }));
@@ -321,7 +321,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task EventFileExists_ReturnsTrueForExistingFile()
+    public async Task EventFileExists_ReturnsTrueForExistingFileAsync()
     {
         // Arrange
         await _manager.WriteEventAsync(_tempEventsPath, CreateTestEvent(1, "Event", new TestDomainEvent { Data = "test" }));
@@ -375,7 +375,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task RoundTrip_MultipleEvents_PreservesAllData()
+    public async Task RoundTrip_MultipleEvents_PreservesAllDataAsync()
     {
         // Arrange
         var events = new[]
@@ -411,7 +411,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task Constructor_WithFlushTrue_EventsAreDurable()
+    public async Task Constructor_WithFlushTrue_EventsAreDurableAsync()
     {
         // Arrange
         var managerWithFlush = new EventFileManager(flushImmediately: true);
@@ -432,7 +432,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task Constructor_WithFlushFalse_EventsStillWritten()
+    public async Task Constructor_WithFlushFalse_EventsStillWrittenAsync()
     {
         // Arrange
         var managerNoFlush = new EventFileManager(flushImmediately: false);
@@ -476,7 +476,7 @@ public class EventFileManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task WriteEventAsync_SetsReadOnlyAttribute_WhenWriteProtectEnabled()
+    public async Task WriteEventAsync_SetsReadOnlyAttribute_WhenWriteProtectEnabledAsync()
     {
         // Arrange
         var protectedPath = Path.Combine(Path.GetTempPath(), $"WriteProtect_{Guid.NewGuid():N}");
@@ -500,7 +500,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_DoesNotSetReadOnlyAttribute_WhenWriteProtectDisabled()
+    public async Task WriteEventAsync_DoesNotSetReadOnlyAttribute_WhenWriteProtectDisabledAsync()
     {
         // Arrange
         var unprotectedPath = Path.Combine(Path.GetTempPath(), $"NoWriteProtect_{Guid.NewGuid():N}");
@@ -525,7 +525,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_CanOverwriteReadOnlyFile_WhenWriteProtectEnabled()
+    public async Task WriteEventAsync_CanOverwriteReadOnlyFile_WhenWriteProtectEnabledAsync()
     {
         // Arrange — simulates AddTagsAsync rewriting an existing protected event
         var protectedPath = Path.Combine(Path.GetTempPath(), $"WriteProtectOverwrite_{Guid.NewGuid():N}");
@@ -556,7 +556,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadEventAsync_SucceedsOnReadOnlyFile()
+    public async Task ReadEventAsync_SucceedsOnReadOnlyFileAsync()
     {
         // Arrange
         var protectedPath = Path.Combine(Path.GetTempPath(), $"ReadOnlyRead_{Guid.NewGuid():N}");

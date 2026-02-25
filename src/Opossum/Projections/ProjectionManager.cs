@@ -248,7 +248,7 @@ internal sealed partial class ProjectionManager : IProjectionManager
 
     public IReadOnlyList<string> GetRegisteredProjections()
     {
-        return _projections.Keys.ToList();
+        return [.._projections.Keys];
     }
 
     public async Task<ProjectionRebuildResult> RebuildAllAsync(

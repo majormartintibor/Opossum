@@ -19,7 +19,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task SaveAsync_WithValidState_SavesFile()
+    public async Task SaveAsync_WithValidState_SavesFileAsync()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -37,7 +37,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task GetAsync_WithNonExistentKey_ReturnsNull()
+    public async Task GetAsync_WithNonExistentKey_ReturnsNullAsync()
     {
         // Arrange
         var nonExistentId = Guid.NewGuid().ToString();
@@ -50,7 +50,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task SaveAsync_WithExistingKey_UpdatesFile()
+    public async Task SaveAsync_WithExistingKey_UpdatesFileAsync()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -68,7 +68,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task DeleteAsync_WithExistingKey_RemovesFile()
+    public async Task DeleteAsync_WithExistingKey_RemovesFileAsync()
     {
         // Arrange
         var orderId = Guid.NewGuid();
@@ -84,7 +84,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task DeleteAsync_WithNonExistentKey_DoesNotThrow()
+    public async Task DeleteAsync_WithNonExistentKey_DoesNotThrowAsync()
     {
         // Arrange
         var nonExistentId = Guid.NewGuid().ToString();
@@ -94,7 +94,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task GetAllAsync_WithMultipleStates_ReturnsAll()
+    public async Task GetAllAsync_WithMultipleStates_ReturnsAllAsync()
     {
         // Arrange
         var order1 = new TestOrderState(Guid.NewGuid(), "Customer A", 100m);
@@ -116,7 +116,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task GetAllAsync_WithNoStates_ReturnsEmptyList()
+    public async Task GetAllAsync_WithNoStates_ReturnsEmptyListAsync()
     {
         // Arrange
         var emptyStore = new FileSystemProjectionStore<TestOrderState>(
@@ -132,7 +132,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task QueryAsync_WithPredicate_ReturnsFilteredResults()
+    public async Task QueryAsync_WithPredicate_ReturnsFilteredResultsAsync()
     {
         // Arrange
         var order1 = new TestOrderState(Guid.NewGuid(), "Customer A", 100m);
@@ -153,7 +153,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task SaveAsync_WithSpecialCharactersInKey_HandlesSafely()
+    public async Task SaveAsync_WithSpecialCharactersInKey_HandlesSafelyAsync()
     {
         // Arrange
         var key = "order/with:special*chars?";
@@ -168,7 +168,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task SaveAsync_WithNullState_ThrowsArgumentNullException()
+    public async Task SaveAsync_WithNullState_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var key = Guid.NewGuid().ToString();
@@ -179,7 +179,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task GetAsync_WithNullKey_ThrowsArgumentException()
+    public async Task GetAsync_WithNullKey_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(() =>
@@ -187,7 +187,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task GetAsync_WithEmptyKey_ThrowsArgumentException()
+    public async Task GetAsync_WithEmptyKey_ThrowsArgumentExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentException>(() =>
@@ -199,7 +199,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     // ========================================================================
 
     [Fact]
-    public async Task GetAsync_WhenDirectoryMissing_ReturnsNull()
+    public async Task GetAsync_WhenDirectoryMissing_ReturnsNullAsync()
     {
         // Arrange - Create store with unique name, then delete its directory
         var storeName = $"MissingDirStore_{Guid.NewGuid()}";
@@ -227,7 +227,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task GetAllAsync_WhenDirectoryMissing_ReturnsEmptyList()
+    public async Task GetAllAsync_WhenDirectoryMissing_ReturnsEmptyListAsync()
     {
         // Arrange - Create store with unique name, then delete its directory
         var storeName = $"MissingDirStore_{Guid.NewGuid()}";
@@ -256,7 +256,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task SaveAsync_WhenDirectoryMissing_CreatesDirectoryAndSaves()
+    public async Task SaveAsync_WhenDirectoryMissing_CreatesDirectoryAndSavesAsync()
     {
         // Arrange - Create store with unique name, then delete its directory
         var storeName = $"MissingDirStore_{Guid.NewGuid()}";
@@ -290,7 +290,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task DeleteAsync_WhenDirectoryMissing_DoesNotThrow()
+    public async Task DeleteAsync_WhenDirectoryMissing_DoesNotThrowAsync()
     {
         // Arrange - Create store with unique name, then delete its directory
         var storeName = $"MissingDirStore_{Guid.NewGuid()}";
@@ -315,7 +315,7 @@ public class FileSystemProjectionStoreTests : IClassFixture<ProjectionFixture>
     }
 
     [Fact]
-    public async Task QueryAsync_WhenDirectoryMissing_ReturnsEmptyList()
+    public async Task QueryAsync_WhenDirectoryMissing_ReturnsEmptyListAsync()
     {
         // Arrange - Create store with unique name, then delete its directory
         var storeName = $"MissingDirStore_{Guid.NewGuid()}";

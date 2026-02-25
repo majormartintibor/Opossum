@@ -56,7 +56,7 @@ public class MediatorServiceExtensionsTests
     }
 
     [Fact]
-    public async Task AddMediator_RegistersHandlersFromCallingAssembly()
+    public async Task AddMediator_RegistersHandlersFromCallingAssemblyAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -94,7 +94,7 @@ public class MediatorServiceExtensionsTests
     }
 
     [Fact]
-    public async Task AddMediator_WithMultipleAssemblies_DiscoversAllHandlers()
+    public async Task AddMediator_WithMultipleAssemblies_DiscoversAllHandlersAsync()
     {
         // Arrange
         var services = new ServiceCollection();

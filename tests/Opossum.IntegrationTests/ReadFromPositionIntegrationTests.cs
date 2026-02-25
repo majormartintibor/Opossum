@@ -6,7 +6,7 @@ namespace Opossum.IntegrationTests;
 
 /// <summary>
 /// Integration tests for the <c>fromPosition</c> parameter of
-/// <see cref="IEventStore.ReadAsync(Query, ReadOption[]?, long?)"/>.
+/// <see cref="IEventStore.ReadAsync"/>.
 ///
 /// Each test creates its own isolated temp directory so tests can run in parallel.
 /// </summary>
@@ -61,7 +61,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     // ── tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
-    public async Task ReadAsync_WithoutFromPosition_ReturnsAllEvents()
+    public async Task ReadAsync_WithoutFromPosition_ReturnsAllEventsAsync()
     {
         await AppendOrderAsync("o1");
         await AppendOrderAsync("o2");
@@ -73,7 +73,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionZero_ReturnsAllEvents()
+    public async Task ReadAsync_WithFromPositionZero_ReturnsAllEventsAsync()
     {
         await AppendOrderAsync("o1");
         await AppendOrderAsync("o2");
@@ -84,7 +84,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPosition_ReturnsOnlyEventsAfterThatPosition()
+    public async Task ReadAsync_WithFromPosition_ReturnsOnlyEventsAfterThatPositionAsync()
     {
         // Append 5 events — positions 1 through 5
         for (int i = 1; i <= 5; i++)
@@ -100,7 +100,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAtLastEvent_ReturnsEmpty()
+    public async Task ReadAsync_WithFromPositionAtLastEvent_ReturnsEmptyAsync()
     {
         await AppendOrderAsync("o1");
         await AppendOrderAsync("o2");
@@ -114,7 +114,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAndEventTypeFilter_ReturnsOnlyMatchingTypesAfterPosition()
+    public async Task ReadAsync_WithFromPositionAndEventTypeFilter_ReturnsOnlyMatchingTypesAfterPositionAsync()
     {
         await AppendOrderAsync("o1");        // pos 1 – OrderEvent
         await AppendShipmentAsync("s1");    // pos 2 – ShipmentEvent
@@ -133,7 +133,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingTagsAfterPosition()
+    public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingTagsAfterPositionAsync()
     {
         var tag = new Tag("orderId", "o-special");
 
@@ -154,7 +154,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_CanPollIncrementally_SimulatingProjectionDaemon()
+    public async Task ReadAsync_CanPollIncrementally_SimulatingProjectionDaemonAsync()
     {
         // First batch — simulate existing events
         await AppendOrderAsync("o1"); // pos 1
@@ -179,7 +179,7 @@ public sealed class ReadFromPositionIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionExtensionMethod_ReturnsOnlyEventsAfterPosition()
+    public async Task ReadAsync_WithFromPositionExtensionMethod_ReturnsOnlyEventsAfterPositionAsync()
     {
         await AppendOrderAsync("o1"); // pos 1
         await AppendOrderAsync("o2"); // pos 2

@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    EnforceCodeStyleInBuild: causes the CLI build (dotnet build / MSBuild) to run
+    the same Roslyn IDE analyzers that Visual Studio runs in the editor — including
+    IDE1006 (naming rule violations). Without this flag, naming-rule warnings defined
+    in .editorconfig are silently ignored during CI/CLI builds.
+  -->
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!--
+      Suppresses the CSC advisory "EnableGenerateDocumentationFile" that appears for
+      projects which do not opt into GenerateDocumentationFile. The library project
+      (src/Opossum) already sets GenerateDocumentationFile=true, so it is unaffected.
+    -->
+    <NoWarn>$(NoWarn);EnableGenerateDocumentationFile</NoWarn>
+  </PropertyGroup>
+</Project>

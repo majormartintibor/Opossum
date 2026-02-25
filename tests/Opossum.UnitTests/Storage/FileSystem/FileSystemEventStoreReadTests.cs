@@ -33,10 +33,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithQueryAll_ReturnsAllEvents()
+    public async Task ReadAsync_WithQueryAll_ReturnsAllEventsAsync()
     {
         // Arrange - Append 3 events
-        await AppendTestEvents(3);
+        await AppendTestEventsAsync(3);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null);
@@ -49,10 +49,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithQueryAll_ReturnsInAscendingOrder()
+    public async Task ReadAsync_WithQueryAll_ReturnsInAscendingOrderAsync()
     {
         // Arrange
-        await AppendTestEvents(5);
+        await AppendTestEventsAsync(5);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null);
@@ -65,7 +65,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithNoEvents_ReturnsEmptyArray()
+    public async Task ReadAsync_WithNoEvents_ReturnsEmptyArrayAsync()
     {
         // Act
         var events = await _store.ReadAsync(Query.All(), null);
@@ -76,7 +76,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithNullQuery_ThrowsArgumentNullException()
+    public async Task ReadAsync_WithNullQuery_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -84,7 +84,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithNoContextsConfigured_ThrowsInvalidOperationException()
+    public async Task ReadAsync_WithNoContextsConfigured_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
         var optionsNoContext = new OpossumOptions { RootPath = _tempRootPath };
@@ -100,12 +100,12 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithSingleEventType_ReturnsMatchingEvents()
+    public async Task ReadAsync_WithSingleEventType_ReturnsMatchingEventsAsync()
     {
         // Arrange
-        await AppendEventWithType("OrderCreated");
-        await AppendEventWithType("OrderShipped");
-        await AppendEventWithType("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
+        await AppendEventWithTypeAsync("OrderShipped");
+        await AppendEventWithTypeAsync("OrderCreated");
 
         // Act
         var events = await _store.ReadAsync(Query.FromEventTypes("OrderCreated"), null);
@@ -119,13 +119,13 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithMultipleEventTypes_ReturnsUnionOfMatches()
+    public async Task ReadAsync_WithMultipleEventTypes_ReturnsUnionOfMatchesAsync()
     {
         // Arrange
-        await AppendEventWithType("OrderCreated");
-        await AppendEventWithType("OrderShipped");
-        await AppendEventWithType("OrderCompleted");
-        await AppendEventWithType("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
+        await AppendEventWithTypeAsync("OrderShipped");
+        await AppendEventWithTypeAsync("OrderCompleted");
+        await AppendEventWithTypeAsync("OrderCreated");
 
         // Act
         var events = await _store.ReadAsync(
@@ -140,10 +140,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithNonExistentEventType_ReturnsEmpty()
+    public async Task ReadAsync_WithNonExistentEventType_ReturnsEmptyAsync()
     {
         // Arrange
-        await AppendEventWithType("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
 
         // Act
         var events = await _store.ReadAsync(Query.FromEventTypes("NonExistent"), null);
@@ -157,13 +157,13 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithSingleTag_ReturnsMatchingEvents()
+    public async Task ReadAsync_WithSingleTag_ReturnsMatchingEventsAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
-        await AppendEventWithTags(tag);
-        await AppendEventWithTags(new Tag("Environment", "Development"));
-        await AppendEventWithTags(tag);
+        await AppendEventWithTagsAsync(tag);
+        await AppendEventWithTagsAsync(new Tag("Environment", "Development"));
+        await AppendEventWithTagsAsync(tag);
 
         // Act
         var events = await _store.ReadAsync(Query.FromTags(tag), null);
@@ -175,16 +175,16 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithMultipleTags_ReturnsIntersectionOfMatches()
+    public async Task ReadAsync_WithMultipleTags_ReturnsIntersectionOfMatchesAsync()
     {
         // Arrange
         var tag1 = new Tag("Environment", "Production");
         var tag2 = new Tag("Region", "US-West");
 
-        await AppendEventWithTags(tag1); // Only tag1
-        await AppendEventWithTags(tag1, tag2); // Both tags
-        await AppendEventWithTags(tag2); // Only tag2
-        await AppendEventWithTags(tag1, tag2); // Both tags
+        await AppendEventWithTagsAsync(tag1); // Only tag1
+        await AppendEventWithTagsAsync(tag1, tag2); // Both tags
+        await AppendEventWithTagsAsync(tag2); // Only tag2
+        await AppendEventWithTagsAsync(tag1, tag2); // Both tags
 
         // Act - AND logic: must have BOTH tags
         var events = await _store.ReadAsync(Query.FromTags(tag1, tag2), null);
@@ -196,10 +196,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithNonExistentTag_ReturnsEmpty()
+    public async Task ReadAsync_WithNonExistentTag_ReturnsEmptyAsync()
     {
         // Arrange
-        await AppendEventWithTags(new Tag("Environment", "Production"));
+        await AppendEventWithTagsAsync(new Tag("Environment", "Production"));
 
         // Act
         var events = await _store.ReadAsync(
@@ -215,7 +215,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithEventTypesAndTags_ReturnsIntersection()
+    public async Task ReadAsync_WithEventTypesAndTags_ReturnsIntersectionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -231,7 +231,7 @@ public class FileSystemEventStoreReadTests : IDisposable
         await _store.AppendAsync([event2], null);
 
         // Event 3: OrderCreated (no tag)
-        await AppendEventWithType("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
 
         // Act - Query for OrderCreated AND Production tag
         var queryItem = new QueryItem
@@ -248,16 +248,16 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithMultipleQueryItems_ReturnsUnion()
+    public async Task ReadAsync_WithMultipleQueryItems_ReturnsUnionAsync()
     {
         // Arrange
         var prodTag = new Tag("Environment", "Production");
         var devTag = new Tag("Environment", "Development");
 
-        await AppendEventWithType("OrderCreated"); // Pos 1
-        await AppendEventWithTags(prodTag); // Pos 2
-        await AppendEventWithTags(devTag); // Pos 3
-        await AppendEventWithType("OrderShipped"); // Pos 4
+        await AppendEventWithTypeAsync("OrderCreated"); // Pos 1
+        await AppendEventWithTagsAsync(prodTag); // Pos 2
+        await AppendEventWithTagsAsync(devTag); // Pos 3
+        await AppendEventWithTypeAsync("OrderShipped"); // Pos 4
 
         // Act - Query for: OrderCreated OR Production tag OR Development tag
         var queryItem1 = new QueryItem { EventTypes = ["OrderCreated"] };
@@ -276,7 +276,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithComplexQuery_ReturnsCorrectMatches()
+    public async Task ReadAsync_WithComplexQuery_ReturnsCorrectMatchesAsync()
     {
         // Arrange - Create diverse events
         var prodTag = new Tag("Environment", "Production");
@@ -298,7 +298,7 @@ public class FileSystemEventStoreReadTests : IDisposable
         await _store.AppendAsync([event3], null);
 
         // Event 4: OrderCreated (no tags)
-        await AppendEventWithType("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
 
         // Act - Query: (OrderCreated OR OrderShipped) AND Production
         var queryItem = new QueryItem
@@ -319,10 +319,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithDescendingOption_ReturnsReversedOrder()
+    public async Task ReadAsync_WithDescendingOption_ReturnsReversedOrderAsync()
     {
         // Arrange
-        await AppendTestEvents(5);
+        await AppendTestEventsAsync(5);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), [ReadOption.Descending]);
@@ -337,14 +337,14 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithDescendingAndFilter_ReturnsFilteredDescending()
+    public async Task ReadAsync_WithDescendingAndFilter_ReturnsFilteredDescendingAsync()
     {
         // Arrange
-        await AppendEventWithType("OrderCreated"); // Pos 1
-        await AppendEventWithType("OrderShipped"); // Pos 2
-        await AppendEventWithType("OrderCreated"); // Pos 3
-        await AppendEventWithType("OrderShipped"); // Pos 4
-        await AppendEventWithType("OrderCreated"); // Pos 5
+        await AppendEventWithTypeAsync("OrderCreated"); // Pos 1
+        await AppendEventWithTypeAsync("OrderShipped"); // Pos 2
+        await AppendEventWithTypeAsync("OrderCreated"); // Pos 3
+        await AppendEventWithTypeAsync("OrderShipped"); // Pos 4
+        await AppendEventWithTypeAsync("OrderCreated"); // Pos 5
 
         // Act
         var events = await _store.ReadAsync(
@@ -359,10 +359,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithNullOptions_ReturnsAscending()
+    public async Task ReadAsync_WithNullOptions_ReturnsAscendingAsync()
     {
         // Arrange
-        await AppendTestEvents(3);
+        await AppendTestEventsAsync(3);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null);
@@ -374,10 +374,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithEmptyOptions_ReturnsAscending()
+    public async Task ReadAsync_WithEmptyOptions_ReturnsAscendingAsync()
     {
         // Arrange
-        await AppendTestEvents(3);
+        await AppendTestEventsAsync(3);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), []);
@@ -393,7 +393,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_PreservesEventData()
+    public async Task ReadAsync_PreservesEventDataAsync()
     {
         // Arrange
         var originalEvent = CreateTestEvent("TestEvent", new TestDomainEvent { Data = "Important Data" });
@@ -414,7 +414,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_PreservesMetadata()
+    public async Task ReadAsync_PreservesMetadataAsync()
     {
         // Arrange
         var correlationId = Guid.NewGuid();
@@ -439,7 +439,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task Integration_AppendAndRead_CompleteWorkflow()
+    public async Task Integration_AppendAndRead_CompleteWorkflowAsync()
     {
         // Arrange - Create diverse events
         var prodTag = new Tag("Environment", "Production");
@@ -494,10 +494,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionNull_ReturnsAllEvents()
+    public async Task ReadAsync_WithFromPositionNull_ReturnsAllEventsAsync()
     {
         // Arrange
-        await AppendTestEvents(5);
+        await AppendTestEventsAsync(5);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null, fromPosition: null);
@@ -509,10 +509,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionZero_ReturnsAllEvents()
+    public async Task ReadAsync_WithFromPositionZero_ReturnsAllEventsAsync()
     {
         // Arrange
-        await AppendTestEvents(5);
+        await AppendTestEventsAsync(5);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null, fromPosition: 0);
@@ -522,10 +522,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionInMiddle_ReturnsOnlyEventsAfterPosition()
+    public async Task ReadAsync_WithFromPositionInMiddle_ReturnsOnlyEventsAfterPositionAsync()
     {
         // Arrange – append 5 events at positions 1–5
-        await AppendTestEvents(5);
+        await AppendTestEventsAsync(5);
 
         // Act – ask for events after position 3
         var events = await _store.ReadAsync(Query.All(), null, fromPosition: 3);
@@ -537,10 +537,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAtLastEvent_ReturnsEmpty()
+    public async Task ReadAsync_WithFromPositionAtLastEvent_ReturnsEmptyAsync()
     {
         // Arrange
-        await AppendTestEvents(3);
+        await AppendTestEventsAsync(3);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null, fromPosition: 3);
@@ -550,10 +550,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionBeyondLastEvent_ReturnsEmpty()
+    public async Task ReadAsync_WithFromPositionBeyondLastEvent_ReturnsEmptyAsync()
     {
         // Arrange
-        await AppendTestEvents(3);
+        await AppendTestEventsAsync(3);
 
         // Act
         var events = await _store.ReadAsync(Query.All(), null, fromPosition: 100);
@@ -563,14 +563,14 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAndEventTypeFilter_ReturnsOnlyMatchingEventsAfterPosition()
+    public async Task ReadAsync_WithFromPositionAndEventTypeFilter_ReturnsOnlyMatchingEventsAfterPositionAsync()
     {
         // Arrange – positions 1–5: alternating OrderCreated / OrderShipped
-        await AppendEventWithType("OrderCreated"); // pos 1
-        await AppendEventWithType("OrderShipped"); // pos 2
-        await AppendEventWithType("OrderCreated"); // pos 3
-        await AppendEventWithType("OrderShipped"); // pos 4
-        await AppendEventWithType("OrderCreated"); // pos 5
+        await AppendEventWithTypeAsync("OrderCreated"); // pos 1
+        await AppendEventWithTypeAsync("OrderShipped"); // pos 2
+        await AppendEventWithTypeAsync("OrderCreated"); // pos 3
+        await AppendEventWithTypeAsync("OrderShipped"); // pos 4
+        await AppendEventWithTypeAsync("OrderCreated"); // pos 5
 
         // Act – OrderCreated events after position 2
         var events = await _store.ReadAsync(
@@ -583,14 +583,14 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingEventsAfterPosition()
+    public async Task ReadAsync_WithFromPositionAndTagFilter_ReturnsOnlyMatchingEventsAfterPositionAsync()
     {
         // Arrange
         var tag = new Tag("env", "prod");
-        await AppendEventWithTags(tag);                              // pos 1
-        await AppendEventWithTags(new Tag("env", "dev")); // pos 2
-        await AppendEventWithTags(tag);                              // pos 3
-        await AppendEventWithTags(tag);                              // pos 4
+        await AppendEventWithTagsAsync(tag);                              // pos 1
+        await AppendEventWithTagsAsync(new Tag("env", "dev")); // pos 2
+        await AppendEventWithTagsAsync(tag);                              // pos 3
+        await AppendEventWithTagsAsync(tag);                              // pos 4
 
         // Act – prod-tagged events after position 1
         var events = await _store.ReadAsync(Query.FromTags(tag), null, fromPosition: 1);
@@ -602,7 +602,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionOnEmptyStore_ReturnsEmpty()
+    public async Task ReadAsync_WithFromPositionOnEmptyStore_ReturnsEmptyAsync()
     {
         // Act
         var events = await _store.ReadAsync(Query.All(), null, fromPosition: 0);
@@ -612,10 +612,10 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_WithFromPositionAndDescendingOption_ReturnsFilteredEventsDescending()
+    public async Task ReadAsync_WithFromPositionAndDescendingOption_ReturnsFilteredEventsDescendingAsync()
     {
         // Arrange
-        await AppendTestEvents(5);
+        await AppendTestEventsAsync(5);
 
         // Act – events after position 2, descending
         var events = await _store.ReadAsync(Query.All(), [ReadOption.Descending], fromPosition: 2);
@@ -631,7 +631,7 @@ public class FileSystemEventStoreReadTests : IDisposable
     // Helper Methods
     // ========================================================================
 
-    private async Task AppendTestEvents(int count)
+    private async Task AppendTestEventsAsync(int count)
     {
         for (int i = 0; i < count; i++)
         {
@@ -640,13 +640,13 @@ public class FileSystemEventStoreReadTests : IDisposable
         }
     }
 
-    private async Task AppendEventWithType(string eventType)
+    private async Task AppendEventWithTypeAsync(string eventType)
     {
         var evt = CreateTestEvent(eventType, new TestDomainEvent { Data = "test" });
         await _store.AppendAsync([evt], null);
     }
 
-    private async Task AppendEventWithTags(params Tag[] tags)
+    private async Task AppendEventWithTagsAsync(params Tag[] tags)
     {
         var evt = CreateTestEvent("TestEvent", new TestDomainEvent { Data = "test" });
         evt.Event = evt.Event with { Tags = tags };
