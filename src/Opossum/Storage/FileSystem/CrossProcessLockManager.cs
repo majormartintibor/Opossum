@@ -20,7 +20,13 @@ internal sealed class CrossProcessLockManager
 {
     private const string LockFileName = ".store.lock";
     private const int SharingViolationHResult = unchecked((int)0x80070020); // Windows ERROR_SHARING_VIOLATION
-    private const int LockViolationHResult = unchecked((int)0x80070021);    // Windows ERROR_LOCK_VIOLATION
+    private const int LockViolationHResult    = unchecked((int)0x80070021); // Windows ERROR_LOCK_VIOLATION
+    // On Linux/Unix, .NET enforces FileShare.None via flock(LOCK_EX|LOCK_NB).
+    // When the lock is already held, flock() returns EWOULDBLOCK and .NET throws
+    // new IOException(message, rawErrno) — so HResult equals the raw POSIX errno,
+    // not a Windows HRESULT. These values are the standard POSIX errno constants:
+    private const int EagainLinux     = 11; // Linux   EAGAIN = EWOULDBLOCK
+    private const int EwouldblockUnix = 35; // macOS/BSD EWOULDBLOCK = EAGAIN
 
     private readonly TimeSpan _timeout;
 
@@ -97,7 +103,8 @@ internal sealed class CrossProcessLockManager
     }
 
     private static bool IsLockViolation(IOException ex) =>
-        ex.HResult is SharingViolationHResult or LockViolationHResult;
+        ex.HResult is SharingViolationHResult or LockViolationHResult // Windows
+            or EagainLinux or EwouldblockUnix;                        // Linux / macOS / BSD
 
     private sealed class FileLockHandle : IAsyncDisposable
     {
