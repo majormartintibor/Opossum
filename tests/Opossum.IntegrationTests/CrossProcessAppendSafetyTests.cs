@@ -203,7 +203,7 @@ public sealed class CrossProcessAppendSafetyTests : IDisposable
 
         // Exactly one event should have been written
         var allEvents = await _store1.ReadAsync(Query.All(), null);
-        Assert.Equal(1, allEvents.Length);
+        Assert.Single(allEvents);
     }
 
     // ========================================================================

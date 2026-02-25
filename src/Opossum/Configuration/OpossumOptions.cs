@@ -103,7 +103,7 @@ public sealed class OpossumOptions
     /// When multiple application instances share the same store directory
     /// (e.g. via a UNC path or mapped drive), Opossum serialises appends
     /// across all processes using a file-system lock. If the lock is held
-    /// by another process for longer than this timeout, <see cref="AppendAsync"/>
+    /// by another process for longer than this timeout, <see cref="IEventStore.AppendAsync"/>
     /// throws <see cref="TimeoutException"/>.
     ///
     /// Default: 5 seconds — sufficient headroom for any business-operation

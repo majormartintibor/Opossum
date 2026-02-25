@@ -68,6 +68,15 @@
     <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
     <File Path="docs/benchmarking/results/20260223/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
   </Folder>
+  <Folder Name="/docs/benchmarking/results/20260225/">
+    <File Path="docs/benchmarking/results/20260225/ANALYSIS.md" />
+    <File Path="docs/benchmarking/results/20260225/Opossum.BenchmarkTests.Core.AppendBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260225/Opossum.BenchmarkTests.Core.DescendingOrderIsolatedBenchmark-report-github.md" />
+    <File Path="docs/benchmarking/results/20260225/Opossum.BenchmarkTests.Core.QueryBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260225/Opossum.BenchmarkTests.Core.ReadBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260225/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260225/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
+  </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
