@@ -59,26 +59,33 @@ public class DescendingPerformanceTests : IDisposable
 
         await _store.AppendAsync(events, null);
 
-        // Act - Measure ascending query
+        // Warm-up: read once to populate the OS page cache from real file reads.
+        // Without this, the ascending measurement benefits from dirty write-cache while
+        // the descending measurement may hit actual disk I/O, making the ratio non-deterministic.
+        _ = await _store.ReadAsync(Query.All(), null);
+
+        // Act - Measure ascending query (warm cache)
         var sw1 = System.Diagnostics.Stopwatch.StartNew();
         var ascending = await _store.ReadAsync(Query.All(), null);
         sw1.Stop();
         var ascendingTime = sw1.ElapsedMilliseconds;
 
-        // Act - Measure descending query
+        // Act - Measure descending query (warm cache)
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var descending = await _store.ReadAsync(Query.All(), [ReadOption.Descending]);
         sw2.Stop();
         var descendingTime = sw2.ElapsedMilliseconds;
 
-        // Assert - Descending should be comparable to ascending (not 12x slower!)
-        // Our fix reversed positions BEFORE reading, so overhead should be minimal
-        // We allow up to 2x overhead (mostly from array reversal of positions)
-        var ratio = (double)descendingTime / ascendingTime;
+        // Assert - Descending should be comparable to ascending (not 12x slower!).
+        // Both reads start from a warm OS cache, so the ratio should be near 1x.
+        // We allow up to 4x to absorb scheduler jitter and GC pauses that still occur
+        // in a test environment. The original bug was ~12x; with the fix applied the
+        // overhead is Array.Reverse(positions) which is microseconds, not milliseconds.
+        var ratio = (double)descendingTime / Math.Max(ascendingTime, 1);
 
-        Assert.True(ratio < 2.0,
+        Assert.True(ratio < 4.0,
             $"Descending took {descendingTime}ms vs Ascending {ascendingTime}ms (ratio: {ratio:F2}x). " +
-            $"Expected <2x overhead with the fix applied.");
+            $"Expected <4x overhead with the fix applied. Original bug was ~12x.");
 
         // Also verify correctness
         Assert.Equal(500, descending.Length);

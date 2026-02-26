@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Flaky `DescendingPerformanceTests` integration test** — the test compared ascending vs. descending
+  read times without a warm-up pass. The ascending measurement benefited from dirty write-cache pages
+  left by `AppendAsync`, while the descending measurement could hit actual disk I/O, producing a
+  non-deterministic ratio. Fixed by adding a warm-up read before both timed measurements so both start
+  from an equally warm OS page-cache state. The ratio threshold was also widened from 2× to 4× to
+  absorb scheduler jitter and GC pauses in a test environment while still catching the original
+  ~12× regression reliably.
+
 ---
 
 ## [0.4.0-preview.1] - 2026-02-26
