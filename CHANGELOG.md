@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.4.0-preview.1] - 2026-02-26
+
 ### Known Issues
 - **Crash-recovery position collision (pre-existing since v0.1.0)** — a process crash
   between step 7 (event files written) and step 9 (ledger updated) leaves orphaned event
@@ -142,6 +146,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `WriteProtectProjectionFiles` is enabled (the default).
 - **`EventFileManagerTests.CreateTestEvent` missing method declaration** — the method body was
   present in the file but the signature had been accidentally removed. Restored the signature.
+
+### Benchmarks
+
+Benchmark run `20260226` compared against `20260225/rerun1` (same branch, post-ADR-005 baseline):
+
+| Suite | 20260225/rerun1 | 20260226 | Δ | Notes |
+|---|---:|---:|---|---|
+| **Single event (with flush)** | 9.8 ms | 17.2 ms | **+75.6 %** | ✅ correctness fix — index files now flushed |
+| **Batch 10 events (with flush)** | 55.2 ms | 127.9 ms | **+131.9 %** | ✅ correctness fix — true durability cost |
+| Single event (no flush) | 4.611 ms | 4.584 ms | −0.6 % | noise |
+| Batch 10 events (no flush) | 36.8 ms | 36.6 ms | −0.5 % | noise |
+| Batch 20 events (no flush) | 78.2 ms | 73.2 ms | **−6.4 %** | improved |
+| Batch 50 / 100 (no flush) | 194 / 406 ms | 224 / 449 ms | +10–16 % | ⚠️ under investigation; acceptable for release |
+| **Multiple event types — 1K** | **66.6 ms** | **64.7 ms** | **−2.8 %** | ✅ +43 % regression from 20260225 fully resolved |
+| Event type — 10K events | 208.3 ms | 200.9 ms | **−3.6 %** | improved |
+| Tag query — 1K events | 10.9 ms | 10.5 ms | **−4.1 %** | improved |
+| Query.All() — 10K events | 828.2 ms | 801.8 ms | **−3.2 %** | improved |
+| Real-world: Payment events | 4,453 μs | 4,062 μs | **−8.8 %** | improved; prior +17 % regression resolved |
+| Descending order vs ascending | 1.0003× | 0.9997× | ≈ 0 | ✅ parity |
+| Parallel rebuild — sequential | 369.7 ms | 319.9 ms | **−13.5 %** | improved (async refactor) |
+| Incremental projection update alloc | ~12 KB | **0 B** | 100 % | ✅ zero-allocation hot path |
+
+**Flush regressions are expected and correct.** The `FlushEventsImmediately = true` path previously
+omitted `FlushToDisk` calls on event-type and tag index temp files. Users who enabled this flag
+were silently not receiving the full durability guarantee. The new numbers represent the true
+on-disk cost: ~17 ms per single-event flush and ~128 ms per 10-event batch flush on SSD.
+
+The +10–16 % regression on large no-flush batches (50, 100 events) has no corresponding
+write-path change in this release. It is within the acceptable range for the target use case
+(< 100 events/day average, SMB/on-premises) and is tracked as a follow-up investigation item
+rather than a release blocker.
+
+Full analysis: `docs/benchmarking/results/20260226/ANALYSIS.md`
+
+---
 
 ## [0.3.0-preview.1] - 2026-02-23
 
@@ -583,16 +622,5 @@ See [README.md](README.md) for complete quick start guide.
 - Built for real-world use cases in automotive retail and SMB applications
 
 ---
-
-## [Unreleased]
-
-### Planned Features
-- Multi-context support
-- Cache warming for projections
-- Snapshot support for aggregates
-- Event schema versioning
-- Retention policies
-- Archiving and compression
-- Cross-platform performance optimizations
 
 [0.1.0-preview.1]: https://github.com/majormartintibor/Opossum/releases/tag/v0.1.0-preview.1

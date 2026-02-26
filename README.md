@@ -22,6 +22,7 @@ Opossum turns your file system into a fully functional event store with projecti
 - [API Reference](#-api-reference)
 - [Full Example](#-full-example)
 - [Performance](#-performance)
+- [Known Limitations](#️-known-limitations)
 
 ---
 
@@ -46,6 +47,7 @@ Unlike cloud-based event stores (EventStoreDB, Azure Event Hubs) or database-bac
 - ?? **SMB solutions** (where cloud costs don't make sense)
 - ?? **Data sovereignty requirements** (keep data in-country/on-site)
 - ?? **Development & testing** (no Docker/database setup needed)
+- ? **Multi-workstation deployments** (multiple PCs sharing a store on a network drive — cross-process append safety via OS file locking)
 
 ---
 
@@ -228,9 +230,9 @@ public class StudentDetailsProjection : IProjectionDefinition<StudentDetails>
         return evt.Event.Tags.First(t => t.Key == "studentId").Value;
     }
 
-    public StudentDetails? Apply(StudentDetails? current, IEvent evt)
+    public StudentDetails? Apply(StudentDetails? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             StudentRegisteredEvent registered => new StudentDetails(
                 registered.StudentId,
@@ -354,11 +356,11 @@ var query = Query.FromItems(new QueryItem
 [ProjectionDefinition("CourseEnrollmentCount")]
 public class CourseEnrollmentProjection : IProjectionDefinition<CourseEnrollmentState>
 {
-    public CourseEnrollmentState? Apply(CourseEnrollmentState? current, IEvent evt)
+    public CourseEnrollmentState? Apply(CourseEnrollmentState? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
-            StudentEnrolledToCourseEvent enrolled => 
+            StudentEnrolledToCourseEvent =>
                 current with { EnrollmentCount = current.EnrollmentCount + 1 },
             _ => current
         };
@@ -382,9 +384,9 @@ public sealed class CourseDetailsProjection : IProjectionWithRelatedEvents<Cours
         evt.Event.Tags.First(t => t.Key == "courseId").Value;
 
     // Return a query for the extra events needed, or null if this event needs nothing extra.
-    public Query? GetRelatedEventsQuery(IEvent evt)
+    public Query? GetRelatedEventsQuery(SequencedEvent evt)
     {
-        if (evt is StudentEnrolledToCourseEvent enrolled)
+        if (evt.Event.Event is StudentEnrolledToCourseEvent enrolled)
             return Query.FromItems(new QueryItem
             {
                 Tags = [new Tag { Key = "studentId", Value = enrolled.StudentId.ToString() }],
@@ -394,8 +396,8 @@ public sealed class CourseDetailsProjection : IProjectionWithRelatedEvents<Cours
     }
 
     // relatedEvents contains what GetRelatedEventsQuery returned (empty array when null was returned).
-    public CourseDetails? Apply(CourseDetails? current, IEvent evt, SequencedEvent[] relatedEvents) =>
-        evt switch
+    public CourseDetails? Apply(CourseDetails? current, SequencedEvent evt, SequencedEvent[] relatedEvents) =>
+        evt.Event.Event switch
         {
             CourseCreatedEvent created => new CourseDetails(
                 CourseId: created.CourseId,
@@ -572,9 +574,15 @@ builder.Services.AddOpossum(options =>
     options.UseStore("MyApplicationContext");
 
     // Flush events to disk immediately (OPTIONAL, default: true)
-    // TRUE: Events are durable (survive power failure) but slower (~1-5ms per event)
-    // FALSE: Faster but events may be lost on power failure (use for testing only)
+    // TRUE: Events are durable (survive power failure) but slower (~17ms per single event on SSD)
+    //       Includes flushing event, index, and ledger files — the full durability guarantee.
+    // FALSE: Faster but events may be lost on power failure (use for testing/dev only)
     options.FlushEventsImmediately = true;
+
+    // Cross-process lock timeout (OPTIONAL, default: 5 seconds)
+    // Relevant when multiple application instances share the same store directory over a network drive.
+    // Increase this if appends consistently time out behind large batch operations on a slow share.
+    options.CrossProcessLockTimeout = TimeSpan.FromSeconds(5);
 });
 ```
 
@@ -597,7 +605,7 @@ builder.Services.AddProjections(options =>
 {
   "Opossum": {
     "RootPath": "D:\\MyApp\\EventStore",
-    "Contexts": ["MyApp"],
+    "StoreName": "MyApp",
     "FlushEventsImmediately": true
   },
   "Projections": {
@@ -1042,17 +1050,18 @@ See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) fo
 
 ### Typical Throughput
 
-**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-02-22):**
+**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-02-26):**
 
 | Operation | Throughput | Notes |
 |-----------|-----------|-------|
-| **Append (FlushImmediately = true)** | ~100 events/sec | Limited by disk flush (~10ms per event on SSD) |
-| **Append (FlushImmediately = false)** | ~220 events/sec | OS page cache only (testing mode - data loss risk) |
-| **Tag query (high selectivity)** | ~590 μs | Index-based, excellent for targeted queries |
+| **Append (FlushImmediately = true, single event)** | ~58 events/sec | True durability: event + index files flushed (~17ms/event on SSD) |
+| **Append (FlushImmediately = true, batch 10)** | ~78 events/sec | ~13ms/event when amortised over a batch |
+| **Append (FlushImmediately = false)** | ~218 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
+| **Tag query (high selectivity)** | ~553 μs | Index-based, excellent for targeted queries |
 | **Tag query (1K events)** | ~10 ms | Sub-linear scaling |
-| **Read by EventType (10K events)** | ~211 ms | Index-based |
+| **Read by EventType (10K events)** | ~201 ms | Index-based |
 | **Projection rebuild** | ~15,000 events/sec | Batched I/O (see rebuild note below) |
-| **Incremental projection update** | ~10 μs | ~500x faster than full rebuild |
+| **Incremental projection update** | ~11 μs | ~500x faster than full rebuild; zero allocation |
 
 ### Query Performance by Selectivity
 
@@ -1095,9 +1104,47 @@ Opossum is designed for **single-server deployments**:
 
 **Beyond these limits?** Consider cloud-based event stores (EventStoreDB, Azure Event Hubs).
 
-**Detailed benchmarks:** See `docs/benchmarking/results/20260222/`
+**Detailed benchmarks:** See `docs/benchmarking/results/20260226/`
 
 > **Rebuild performance note:** The projection rebuild I/O optimisation reduced the 4-projection sequential rebuild from **5.5 s → 370 ms (~15×)** and memory from **85.9 MB → 21.5 MB (~4×)**. As a consequence, the parallel-over-sequential speedup collapsed to near-parity — the disk I/O bottleneck that made parallelism valuable was eliminated. See `CHANGELOG.md` for the full benchmark comparison.
+
+### IEventStoreAdmin
+
+Administrative operations for store lifecycle management. Resolved from DI as `IEventStoreAdmin`:
+
+```csharp
+public interface IEventStoreAdmin
+{
+    // Permanently delete all store data (events, indices, projections, ledger).
+    // Write-protected files are handled transparently — read-only attributes are stripped.
+    // The store directory is recreated automatically on the next AppendAsync/ReadAsync call.
+    Task DeleteStoreAsync();
+}
+```
+
+---
+
+## ⚠️ Known Limitations
+
+### Crash-Recovery Position Collision (tracked for 0.5.0)
+
+**Severity:** High — silent data loss possible on power failure during an append.
+
+If the process crashes or loses power **after** event files are written to disk but **before**
+the ledger is updated, orphaned event files remain at positions the ledger does not record.
+On the next `AppendAsync`, those positions are reallocated and the orphaned files are
+**silently overwritten**.
+
+- `WriteProtectEventFiles = true` does **not** protect against this — the write path strips
+  the read-only attribute before overwriting.
+- `FlushEventsImmediately = true` ensures the original events survive on disk but does not
+  prevent the overwrite on restart.
+
+**Workaround:** After any unclean shutdown, check for event files at positions greater than
+the value in `.ledger`. Full analysis and manual recovery steps:
+[`docs/limitations/crash-recovery-position-collision.md`](docs/limitations/crash-recovery-position-collision.md).
+
+**Fix target:** 0.5.0 (write-ahead log approach).
 
 ---
 
