@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.3.0-preview.1</Version>
+    <Version>0.4.0-preview.1</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -19,21 +19,36 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>opossum.png</PackageIcon>
-    <PackageReleaseNotes>Breaking changes:
-- Apply() now receives SequencedEvent instead of IEvent (tags, metadata, position available in projections)
-- AppendAsync() gains a CancellationToken parameter
-- Tag, QueryItem, Metadata, DomainEvent, SequencedEvent are now immutable record types
-- options.AddContext() renamed to options.UseStore(); Contexts list replaced by StoreName string
+    <PackageReleaseNotes>Added:
+- Cross-process append safety: multiple app instances sharing the same store directory are now safe (ADR-005)
+- CrossProcessLockManager with exponential backoff and OpossumOptions.CrossProcessLockTimeout (default: 5 s)
+- IEventStoreAdmin interface with DeleteStoreAsync — permanently removes all store data (events, indices, projections, ledger)
+- OpossumOptions.WriteProtectProjectionFiles — marks projection files read-only after every write (mirrors WriteProtectEventFiles)
 
-Added:
-- IEventStoreMaintenance.AddTagsAsync — retroactively add tags to stored events (additive-only, no overwrites)
+Changed:
+- WriteProtectEventFiles and WriteProtectProjectionFiles now default to false (opt-in for production)
+- Event and projection files now use pretty-printed (indented) JSON for human readability
+
+Fixed:
+- Index files (event-type, tag) were not flushed to disk when FlushEventsImmediately = true — durability guarantee is now complete
+- DeleteStoreAsync race condition with concurrent AppendAsync — deletion now acquires the append lock
+- Flaky DescendingPerformanceTests integration test — warm-up pass added; ratio threshold widened to 4x
+
+Performance:
+- Parallel index file loading in GetPositionsByEventTypesAsync / GetPositionsByTagsAsync (Task.WhenAll)
+- Reduced read-retry overhead: 3 retries / 1 ms back-off (was 5 / 10 ms)
+- Eliminated redundant File.Exists syscall per index file read
+- K-way sorted merge for multi-type/multi-tag position queries
+
+Known Issues:
+- Crash-recovery position collision (pre-existing since v0.1.0) — tracked for 0.5.0
 
 Full changelog: https://github.com/majormartintibor/Opossum/blob/main/CHANGELOG.md</PackageReleaseNotes>
 
     <!-- Assembly Versioning -->
-    <AssemblyVersion>0.3.0.0</AssemblyVersion>
-    <FileVersion>0.3.0.0</FileVersion>
-    <InformationalVersion>0.3.0-preview.1</InformationalVersion>
+    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <FileVersion>0.4.0.0</FileVersion>
+    <InformationalVersion>0.4.0-preview.1</InformationalVersion>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
