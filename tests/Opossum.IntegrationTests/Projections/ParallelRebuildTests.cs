@@ -1,5 +1,6 @@
 using Opossum.Core;
 using Opossum.DependencyInjection;
+using Opossum.IntegrationTests.Helpers;
 using Opossum.Projections;
 
 namespace Opossum.IntegrationTests.Projections;
@@ -44,7 +45,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAllAsync_WithNoProjections_ReturnsEmptyResult()
+    public async Task RebuildAllAsync_WithNoProjections_ReturnsEmptyResultAsync()
     {
         // Act
         var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
@@ -58,7 +59,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAllAsync_WithForceRebuildFalse_OnlyRebuildsProjectionsWithNoCheckpoint()
+    public async Task RebuildAllAsync_WithForceRebuildFalse_OnlyRebuildsProjectionsWithNoCheckpointAsync()
     {
         // Arrange - Register two projections and manually set checkpoint for one
         var projection1 = new TestProjection1();
@@ -80,7 +81,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAllAsync_WithForceRebuildTrue_RebuildsAllProjections()
+    public async Task RebuildAllAsync_WithForceRebuildTrue_RebuildsAllProjectionsAsync()
     {
         // Arrange - Register two projections and set checkpoints for both
         var projection1 = new TestProjection1();
@@ -101,7 +102,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithSpecificProjections_RebuildsOnlyThose()
+    public async Task RebuildAsync_WithSpecificProjections_RebuildsOnlyThoseAsync()
     {
         // Arrange - Register three projections
         var projection1 = new TestProjection1();
@@ -125,7 +126,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithEmptyArray_ReturnsEmptyResult()
+    public async Task RebuildAsync_WithEmptyArray_ReturnsEmptyResultAsync()
     {
         // Act
         var result = await _projectionManager.RebuildAsync([]);
@@ -137,7 +138,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithNullArray_ThrowsArgumentNullException()
+    public async Task RebuildAsync_WithNullArray_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -145,7 +146,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task GetRebuildStatusAsync_WhenNotRebuilding_ReturnsFalse()
+    public async Task GetRebuildStatusAsync_WhenNotRebuilding_ReturnsFalseAsync()
     {
         // Act
         var status = await _projectionManager.GetRebuildStatusAsync();
@@ -158,7 +159,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildResult_ContainsAccurateDetails()
+    public async Task RebuildResult_ContainsAccurateDetailsAsync()
     {
         // Arrange
         var projection = new TestProjection1();
@@ -216,7 +217,7 @@ public class ParallelRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAllAsync_MeasuresOverallDuration()
+    public async Task RebuildAllAsync_MeasuresOverallDurationAsync()
     {
         // Arrange
         var projection1 = new TestProjection1();
@@ -235,11 +236,7 @@ public class ParallelRebuildTests : IDisposable
     public void Dispose()
     {
         _serviceProvider.Dispose();
-
-        if (Directory.Exists(_testStoragePath))
-        {
-            Directory.Delete(_testStoragePath, recursive: true);
-        }
+        TestDirectoryHelper.ForceDelete(_testStoragePath);
     }
 
     // Test projection definitions

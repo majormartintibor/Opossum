@@ -107,7 +107,7 @@ public class ProjectionRebuildBenchmarks
     /// ONLY measures: Query + Deserialize + Build Projection
     /// </summary>
     [Benchmark(Baseline = true, Description = "Rebuild projection (50 events)")]
-    public async Task RebuildProjection_50Events()
+    public async Task RebuildProjection_50EventsAsync()
     {
         // Query only "Student50" events (50 events)
         var projection = await RebuildStudentProjectionAsync("Student50");
@@ -118,7 +118,7 @@ public class ProjectionRebuildBenchmarks
     /// Tests scaling to medium datasets.
     /// </summary>
     [Benchmark(Description = "Rebuild projection (250 events)")]
-    public async Task RebuildProjection_250Events()
+    public async Task RebuildProjection_250EventsAsync()
     {
         // Query only "Student250" events (250 events)
         var projection = await RebuildStudentProjectionAsync("Student250");
@@ -129,7 +129,7 @@ public class ProjectionRebuildBenchmarks
     /// Tests scaling to larger datasets (production-like).
     /// </summary>
     [Benchmark(Description = "Rebuild projection (500 events)")]
-    public async Task RebuildProjection_500Events()
+    public async Task RebuildProjection_500EventsAsync()
     {
         // Query only "Student500" events (500 events)
         var projection = await RebuildStudentProjectionAsync("Student500");
@@ -180,7 +180,7 @@ public class ProjectionRebuildBenchmarks
     /// Uses smaller dataset (100 + 200 + 100 = 400 events total).
     /// </summary>
     [Benchmark(Description = "Complex projection (multi-event types)")]
-    public async Task RebuildComplexProjection_MultiEventTypes()
+    public async Task RebuildComplexProjection_MultiEventTypesAsync()
     {
         // Events already in store from IterationSetup
         var projection = await RebuildComplexProjectionAsync();

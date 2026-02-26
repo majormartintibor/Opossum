@@ -21,7 +21,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_SameEventType_NoLostUpdates()
+    public async Task ConcurrentAddPosition_SameEventType_NoLostUpdatesAsync()
     {
         // Arrange
         var index = new EventTypeIndex();
@@ -44,7 +44,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_DifferentEventTypes_NoConflicts()
+    public async Task ConcurrentAddPosition_DifferentEventTypes_NoConflictsAsync()
     {
         // Arrange
         var index = new EventTypeIndex();
@@ -78,7 +78,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_DuplicatePositions_NoDuplicatesInResult()
+    public async Task ConcurrentAddPosition_DuplicatePositions_NoDuplicatesInResultAsync()
     {
         // Arrange
         var index = new EventTypeIndex();
@@ -102,7 +102,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentReadAndWrite_NoCorruption()
+    public async Task ConcurrentReadAndWrite_NoCorruptionAsync()
     {
         // Arrange
         var index = new EventTypeIndex();
@@ -164,7 +164,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task StressTest_HighConcurrency_MaintainsIntegrity()
+    public async Task StressTest_HighConcurrency_MaintainsIntegrityAsync()
     {
         // Arrange
         var index = new EventTypeIndex();
@@ -198,7 +198,7 @@ public class EventTypeIndexThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddPosition_WithExceptions_DoesNotCorruptState()
+    public async Task ConcurrentAddPosition_WithExceptions_DoesNotCorruptStateAsync()
     {
         // Arrange
         var index = new EventTypeIndex();

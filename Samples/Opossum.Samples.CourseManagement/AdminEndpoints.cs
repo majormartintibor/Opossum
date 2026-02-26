@@ -1,10 +1,9 @@
-using System.Diagnostics;
 using Opossum.Projections;
 
 namespace Opossum.Samples.CourseManagement;
 
 /// <summary>
-/// Admin endpoints for projection management.
+/// Admin endpoints for projection management and store lifecycle operations.
 /// These endpoints are protected and should only be accessible to administrators.
 /// In production, add proper authentication/authorization.
 /// </summary>
@@ -133,9 +132,9 @@ public static class AdminEndpoints
         .WithSummary("Get all projection checkpoints")
         .WithDescription("""
             Returns the last processed event position for each projection.
-            
+
             A checkpoint of 0 indicates the projection has never been built.
-            
+
             Response:
             {
                 "CourseDetails": 1523,
@@ -143,6 +142,49 @@ public static class AdminEndpoints
                 "StudentDetails": 1523,
                 "StudentShortInfo": 0  ← Not yet built
             }
+            """);
+    }
+
+    public static void MapStoreAdminEndpoints(this IEndpointRouteBuilder app)
+    {
+        var storeGroup = app.MapGroup("/admin/store")
+            .WithTags("Admin - Store");
+
+        // Delete the entire event store (events, projections, indices, ledger)
+        storeGroup.MapDelete("/", async (
+            IEventStoreAdmin admin,
+            [FromQuery] bool confirm = false) =>
+        {
+            if (!confirm)
+            {
+                return Results.BadRequest(new
+                {
+                    Error = "Confirmation required.",
+                    Detail = "Pass ?confirm=true to permanently delete all store data."
+                });
+            }
+
+            await admin.DeleteStoreAsync();
+            return Results.NoContent();
+        })
+        .WithSummary("Delete the entire event store")
+        .WithDescription("""
+            Permanently and irreversibly deletes ALL data in the store:
+            events, indices, projections, checkpoints, and the ledger.
+            Write-protected files are handled transparently.
+
+            WARNING: This operation cannot be undone. All event history is lost.
+
+            Required query parameter:
+            - confirm=true  Must be supplied to prevent accidental deletion.
+
+            Legitimate use cases:
+            - Development and test environment cleanup
+            - Wiping a store to start fresh after a schema change
+            - GDPR / data-erasure compliance at the store level
+
+            After deletion, subsequent append or read operations will recreate
+            the necessary directory structure automatically.
             """);
     }
 }

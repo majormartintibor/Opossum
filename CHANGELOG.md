@@ -5,6 +5,183 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+---
+
+## [0.4.0-preview.1] - 2026-02-26
+
+### Known Issues
+- **Crash-recovery position collision (pre-existing since v0.1.0)** — a process crash
+  between step 7 (event files written) and step 9 (ledger updated) leaves orphaned event
+  files on disk at positions the ledger does not record. On the next append, those positions
+  are reallocated and the orphaned files are silently overwritten. `WriteProtectEventFiles`
+  does not guard against this because the write path strips the `ReadOnly` attribute before
+  every overwrite. Full analysis in
+  [`docs/limitations/crash-recovery-position-collision.md`](docs/limitations/crash-recovery-position-collision.md).
+  Fix is tracked for 0.5.0.
+
+### Fixed
+- **Index files not flushed to disk when `FlushEventsImmediately = true`** — `PositionIndexFile.WritePositionsAsync`
+  now calls `RandomAccess.FlushToDisk` on the temp file before the atomic rename when the flush flag is set,
+  matching the durability guarantee already provided by event and ledger files. Previously, on a power failure
+  after an append, event-type and tag index queries could miss the last batch of appended events until a
+  manual reindex. `EventTypeIndex`, `TagIndex`, `IndexManager`, and `FileSystemEventStore` were updated to
+  propagate the `FlushEventsImmediately` option through the full index write path.
+- **`DeleteStoreAsync` race condition with `AppendAsync`** — `DeleteStoreAsync` now acquires
+  `_appendLock` before touching the store directory. Previously a concurrent `AppendAsync`
+  could encounter `IOException`/`DirectoryNotFoundException` mid-write because the deletion
+  bypassed the in-process semaphore entirely. The double-checked pattern (fast-path existence
+  check before the lock, re-check inside) ensures both concurrent deletes and the
+  append-vs-delete race complete cleanly.
+
+### Performance
+- **Parallel event-type index loading** (`IndexManager`): `GetPositionsByEventTypesAsync` and
+  `GetPositionsByTagsAsync` now load all per-type/per-tag index files concurrently via
+  `Task.WhenAll` instead of sequentially. Multi-type and multi-tag queries scale with
+  `max(T_file)` rather than `sum(T_file)`.
+- **Reduced read-retry overhead** (`PositionIndexFile`): `ReadPositionsAsync` now uses
+  `maxRetries = 3` with a `1 ms` initial back-off (was 5 retries / 10 ms). Reads are
+  non-destructive so a shorter back-off is sufficient, reducing worst-case retry latency by ~10×.
+- **Eliminated redundant `File.Exists` syscall** (`EventTypeIndex`, `TagIndex`):
+  `GetPositionsAsync` no longer calls `File.Exists` before delegating to
+  `PositionIndexFile.ReadPositionsAsync`, which already handles the missing-file case — saving
+  one kernel call per index file read.
+- **K-way sorted merge** (`IndexManager`): multi-type and multi-tag position merges now use a
+  k-way sorted merge that exploits pre-sorted index arrays, replacing the `HashSet<long>` +
+  `Array.Sort` approach (O(N log N) → O(N × K)).
+
+### Added
+- **Cross-process append safety (ADR-005)** — `AppendAsync` is now safe when multiple
+  application instances share the same store directory over a network drive or UNC path.
+  A dedicated `.store.lock` file in the context directory is opened with `FileShare.None`
+  for the entire duration of every append. Windows SMB enforces this server-side across all
+  machines, eliminating the read-check-write race that could silently overwrite events when
+  two PCs submitted a form within the same ~10 ms window. The existing `SemaphoreSlim` is
+  retained as a fast within-process gate; the file lock is only contested across processes.
+  Lock acquisition on an uncontested local drive adds < 1 ms overhead per append.
+- **`CrossProcessLockManager`** — new internal class that acquires and releases the
+  `.store.lock` file with exponential backoff (10 ms → 500 ms cap) on sharing violations.
+  Throws `TimeoutException` with a diagnostic message when the configured timeout elapses.
+  Throws `OperationCanceledException` immediately when the caller's token is cancelled.
+- **`OpossumOptions.CrossProcessLockTimeout`** — new configuration property (default: 5 s).
+  Increase this value when appends are consistently queued behind large batch operations on
+  a slow network share. Validated at startup: must be > `TimeSpan.Zero`.
+- **`TimeoutException` documented on `IEventStore.AppendAsync`** — the XML comment now
+  describes when and why `TimeoutException` can surface, and references the configuration
+  option to adjust.
+- **`CrossProcessLockManagerTests`** (8 unit tests) — cover: successful acquisition, lock
+  file is created even when the context directory does not yet exist, second acquisition while
+  held throws `TimeoutException`, disposal releases the lock for re-acquisition, pre-cancelled
+  token throws immediately, mid-wait cancellation throws `OperationCanceledException`, and
+  exponential backoff stays within the configured timeout + max-backoff bounds.
+- **`CrossProcessAppendSafetyTests`** (5 integration tests) — cover: two store instances on
+  the same directory producing contiguous positions across 100 concurrent appends, no event
+  payload overwritten, exactly one winner under competing `AppendCondition`, `TimeoutException`
+  thrown when the lock is externally held for longer than `CrossProcessLockTimeout`, and
+  100 sequential single-instance appends completing within 5 s (performance sanity guard).
+- **`IEventStoreAdmin` interface with `DeleteStoreAsync`** — new public administrative interface
+  that exposes destructive store-lifecycle operations. `DeleteStoreAsync` permanently removes
+  all data owned by the store: events, indices, projections, checkpoints, and the ledger.
+  Write-protected files (`WriteProtectEventFiles`, `WriteProtectProjectionFiles`) are handled
+  transparently — the read-only attribute is stripped before deletion so no
+  `UnauthorizedAccessException` is thrown. After the call, the store directory no longer
+  exists; subsequent `AppendAsync`/`ReadAsync` calls recreate the required directory structure
+  automatically. Registered in DI alongside `IEventStore` (same singleton instance).
+- **`DELETE /admin/store?confirm=true` endpoint in sample app** — `AdminEndpoints.MapStoreAdminEndpoints`
+  maps a delete endpoint for the whole event store. The `confirm=true` query parameter is
+  required to prevent accidental erasure (omitting it or passing `confirm=false` returns HTTP
+  400). A successful deletion returns HTTP 204 No Content. The endpoint is idempotent: calling
+  it on an already-absent store also returns 204.
+- **`EventStoreAdminTests`** — unit test class covering `DeleteStoreAsync`: basic deletion,
+  graceful no-op when the store directory is absent, transparent bypass of write-protected
+  event files, transparent bypass of write-protected projection files, store recreation after
+  deletion, and `InvalidOperationException` when no store is configured.
+- **`StoreAdminEndpointTests`** — integration test class for the `DELETE /admin/store` endpoint:
+  missing `confirm`, `confirm=false`, and `confirm=true` (HTTP status codes), store-directory
+  deletion verified on disk, store-recreation after deletion verified via a subsequent append,
+  and idempotent double-deletion.
+- **`OpossumOptions.WriteProtectProjectionFiles`** — new option (default: `true`) that marks
+  projection files read-only at the OS level immediately after they are written to disk.
+  Human operators can open and read the JSON files in any text editor, but cannot accidentally
+  modify or delete them. Opossum transparently removes the read-only attribute before
+  overwriting or deleting a projection file internally, then re-applies protection afterward.
+  This mirrors the existing `WriteProtectEventFiles` behavior and satisfies the same
+  "human-readable but immutable" requirement for the derived projection store.
+- **`TestDirectoryHelper.ForceDelete`** — shared test utility in both `Opossum.UnitTests` and
+  `Opossum.IntegrationTests` that strips all read-only attributes from files recursively before
+  deleting a temp directory. Used in all test `Dispose()` methods that clean up temp stores
+  created with write-protection enabled.
+
+### Changed
+- **`WriteProtectEventFiles` default changed from `true` to `false`** — write protection is
+  now opt-in. Development environments can delete store files freely without clearing
+  read-only attributes. Enable explicitly in production: `options.WriteProtectEventFiles = true`.
+- **`WriteProtectProjectionFiles` default changed from `true` to `false`** — same rationale.
+  Enable in production: `options.WriteProtectProjectionFiles = true`.
+- **Event files are now pretty-printed JSON** — `JsonEventSerializer` switched from minified
+  single-line JSON to indented multi-line JSON (`WriteIndented = true`). Event files are now
+  immediately readable when opened in any text editor without any reformatting step.
+- **Projection files are now pretty-printed JSON** — `FileSystemProjectionStore` likewise
+  switched to `WriteIndented = true`. Both event and projection JSON files use the same
+  human-friendly indented format.
+
+### Fixed
+- **Duplicate `EventStoreAdminTests` class** — the unit test file accidentally contained two
+  identical class definitions, causing `CS0101`/`CS0111` compilation errors. The redundant
+  second definition was removed; the first (which uses the cleaner `CreateEvent` helper) is
+  the canonical version.
+- **`StoreAdminEndpointTests.GetStoreName()` used stale `Opossum:Contexts` config key** —
+  after the `AddContext` → `UseStore` rename in 0.3.0-preview.1, the helper still read the
+  old `Opossum:Contexts` array and called `.Get<string[]>()` (an extension method unavailable
+  without `Microsoft.Extensions.Configuration.Binder`), causing a `CS1061` build error.
+  Updated to `config["Opossum:StoreName"]` which uses the plain `IConfiguration` indexer.
+- **`IntegrationTestFixture` used stale `Opossum:Contexts` config key** — same root cause as
+  above; updated to `context.Configuration["Opossum:StoreName"]`.
+- **Test cleanup failures with write-protected files** — `Dispose()` methods in multiple test
+  classes were calling `Directory.Delete(path, recursive: true)` directly, which throws
+  `UnauthorizedAccessException` on Windows when the directory contains read-only files.
+  Updated all affected `Dispose()` methods and inline `finally` blocks to use
+  `TestDirectoryHelper.ForceDelete` so tests pass reliably when `WriteProtectEventFiles` or
+  `WriteProtectProjectionFiles` is enabled (the default).
+- **`EventFileManagerTests.CreateTestEvent` missing method declaration** — the method body was
+  present in the file but the signature had been accidentally removed. Restored the signature.
+
+### Benchmarks
+
+Benchmark run `20260226` compared against `20260225/rerun1` (same branch, post-ADR-005 baseline):
+
+| Suite | 20260225/rerun1 | 20260226 | Δ | Notes |
+|---|---:|---:|---|---|
+| **Single event (with flush)** | 9.8 ms | 17.2 ms | **+75.6 %** | ✅ correctness fix — index files now flushed |
+| **Batch 10 events (with flush)** | 55.2 ms | 127.9 ms | **+131.9 %** | ✅ correctness fix — true durability cost |
+| Single event (no flush) | 4.611 ms | 4.584 ms | −0.6 % | noise |
+| Batch 10 events (no flush) | 36.8 ms | 36.6 ms | −0.5 % | noise |
+| Batch 20 events (no flush) | 78.2 ms | 73.2 ms | **−6.4 %** | improved |
+| Batch 50 / 100 (no flush) | 194 / 406 ms | 224 / 449 ms | +10–16 % | ⚠️ under investigation; acceptable for release |
+| **Multiple event types — 1K** | **66.6 ms** | **64.7 ms** | **−2.8 %** | ✅ +43 % regression from 20260225 fully resolved |
+| Event type — 10K events | 208.3 ms | 200.9 ms | **−3.6 %** | improved |
+| Tag query — 1K events | 10.9 ms | 10.5 ms | **−4.1 %** | improved |
+| Query.All() — 10K events | 828.2 ms | 801.8 ms | **−3.2 %** | improved |
+| Real-world: Payment events | 4,453 μs | 4,062 μs | **−8.8 %** | improved; prior +17 % regression resolved |
+| Descending order vs ascending | 1.0003× | 0.9997× | ≈ 0 | ✅ parity |
+| Parallel rebuild — sequential | 369.7 ms | 319.9 ms | **−13.5 %** | improved (async refactor) |
+| Incremental projection update alloc | ~12 KB | **0 B** | 100 % | ✅ zero-allocation hot path |
+
+**Flush regressions are expected and correct.** The `FlushEventsImmediately = true` path previously
+omitted `FlushToDisk` calls on event-type and tag index temp files. Users who enabled this flag
+were silently not receiving the full durability guarantee. The new numbers represent the true
+on-disk cost: ~17 ms per single-event flush and ~128 ms per 10-event batch flush on SSD.
+
+The +10–16 % regression on large no-flush batches (50, 100 events) has no corresponding
+write-path change in this release. It is within the acceptable range for the target use case
+(< 100 events/day average, SMB/on-premises) and is tracked as a follow-up investigation item
+rather than a release blocker.
+
+Full analysis: `docs/benchmarking/results/20260226/ANALYSIS.md`
+
+---
+
 ## [0.3.0-preview.1] - 2026-02-23
 
 ### Fixed
@@ -445,16 +622,5 @@ See [README.md](README.md) for complete quick start guide.
 - Built for real-world use cases in automotive retail and SMB applications
 
 ---
-
-## [Unreleased]
-
-### Planned Features
-- Multi-context support
-- Cache warming for projections
-- Snapshot support for aggregates
-- Event schema versioning
-- Retention policies
-- Archiving and compression
-- Cross-platform performance optimizations
 
 [0.1.0-preview.1]: https://github.com/majormartintibor/Opossum/releases/tag/v0.1.0-preview.1

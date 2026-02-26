@@ -339,12 +339,12 @@ public class ComposeProjectionsTests
         var p1 = new DecisionProjection<List<long>>(
             initialState: [],
             query: Query.All(),
-            apply: (list, evt) => new List<long>(list) { evt.Position });
+            apply: (list, evt) => [..list, evt.Position]);
 
         var p2 = new DecisionProjection<List<long>>(
             initialState: [],
             query: Query.All(),
-            apply: (list, evt) => new List<long>(list) { evt.Position });
+            apply: (list, evt) => [..list, evt.Position]);
 
         // Events provided out of position order
         var events = new[]

@@ -24,7 +24,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddProjectionAsync_CreatesIndexFile()
+    public async Task AddProjectionAsync_CreatesIndexFileAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Active");
@@ -40,7 +40,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddProjectionAsync_AddsKeyToExistingIndex()
+    public async Task AddProjectionAsync_AddsKeyToExistingIndexAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Active");
@@ -59,7 +59,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddProjectionAsync_PreventsDuplicates()
+    public async Task AddProjectionAsync_PreventsDuplicatesAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Active");
@@ -75,7 +75,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveProjectionAsync_RemovesKeyFromIndex()
+    public async Task RemoveProjectionAsync_RemovesKeyFromIndexAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Active");
@@ -92,7 +92,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveProjectionAsync_DeletesIndexFileWhenEmpty()
+    public async Task RemoveProjectionAsync_DeletesIndexFileWhenEmptyAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Active");
@@ -108,7 +108,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetProjectionKeysByTagAsync_ReturnsEmptyForNonExistentTag()
+    public async Task GetProjectionKeysByTagAsync_ReturnsEmptyForNonExistentTagAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Inactive");
@@ -121,7 +121,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetProjectionKeysByTagsAsync_ReturnsIntersection()
+    public async Task GetProjectionKeysByTagsAsync_ReturnsIntersectionAsync()
     {
         // Arrange
         var tag1 = new Tag("Status", "Active");
@@ -144,7 +144,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetProjectionKeysByTagsAsync_ReturnsEmptyIfAnyTagHasNoMatches()
+    public async Task GetProjectionKeysByTagsAsync_ReturnsEmptyIfAnyTagHasNoMatchesAsync()
     {
         // Arrange
         var tag1 = new Tag("Status", "Active");
@@ -160,7 +160,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateProjectionTagsAsync_RemovesOldAndAddsNew()
+    public async Task UpdateProjectionTagsAsync_RemovesOldAndAddsNewAsync()
     {
         // Arrange
         var projKey = "proj-1";
@@ -199,7 +199,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateProjectionTagsAsync_OnlyUpdatesChangedTags()
+    public async Task UpdateProjectionTagsAsync_OnlyUpdatesChangedTagsAsync()
     {
         // Arrange
         var projKey = "proj-1";
@@ -251,7 +251,7 @@ public class ProjectionTagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAddition_SameTag_NoLostUpdates()
+    public async Task ConcurrentAddition_SameTag_NoLostUpdatesAsync()
     {
         // Arrange
         var tag = new Tag("Status", "Active");

@@ -35,7 +35,7 @@ public class LedgerManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetLastSequencePositionAsync_WhenLedgerDoesNotExist_ReturnsZero()
+    public async Task GetLastSequencePositionAsync_WhenLedgerDoesNotExist_ReturnsZeroAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "NonExistentContext");
@@ -48,7 +48,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLastSequencePositionAsync_WhenLedgerExists_ReturnsLastPosition()
+    public async Task GetLastSequencePositionAsync_WhenLedgerExists_ReturnsLastPositionAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "ExistingContext");
@@ -62,7 +62,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLastSequencePositionAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task GetLastSequencePositionAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -70,7 +70,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLastSequencePositionAsync_WhenLedgerIsCorrupt_ReturnsZero()
+    public async Task GetLastSequencePositionAsync_WhenLedgerIsCorrupt_ReturnsZeroAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "CorruptContext");
@@ -88,7 +88,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLastSequencePositionAsync_WhenLedgerIsEmpty_ReturnsZero()
+    public async Task GetLastSequencePositionAsync_WhenLedgerIsEmpty_ReturnsZeroAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "EmptyLedgerContext");
@@ -110,7 +110,7 @@ public class LedgerManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetNextSequencePositionAsync_WhenLedgerDoesNotExist_ReturnsOne()
+    public async Task GetNextSequencePositionAsync_WhenLedgerDoesNotExist_ReturnsOneAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "NewContext");
@@ -123,7 +123,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetNextSequencePositionAsync_WhenLedgerExists_ReturnsIncrementedPosition()
+    public async Task GetNextSequencePositionAsync_WhenLedgerExists_ReturnsIncrementedPositionAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "IncrementContext");
@@ -137,7 +137,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetNextSequencePositionAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task GetNextSequencePositionAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -149,7 +149,7 @@ public class LedgerManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task UpdateSequencePositionAsync_CreatesLedgerFile()
+    public async Task UpdateSequencePositionAsync_CreatesLedgerFileAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "CreateLedgerContext");
@@ -163,7 +163,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateSequencePositionAsync_WritesCorrectPosition()
+    public async Task UpdateSequencePositionAsync_WritesCorrectPositionAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "WritePositionContext");
@@ -177,7 +177,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateSequencePositionAsync_OverwritesExistingPosition()
+    public async Task UpdateSequencePositionAsync_OverwritesExistingPositionAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "OverwriteContext");
@@ -192,7 +192,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateSequencePositionAsync_WithNullContextPath_ThrowsArgumentNullException()
+    public async Task UpdateSequencePositionAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -200,7 +200,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateSequencePositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeException()
+    public async Task UpdateSequencePositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeExceptionAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "NegativeContext");
@@ -211,7 +211,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateSequencePositionAsync_WithZeroPosition_Succeeds()
+    public async Task UpdateSequencePositionAsync_WithZeroPosition_SucceedsAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "ZeroContext");
@@ -229,7 +229,7 @@ public class LedgerManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AcquireLockAsync_CreatesLockObject()
+    public async Task AcquireLockAsync_CreatesLockObjectAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "LockContext");
@@ -242,7 +242,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AcquireLockAsync_PreventsSimultaneousAccess()
+    public async Task AcquireLockAsync_PreventsSimultaneousAccessAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "ExclusiveContext");
@@ -291,7 +291,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task AcquireLockAsync_ReleasesLockOnDispose()
+    public async Task AcquireLockAsync_ReleasesLockOnDisposeAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "DisposeLockContext");
@@ -310,7 +310,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentUpdates_WithoutLocking_MayFail()
+    public async Task ConcurrentUpdates_WithoutLocking_MayFailAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "ConcurrentContext");
@@ -356,7 +356,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task LockPreventsSimultaneousFileAccess()
+    public async Task LockPreventsSimultaneousFileAccessAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "LockTestContext");
@@ -381,7 +381,7 @@ public class LedgerManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task SequentialOperations_WorkCorrectly()
+    public async Task SequentialOperations_WorkCorrectlyAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "SequentialContext");
@@ -411,7 +411,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task LedgerPersistsAcrossManagerInstances()
+    public async Task LedgerPersistsAcrossManagerInstancesAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "PersistenceContext");
@@ -427,7 +427,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task LedgerFileHasCorrectFormat()
+    public async Task LedgerFileHasCorrectFormatAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "FormatContext");
@@ -447,7 +447,7 @@ public class LedgerManagerTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task Constructor_WithFlushTrue_LedgerIsDurable()
+    public async Task Constructor_WithFlushTrue_LedgerIsDurableAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "FlushTrueContext");
@@ -468,7 +468,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task Constructor_WithFlushFalse_LedgerStillWritten()
+    public async Task Constructor_WithFlushFalse_LedgerStillWrittenAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "FlushFalseContext");

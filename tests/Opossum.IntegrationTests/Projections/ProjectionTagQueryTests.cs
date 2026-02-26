@@ -1,5 +1,6 @@
 using Opossum.Configuration;
 using Opossum.Core;
+using Opossum.IntegrationTests.Helpers;
 using Opossum.Projections;
 
 namespace Opossum.IntegrationTests.Projections;
@@ -21,14 +22,11 @@ public class ProjectionTagQueryTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempPath))
-        {
-            Directory.Delete(_tempPath, recursive: true);
-        }
+        TestDirectoryHelper.ForceDelete(_tempPath);
     }
 
     [Fact]
-    public async Task QueryByTagAsync_ReturnsProjectionsMatchingTag()
+    public async Task QueryByTagAsync_ReturnsProjectionsMatchingTagAsync()
     {
         // Arrange
         var tagProvider = new TestProjectionTagProvider();
@@ -52,7 +50,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryByTagsAsync_ReturnsProjectionsMatchingAllTags()
+    public async Task QueryByTagsAsync_ReturnsProjectionsMatchingAllTagsAsync()
     {
         // Arrange
         var tagProvider = new TestProjectionTagProvider();
@@ -80,7 +78,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryByTagsAsync_AndLogicIsCorrect_WhenFirstTagIndexIsLargerThanSecond()
+    public async Task QueryByTagsAsync_AndLogicIsCorrect_WhenFirstTagIndexIsLargerThanSecondAsync()
     {
         // Arrange - regression test: when the first tag's index set is LARGER than the second,
         // the old code sorted to find the smallest, but then called keySets.Skip(1) on the
@@ -117,7 +115,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryByTagAsync_WithCaseInsensitiveComparison_FindsMatches()
+    public async Task QueryByTagAsync_WithCaseInsensitiveComparison_FindsMatchesAsync()
     {
         // Arrange
         var tagProvider = new TestProjectionTagProvider();
@@ -135,7 +133,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_UpdatesIndicesWhenTagsChange()
+    public async Task SaveAsync_UpdatesIndicesWhenTagsChangeAsync()
     {
         // Arrange
         var tagProvider = new TestProjectionTagProvider();
@@ -164,7 +162,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_UpdatesIndicesWhenTagsChange_AfterApplicationRestart()
+    public async Task SaveAsync_UpdatesIndicesWhenTagsChange_AfterApplicationRestartAsync()
     {
         // Regression test: _projectionTags is an in-memory cache that is empty after a restart.
         // Without the fix, the first SaveAsync on a new store instance treats every existing
@@ -200,7 +198,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesFromIndices()
+    public async Task DeleteAsync_RemovesFromIndicesAsync()
     {
         // Arrange
         var tagProvider = new TestProjectionTagProvider();
@@ -218,7 +216,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task QueryByTagAsync_WithoutTagProvider_ReturnsEmpty()
+    public async Task QueryByTagAsync_WithoutTagProvider_ReturnsEmptyAsync()
     {
         // Arrange - No tag provider
         var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection", null);
@@ -234,7 +232,7 @@ public class ProjectionTagQueryTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAllIndices_ClearsAllTagIndices()
+    public async Task DeleteAllIndices_ClearsAllTagIndicesAsync()
     {
         // Arrange
         var tagProvider = new TestProjectionTagProvider();

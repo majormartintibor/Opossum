@@ -65,7 +65,7 @@ public class ParallelRebuildBenchmarks : IDisposable
     }
 
     [Benchmark(Baseline = true)]
-    public async Task SequentialRebuild_4Projections()
+    public async Task SequentialRebuild_4ProjectionsAsync()
     {
         // Rebuild each projection one at a time
         await _projectionManager!.RebuildAsync("BenchProjection1");
@@ -75,14 +75,14 @@ public class ParallelRebuildBenchmarks : IDisposable
     }
 
     [Benchmark]
-    public async Task ParallelRebuild_4Projections_Concurrency4()
+    public async Task ParallelRebuild_4Projections_Concurrency4Async()
     {
         // Rebuild all at once with MaxConcurrentRebuilds = 4
         await _projectionManager!.RebuildAllAsync(forceRebuild: true);
     }
 
     [Benchmark]
-    public async Task ParallelRebuild_4Projections_Concurrency2()
+    public async Task ParallelRebuild_4Projections_Concurrency2Async()
     {
         // Temporarily lower concurrency to test scaling
         var services = new ServiceCollection();

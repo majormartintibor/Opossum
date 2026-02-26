@@ -19,7 +19,7 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public async Task Database_UsesIsolatedTestPath_NotProductionDatabase()
+    public async Task Database_UsesIsolatedTestPath_NotProductionDatabaseAsync()
     {
         // This test verifies that tests are NOT using the production database
         // Instead, they should use a temporary path from the test fixture
@@ -93,7 +93,7 @@ public class DiagnosticTests
     }
 
     [Fact]
-    public async Task EmptyDatabase_StartsWithNoEvents()
+    public async Task EmptyDatabase_StartsWithNoEventsAsync()
     {
         // NOTE: This test name is slightly misleading after we added fixture seeding.
         // The database is NOT empty - it has 2 students and 2 courses seeded by the fixture.

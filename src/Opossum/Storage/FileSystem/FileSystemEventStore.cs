@@ -11,6 +11,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
     private readonly LedgerManager _ledgerManager;
     private readonly EventFileManager _eventFileManager;
     private readonly IndexManager _indexManager;
+    private readonly CrossProcessLockManager _crossProcessLockManager;
     private readonly SemaphoreSlim _appendLock = new(1, 1);
     private readonly ILogger<FileSystemEventStore> _logger;
 
@@ -21,8 +22,9 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         _options = options;
         _logger = logger ?? NullLogger<FileSystemEventStore>.Instance;
         _ledgerManager = new LedgerManager(options.FlushEventsImmediately);
-        _eventFileManager = new EventFileManager(options.FlushEventsImmediately);
-        _indexManager = new IndexManager();
+        _eventFileManager = new EventFileManager(options.FlushEventsImmediately, options.WriteProtectEventFiles);
+        _indexManager = new IndexManager(options.FlushEventsImmediately);
+        _crossProcessLockManager = new CrossProcessLockManager(options.CrossProcessLockTimeout);
     }
 
     // Constructor for testing with dependency injection
@@ -42,6 +44,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         _ledgerManager = ledgerManager;
         _eventFileManager = eventFileManager;
         _indexManager = indexManager;
+        _crossProcessLockManager = new CrossProcessLockManager(options.CrossProcessLockTimeout);
     }
 
     public void Dispose()
@@ -86,17 +89,23 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         activity?.SetTag("opossum.event_count", events.Length);
         activity?.SetTag("opossum.context", _options.StoreName);
 
-        // 3. Use semaphore for atomic operation (one append at a time)
+        // 3. Use semaphore for atomic operation (one append at a time within this process)
         await _appendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            // 4. Check AppendCondition
+            // 4. Acquire cross-process file lock to serialise appends across all processes
+            //    sharing the same store directory (e.g. on a UNC path or mapped drive).
+            await using var _ = await _crossProcessLockManager
+                .AcquireAsync(contextPath, cancellationToken)
+                .ConfigureAwait(false);
+
+            // 5. Check AppendCondition
             if (condition != null)
             {
                 await ValidateAppendConditionAsync(contextPath, condition).ConfigureAwait(false);
             }
 
-            // 5. Allocate sequence positions and build SequencedEvents
+            // 6. Allocate sequence positions and build SequencedEvents
             var startPosition = await _ledgerManager.GetNextSequencePositionAsync(contextPath).ConfigureAwait(false);
 
             var sequencedEvents = new SequencedEvent[events.Length];
@@ -116,20 +125,20 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
                 };
             }
 
-            // 6. Write events to files
+            // 7. Write events to files
             var eventsPath = GetEventsPath(contextPath);
             foreach (var evt in sequencedEvents)
             {
                 await _eventFileManager.WriteEventAsync(eventsPath, evt).ConfigureAwait(false);
             }
 
-            // 7. Update indices
+            // 8. Update indices
             foreach (var evt in sequencedEvents)
             {
                 await _indexManager.AddEventToIndicesAsync(contextPath, evt).ConfigureAwait(false);
             }
 
-            // 8. Update ledger
+            // 9. Update ledger
             var lastPosition = startPosition + events.Length - 1;
             await _ledgerManager.UpdateSequencePositionAsync(contextPath, lastPosition).ConfigureAwait(false);
         }

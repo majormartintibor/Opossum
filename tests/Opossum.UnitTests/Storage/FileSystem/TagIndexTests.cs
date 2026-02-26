@@ -27,7 +27,7 @@ public class TagIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddPositionAsync_CreatesIndexFile()
+    public async Task AddPositionAsync_CreatesIndexFileAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -40,7 +40,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_CreatesIndexDirectory()
+    public async Task AddPositionAsync_CreatesIndexDirectoryAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -54,7 +54,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_AddsPosition()
+    public async Task AddPositionAsync_AddsPositionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -69,7 +69,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_AddsMultiplePositions()
+    public async Task AddPositionAsync_AddsMultiplePositionsAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -86,7 +86,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_IgnoresDuplicatePositions()
+    public async Task AddPositionAsync_IgnoresDuplicatePositionsAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -103,7 +103,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNullIndexPath_ThrowsArgumentNullException()
+    public async Task AddPositionAsync_WithNullIndexPath_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -114,7 +114,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNullTag_ThrowsArgumentNullException()
+    public async Task AddPositionAsync_WithNullTag_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -122,7 +122,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNullTagKey_ThrowsArgumentNullException()
+    public async Task AddPositionAsync_WithNullTagKey_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var tag = new Tag(null!, "Production");
@@ -133,7 +133,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithEmptyTagKey_ThrowsArgumentException()
+    public async Task AddPositionAsync_WithEmptyTagKey_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var tag = new Tag("", "Production");
@@ -144,7 +144,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithWhitespaceTagKey_ThrowsArgumentException()
+    public async Task AddPositionAsync_WithWhitespaceTagKey_ThrowsArgumentExceptionAsync()
     {
         // Arrange
         var tag = new Tag("   ", "Production");
@@ -155,7 +155,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithZeroPosition_ThrowsArgumentOutOfRangeException()
+    public async Task AddPositionAsync_WithZeroPosition_ThrowsArgumentOutOfRangeExceptionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -166,7 +166,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeException()
+    public async Task AddPositionAsync_WithNegativePosition_ThrowsArgumentOutOfRangeExceptionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -177,7 +177,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithNullTagValue_WorksCorrectly()
+    public async Task AddPositionAsync_WithNullTagValue_WorksCorrectlyAsync()
     {
         // Arrange
         var tag = new Tag("Status", null!);
@@ -195,7 +195,7 @@ public class TagIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsAsync_WithNonExistentIndex_ReturnsEmptyArray()
+    public async Task GetPositionsAsync_WithNonExistentIndex_ReturnsEmptyArrayAsync()
     {
         // Arrange
         var tag = new Tag("NonExistent", "Value");
@@ -209,7 +209,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_ReturnsPositionsInSortedOrder()
+    public async Task GetPositionsAsync_ReturnsPositionsInSortedOrderAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -225,7 +225,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithMultipleTags_ReturnsCorrectPositions()
+    public async Task GetPositionsAsync_WithMultipleTags_ReturnsCorrectPositionsAsync()
     {
         // Arrange
         var tagA = new Tag("Environment", "Production");
@@ -244,7 +244,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithDifferentKeys_ReturnsCorrectPositions()
+    public async Task GetPositionsAsync_WithDifferentKeys_ReturnsCorrectPositionsAsync()
     {
         // Arrange
         var tagA = new Tag("Environment", "Production");
@@ -262,7 +262,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithNullIndexPath_ThrowsArgumentNullException()
+    public async Task GetPositionsAsync_WithNullIndexPath_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -273,7 +273,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithNullTag_ThrowsArgumentNullException()
+    public async Task GetPositionsAsync_WithNullTag_ThrowsArgumentNullExceptionAsync()
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
@@ -281,7 +281,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetPositionsAsync_WithNullTagKey_ThrowsArgumentNullException()
+    public async Task GetPositionsAsync_WithNullTagKey_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var tag = new Tag(null!, "Production");
@@ -296,7 +296,7 @@ public class TagIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task IndexExists_ReturnsTrueForExistingIndex()
+    public async Task IndexExists_ReturnsTrueForExistingIndexAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -344,7 +344,7 @@ public class TagIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddPositionAsync_WithSpecialCharactersInTag_CreatesSafeFileName()
+    public async Task AddPositionAsync_WithSpecialCharactersInTag_CreatesSafeFileNameAsync()
     {
         // Arrange
         var tag = new Tag("Test/Key:With*Special?Characters", "Value/With:Special*Chars");
@@ -359,7 +359,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_WithDotInTag_CreatesSafeFileName()
+    public async Task AddPositionAsync_WithDotInTag_CreatesSafeFileNameAsync()
     {
         // Arrange
         var tag = new Tag("Namespace.Event", "Value.With.Dots");
@@ -376,7 +376,7 @@ public class TagIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task GetPositionsAsync_WithCorruptedIndexFile_ReturnsEmptyArray()
+    public async Task GetPositionsAsync_WithCorruptedIndexFile_ReturnsEmptyArrayAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -394,7 +394,7 @@ public class TagIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task AddPositionAsync_AfterCorruption_RebuildsIndex()
+    public async Task AddPositionAsync_AfterCorruption_RebuildsIndexAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");
@@ -417,7 +417,7 @@ public class TagIndexTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddPositionAsync_MultipleSequentialWrites_AllPositionsAdded()
+    public async Task AddPositionAsync_MultipleSequentialWrites_AllPositionsAddedAsync()
     {
         // Arrange
         var tag = new Tag("Environment", "Production");

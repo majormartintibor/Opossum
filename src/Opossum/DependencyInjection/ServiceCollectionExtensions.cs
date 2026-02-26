@@ -61,12 +61,13 @@ public static class ServiceCollectionExtensions
         // Register storage initializer for use by other components
         services.AddSingleton(initializer);
 
-        // Register the concrete implementation once; expose both public interfaces
-        // as aliases so consumers can inject either IEventStore or IEventStoreMaintenance
-        // while sharing the same singleton instance.
+        // Register the concrete implementation once; expose all public interfaces
+        // as aliases so consumers can inject IEventStore, IEventStoreMaintenance, or
+        // IEventStoreAdmin while sharing the same singleton instance.
         services.AddSingleton<FileSystemEventStore>();
         services.AddSingleton<IEventStore>(sp => sp.GetRequiredService<FileSystemEventStore>());
         services.AddSingleton<IEventStoreMaintenance>(sp => sp.GetRequiredService<FileSystemEventStore>());
+        services.AddSingleton<IEventStoreAdmin>(sp => sp.GetRequiredService<FileSystemEventStore>());
 
         return services;
     }

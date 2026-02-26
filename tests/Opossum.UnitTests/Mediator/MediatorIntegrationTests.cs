@@ -8,7 +8,7 @@ namespace Opossum.UnitTests.Mediator;
 public class MediatorIntegrationTests
 {
     [Fact]
-    public async Task EndToEnd_SimpleQuery_ReturnsResult()
+    public async Task EndToEnd_SimpleQuery_ReturnsResultAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -28,7 +28,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_CommandWithDependencies_ProcessesSuccessfully()
+    public async Task EndToEnd_CommandWithDependencies_ProcessesSuccessfullyAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -49,7 +49,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_AsyncHandlerWithLogging_ExecutesSuccessfully()
+    public async Task EndToEnd_AsyncHandlerWithLogging_ExecutesSuccessfullyAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -70,7 +70,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_StaticHandler_ExecutesCorrectly()
+    public async Task EndToEnd_StaticHandler_ExecutesCorrectlyAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -90,7 +90,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_WithCancellation_CancelsOperation()
+    public async Task EndToEnd_WithCancellation_CancelsOperationAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -109,7 +109,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_MultipleHandlers_AllWorkIndependently()
+    public async Task EndToEnd_MultipleHandlers_AllWorkIndependentlyAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -133,7 +133,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_HandlerThrowsException_PropagatesException()
+    public async Task EndToEnd_HandlerThrowsException_PropagatesExceptionAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -151,7 +151,7 @@ public class MediatorIntegrationTests
     }
 
     [Fact]
-    public async Task EndToEnd_ComplexScenario_WithMultipleDependencies()
+    public async Task EndToEnd_ComplexScenario_WithMultipleDependenciesAsync()
     {
         // Arrange
         var services = new ServiceCollection();

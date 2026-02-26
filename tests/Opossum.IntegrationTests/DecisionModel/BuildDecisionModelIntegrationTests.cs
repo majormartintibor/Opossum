@@ -86,7 +86,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region Empty store
 
     [Fact]
-    public async Task BuildDecisionModelAsync_EmptyStore_StateIsInitialState()
+    public async Task BuildDecisionModelAsync_EmptyStore_StateIsInitialStateAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -97,7 +97,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_EmptyStore_AfterSequencePositionIsNull()
+    public async Task BuildDecisionModelAsync_EmptyStore_AfterSequencePositionIsNullAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -108,7 +108,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_EmptyStore_FailIfEventsMatchIsProjectionQuery()
+    public async Task BuildDecisionModelAsync_EmptyStore_FailIfEventsMatchIsProjectionQueryAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -124,7 +124,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region State reflects appended events
 
     [Fact]
-    public async Task BuildDecisionModelAsync_AfterAppend_StateReflectsEvents()
+    public async Task BuildDecisionModelAsync_AfterAppend_StateReflectsEventsAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -140,7 +140,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_AfterMultipleEnrollments_CountIsCorrect()
+    public async Task BuildDecisionModelAsync_AfterMultipleEnrollments_CountIsCorrectAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -159,7 +159,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_AfterSequencePosition_IsMaxEventPosition()
+    public async Task BuildDecisionModelAsync_AfterSequencePosition_IsMaxEventPositionAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -180,7 +180,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_UnrelatedEventsDoNotAffectState()
+    public async Task BuildDecisionModelAsync_UnrelatedEventsDoNotAffectStateAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -203,7 +203,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region DCB round-trip: AppendCondition enforces consistency
 
     [Fact]
-    public async Task BuildDecisionModelAsync_StaleCondition_AppendThrows()
+    public async Task BuildDecisionModelAsync_StaleCondition_AppendThrowsAsync()
     {
         // Arrange: append initial event, build decision model
         var store = CreateEventStore();
@@ -232,7 +232,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_FreshCondition_AppendSucceeds()
+    public async Task BuildDecisionModelAsync_FreshCondition_AppendSucceedsAsync()
     {
         // Arrange: append initial event, build a FRESH decision model
         var store = CreateEventStore();
@@ -257,7 +257,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_UnrelatedConcurrentWrite_DoesNotInvalidateCondition()
+    public async Task BuildDecisionModelAsync_UnrelatedConcurrentWrite_DoesNotInvalidateConditionAsync()
     {
         // The DCB boundary is scoped — unrelated events must not cause conflicts
         var store = CreateEventStore();
@@ -293,7 +293,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region Cancellation
 
     [Fact]
-    public async Task BuildDecisionModelAsync_CancelledToken_ThrowsOperationCanceledException()
+    public async Task BuildDecisionModelAsync_CancelledToken_ThrowsOperationCanceledExceptionAsync()
     {
         var store = CreateEventStore();
         var projection = CourseExistsProjection(Guid.NewGuid());
@@ -310,7 +310,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region Guard clauses
 
     [Fact]
-    public async Task BuildDecisionModelAsync_NullEventStore_ThrowsArgumentNullException()
+    public async Task BuildDecisionModelAsync_NullEventStore_ThrowsArgumentNullExceptionAsync()
     {
         var projection = CourseExistsProjection(Guid.NewGuid());
 
@@ -319,7 +319,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task BuildDecisionModelAsync_NullProjection_ThrowsArgumentNullException()
+    public async Task BuildDecisionModelAsync_NullProjection_ThrowsArgumentNullExceptionAsync()
     {
         var store = CreateEventStore();
 
@@ -332,7 +332,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region Composed 2-projection overload
 
     [Fact]
-    public async Task Compose2_BothStatesReflectAppendedEvents()
+    public async Task Compose2_BothStatesReflectAppendedEventsAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -357,7 +357,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task Compose2_SingleReadForBothProjections_ConditionSpansBothQueries()
+    public async Task Compose2_SingleReadForBothProjections_ConditionSpansBothQueriesAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -379,7 +379,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task Compose2_StaleCondition_AppendThrows()
+    public async Task Compose2_StaleCondition_AppendThrowsAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -408,7 +408,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task Compose2_UnrelatedConcurrentWrite_DoesNotInvalidateCondition()
+    public async Task Compose2_UnrelatedConcurrentWrite_DoesNotInvalidateConditionAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();
@@ -444,7 +444,7 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     #region Composed 3-projection overload
 
     [Fact]
-    public async Task Compose3_AllThreeStatesReflectAppendedEvents()
+    public async Task Compose3_AllThreeStatesReflectAppendedEventsAsync()
     {
         var store = CreateEventStore();
         var courseId = Guid.NewGuid();

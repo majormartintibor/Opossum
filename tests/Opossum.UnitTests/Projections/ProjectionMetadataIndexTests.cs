@@ -23,7 +23,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveAsync_CreatesMetadataIndexFile()
+    public async Task SaveAsync_CreatesMetadataIndexFileAsync()
     {
         // Arrange
         var metadata = new ProjectionMetadata
@@ -43,7 +43,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAsync_ReturnsNullForNonExistentKey()
+    public async Task GetAsync_ReturnsNullForNonExistentKeyAsync()
     {
         // Act
         var result = await _index.GetAsync(_tempPath, "non-existent");
@@ -53,7 +53,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAsync_ReturnsMetadataForExistingKey()
+    public async Task GetAsync_ReturnsMetadataForExistingKeyAsync()
     {
         // Arrange
         var metadata = new ProjectionMetadata
@@ -76,7 +76,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAllAsync_ReturnsAllMetadata()
+    public async Task GetAllAsync_ReturnsAllMetadataAsync()
     {
         // Arrange
         var metadata1 = new ProjectionMetadata
@@ -107,7 +107,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task GetUpdatedSinceAsync_FiltersCorrectly()
+    public async Task GetUpdatedSinceAsync_FiltersCorrectlyAsync()
     {
         // Arrange
         var oldDate = DateTimeOffset.UtcNow.AddDays(-10);
@@ -142,7 +142,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_RemovesMetadata()
+    public async Task DeleteAsync_RemovesMetadataAsync()
     {
         // Arrange
         var metadata = new ProjectionMetadata
@@ -163,7 +163,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task ClearAsync_RemovesAllMetadata()
+    public async Task ClearAsync_RemovesAllMetadataAsync()
     {
         // Arrange
         var metadata1 = new ProjectionMetadata
@@ -196,7 +196,7 @@ public class ProjectionMetadataIndexTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentSaves_AreThreadSafe()
+    public async Task ConcurrentSaves_AreThreadSafeAsync()
     {
         // Arrange
         var tasks = new List<Task>();

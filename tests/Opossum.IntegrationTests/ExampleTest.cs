@@ -11,7 +11,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
     private readonly IEventStore _eventStore = fixture.EventStore;
 
     [Fact]
-    public async Task EnrollStudentToCourse_ShouldCreateEventAndBuildAggregate()
+    public async Task EnrollStudentToCourse_ShouldCreateEventAndBuildAggregateAsync()
     {
         // Arrange
         var studentId = Guid.NewGuid();
@@ -82,7 +82,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
     }
 
     [Fact]
-    public async Task EnrollStudentToCourse_WhenCourseIsFull_ShouldFail()
+    public async Task EnrollStudentToCourse_WhenCourseIsFull_ShouldFailAsync()
     {
         // Arrange
         var courseId = Guid.NewGuid();
@@ -121,7 +121,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
     }
 
     [Fact]
-    public async Task EnrollStudentToCourse_WhenStudentReachedLimit_ShouldFail()
+    public async Task EnrollStudentToCourse_WhenStudentReachedLimit_ShouldFailAsync()
     {
         // Arrange
         var studentId = Guid.NewGuid();
@@ -181,7 +181,7 @@ public class ExampleTest(OpossumFixture fixture) : IClassFixture<OpossumFixture>
     }
 
     [Fact]
-    public async Task EnrollStudentToCourse_MultipleStudents_ShouldTrackCorrectly()
+    public async Task EnrollStudentToCourse_MultipleStudents_ShouldTrackCorrectlyAsync()
     {
         // Arrange - Test that the aggregate correctly counts DIFFERENT students in the course
         var courseId = Guid.NewGuid();

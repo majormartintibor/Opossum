@@ -23,7 +23,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
-    public async Task IndependentCommands_ShouldExecuteConcurrently_WithoutConflict()
+    public async Task IndependentCommands_ShouldExecuteConcurrently_WithoutConflictAsync()
     {
         // Arrange - Use isolated scope
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -70,7 +70,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation during concurrent operations.
     /// </summary>
     [Fact]
-    public async Task ConcurrentEnrollments_WhenCourseHasOneSpotLeft_ShouldAllowOnlyOne()
+    public async Task ConcurrentEnrollments_WhenCourseHasOneSpotLeft_ShouldAllowOnlyOneAsync()
     {
         // Arrange - Use isolated scope to avoid file locking conflicts
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -145,7 +145,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
-    public async Task ConcurrentEnrollments_ToDifferentCourses_ShouldAllSucceed()
+    public async Task ConcurrentEnrollments_ToDifferentCourses_ShouldAllSucceedAsync()
     {
         // Arrange - Use isolated scope
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -190,7 +190,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
-    public async Task ConcurrentEnrollments_SameStudentSameCourse_ShouldOnlyAllowOnce()
+    public async Task ConcurrentEnrollments_SameStudentSameCourse_ShouldOnlyAllowOnceAsync()
     {
         // Arrange - Use isolated scope
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -241,7 +241,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated service scope to prevent file locking issues during concurrent operations.
     /// </summary>
     [Fact]
-    public async Task ConcurrentEnrollments_ManyStudentsOneCourse_ShouldRespectCapacity()
+    public async Task ConcurrentEnrollments_ManyStudentsOneCourse_ShouldRespectCapacityAsync()
     {
         // Arrange - Use isolated scope to avoid file locking conflicts
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -294,7 +294,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
-    public async Task FailedAppend_ShouldReleaseLock_AllowingSubsequentOperations()
+    public async Task FailedAppend_ShouldReleaseLock_AllowingSubsequentOperationsAsync()
     {
         // Arrange - Use isolated scope
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -335,7 +335,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
-    public async Task AppendAsync_WithAfterSequencePosition_ShouldDetectStaleReads()
+    public async Task AppendAsync_WithAfterSequencePosition_ShouldDetectStaleReadsAsync()
     {
         // Arrange - Use isolated scope
         using var scope = _fixture.GetIsolatedServiceScope();
@@ -406,7 +406,7 @@ public class ConcurrencyTests(OpossumFixture fixture) : IClassFixture<OpossumFix
     /// Uses isolated scope for proper file system isolation.
     /// </summary>
     [Fact]
-    public async Task AppendAsync_WithFailIfEventsMatch_ShouldDetectConflictingEvents()
+    public async Task AppendAsync_WithFailIfEventsMatch_ShouldDetectConflictingEventsAsync()
     {
         // Arrange - Use isolated scope
         using var scope = _fixture.GetIsolatedServiceScope();

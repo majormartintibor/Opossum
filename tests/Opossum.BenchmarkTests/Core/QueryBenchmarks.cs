@@ -83,7 +83,7 @@ public class QueryBenchmarks
     /// Complex query: Single EventType + Single Tag
     /// </summary>
     [Benchmark(Baseline = true, Description = "EventType + Single Tag")]
-    public async Task Query_EventType_And_SingleTag()
+    public async Task Query_EventType_And_SingleTagAsync()
     {
         var store = CreateStore();
 
@@ -102,7 +102,7 @@ public class QueryBenchmarks
     /// Complex query: Multiple EventTypes + Multiple Tags
     /// </summary>
     [Benchmark(Description = "Multiple EventTypes + Multiple Tags")]
-    public async Task Query_MultipleEventTypes_And_MultipleTags()
+    public async Task Query_MultipleEventTypes_And_MultipleTagsAsync()
     {
         var store = CreateStore();
 
@@ -128,7 +128,7 @@ public class QueryBenchmarks
     /// Query with descending order (newest first)
     /// </summary>
     [Benchmark(Description = "Query with Descending order")]
-    public async Task Query_WithDescendingOrder()
+    public async Task Query_WithDescendingOrderAsync()
     {
         var store = CreateStore();
 
@@ -146,7 +146,7 @@ public class QueryBenchmarks
     /// Uses a very specific tag that matches ~1% of events
     /// </summary>
     [Benchmark(Description = "High selectivity (few matches)")]
-    public async Task Query_HighSelectivity_FewMatches()
+    public async Task Query_HighSelectivity_FewMatchesAsync()
     {
         var store = CreateStore();
 
@@ -171,7 +171,7 @@ public class QueryBenchmarks
     /// Uses broad criteria that matches ~75% of events
     /// </summary>
     [Benchmark(Description = "Low selectivity (many matches)")]
-    public async Task Query_LowSelectivity_ManyMatches()
+    public async Task Query_LowSelectivity_ManyMatchesAsync()
     {
         var store = CreateStore();
 
@@ -196,7 +196,7 @@ public class QueryBenchmarks
     /// Item 2: OrderShipped in Production
     /// </summary>
     [Benchmark(Description = "Multiple QueryItems (OR logic)")]
-    public async Task Query_MultipleQueryItems_OrLogic()
+    public async Task Query_MultipleQueryItems_OrLogicAsync()
     {
         var store = CreateStore();
 
@@ -227,7 +227,7 @@ public class QueryBenchmarks
     /// Real-world scenario: Get all payment-related events for a specific tenant
     /// </summary>
     [Benchmark(Description = "Real-world: Payment events for tenant")]
-    public async Task Query_RealWorld_PaymentEventsForTenant()
+    public async Task Query_RealWorld_PaymentEventsForTenantAsync()
     {
         var store = CreateStore();
 
@@ -250,7 +250,7 @@ public class QueryBenchmarks
     /// Combines multiple event types with status tag
     /// </summary>
     [Benchmark(Description = "Real-world: Orders in specific state")]
-    public async Task Query_RealWorld_OrdersInState()
+    public async Task Query_RealWorld_OrdersInStateAsync()
     {
         var store = CreateStore();
 

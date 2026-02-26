@@ -1,6 +1,7 @@
 using Opossum.Configuration;
 using Opossum.Core;
 using Opossum.Storage.FileSystem;
+using Opossum.UnitTests.Helpers;
 
 namespace Opossum.UnitTests.Storage.FileSystem;
 
@@ -24,8 +25,7 @@ public class EventStoreMaintenanceTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRootPath))
-            Directory.Delete(_tempRootPath, recursive: true);
+        TestDirectoryHelper.ForceDelete(_tempRootPath);
     }
 
     // ========================================================================
@@ -33,7 +33,7 @@ public class EventStoreMaintenanceTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddTagsAsync_AddsNewTagsToAllMatchingEvents()
+    public async Task AddTagsAsync_AddsNewTagsToAllMatchingEventsAsync()
     {
         // Arrange - two events of the same type, no existing tags
         await _store.AppendAsync(
@@ -58,7 +58,7 @@ public class EventStoreMaintenanceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddTagsAsync_OnlyAffectsEventsOfSpecifiedType()
+    public async Task AddTagsAsync_OnlyAffectsEventsOfSpecifiedTypeAsync()
     {
         // Arrange - mixed event types
         await _store.AppendAsync(
@@ -83,7 +83,7 @@ public class EventStoreMaintenanceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddTagsAsync_SkipsTagsWhoseKeyAlreadyExists()
+    public async Task AddTagsAsync_SkipsTagsWhoseKeyAlreadyExistsAsync()
     {
         // Arrange - event already has the "region" tag
         var evt = CreateEvent("CourseCreated");
@@ -107,7 +107,7 @@ public class EventStoreMaintenanceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddTagsAsync_AddsOnlyNewKeysWhenEventHasSomeTags()
+    public async Task AddTagsAsync_AddsOnlyNewKeysWhenEventHasSomeTagsAsync()
     {
         // Arrange - event has "courseId" but not "region"
         var evt = CreateEvent("CourseCreated");
@@ -132,7 +132,7 @@ public class EventStoreMaintenanceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddTagsAsync_ReturnsZeroWhenNoEventsOfType()
+    public async Task AddTagsAsync_ReturnsZeroWhenNoEventsOfTypeAsync()
     {
         // Arrange - no events at all
         IEventStoreMaintenance maintenance = _store;
@@ -152,7 +152,7 @@ public class EventStoreMaintenanceTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddTagsAsync_UpdatesTagIndex_SoNewTagQueryFindsEvents()
+    public async Task AddTagsAsync_UpdatesTagIndex_SoNewTagQueryFindsEventsAsync()
     {
         // Arrange - append without tags
         await _store.AppendAsync([CreateEvent("CourseCreated")], null);
@@ -169,7 +169,7 @@ public class EventStoreMaintenanceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddTagsAsync_EventFileContainsNewTags_AfterOperation()
+    public async Task AddTagsAsync_EventFileContainsNewTags_AfterOperationAsync()
     {
         // Arrange
         await _store.AppendAsync([CreateEvent("CourseCreated")], null);
@@ -190,7 +190,7 @@ public class EventStoreMaintenanceTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddTagsAsync_TagFactoryReceivesFullSequencedEvent()
+    public async Task AddTagsAsync_TagFactoryReceivesFullSequencedEventAsync()
     {
         // Arrange - event has an existing "courseId" tag to derive from
         var evt = CreateEvent("CourseCreated");
@@ -220,7 +220,7 @@ public class EventStoreMaintenanceTests : IDisposable
     // ========================================================================
 
     [Fact]
-    public async Task AddTagsAsync_WithNullTagFactory_ThrowsArgumentNullException()
+    public async Task AddTagsAsync_WithNullTagFactory_ThrowsArgumentNullExceptionAsync()
     {
         IEventStoreMaintenance maintenance = _store;
 
@@ -229,7 +229,7 @@ public class EventStoreMaintenanceTests : IDisposable
     }
 
     [Fact]
-    public async Task AddTagsAsync_WithEmptyEventType_ThrowsArgumentException()
+    public async Task AddTagsAsync_WithEmptyEventType_ThrowsArgumentExceptionAsync()
     {
         IEventStoreMaintenance maintenance = _store;
 

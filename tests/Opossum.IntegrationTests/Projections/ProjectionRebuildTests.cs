@@ -42,7 +42,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_AfterEventsAdded_BuildsCorrectState()
+    public async Task RebuildProjection_AfterEventsAdded_BuildsCorrectStateAsync()
     {
         // Arrange
         var accountId = Guid.NewGuid();
@@ -83,7 +83,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_WithExistingState_ReplacesState()
+    public async Task RebuildProjection_WithExistingState_ReplacesStateAsync()
     {
         // Arrange
         var accountId = Guid.NewGuid();
@@ -127,7 +127,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_WithMultipleInstances_BuildsAll()
+    public async Task RebuildProjection_WithMultipleInstances_BuildsAllAsync()
     {
         // Arrange
         var projection = new AccountBalanceProjection();
@@ -160,7 +160,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_WithDeletion_RemovesProjection()
+    public async Task RebuildProjection_WithDeletion_RemovesProjectionAsync()
     {
         // Arrange
         var accountId = Guid.NewGuid();
@@ -192,7 +192,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_WithEventOrdering_ProcessesInOrder()
+    public async Task RebuildProjection_WithEventOrdering_ProcessesInOrderAsync()
     {
         // Arrange
         var accountId = Guid.NewGuid();
@@ -235,7 +235,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_WithNoEvents_CreatesNoInstances()
+    public async Task RebuildProjection_WithNoEvents_CreatesNoInstancesAsync()
     {
         // Arrange
         var projection = new AccountBalanceProjection();
@@ -252,7 +252,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildProjection_WithPartialBatches_ProcessesAllEvents()
+    public async Task RebuildProjection_WithPartialBatches_ProcessesAllEventsAsync()
     {
         // Arrange
         var accountId = Guid.NewGuid();
@@ -290,7 +290,7 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCheckpoint_ReturnsLastProcessedPosition()
+    public async Task GetCheckpoint_ReturnsLastProcessedPositionAsync()
     {
         // Arrange
         var accountId = Guid.NewGuid();

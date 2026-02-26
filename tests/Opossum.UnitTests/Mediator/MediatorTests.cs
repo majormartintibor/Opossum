@@ -6,7 +6,7 @@ namespace Opossum.UnitTests.Mediator;
 public class MediatorTests
 {
     [Fact]
-    public async Task InvokeAsync_WithValidHandler_ReturnsResponse()
+    public async Task InvokeAsync_WithValidHandler_ReturnsResponseAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -25,7 +25,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithNullMessage_ThrowsArgumentNullException()
+    public async Task InvokeAsync_WithNullMessage_ThrowsArgumentNullExceptionAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -40,7 +40,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithNoHandler_ThrowsInvalidOperationException()
+    public async Task InvokeAsync_WithNoHandler_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -59,7 +59,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithWrongResponseType_ThrowsInvalidOperationException()
+    public async Task InvokeAsync_WithWrongResponseType_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -79,7 +79,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCancellationToken_PassesCancellationToHandler()
+    public async Task InvokeAsync_WithCancellationToken_PassesCancellationToHandlerAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -98,7 +98,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithTimeout_CancelsAfterTimeout()
+    public async Task InvokeAsync_WithTimeout_CancelsAfterTimeoutAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -116,7 +116,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithAsyncHandler_ReturnsResponse()
+    public async Task InvokeAsync_WithAsyncHandler_ReturnsResponseAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -135,7 +135,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithDependencyInjection_ResolvesDependencies()
+    public async Task InvokeAsync_WithDependencyInjection_ResolvesDependenciesAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -155,7 +155,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithStaticHandler_ExecutesSuccessfully()
+    public async Task InvokeAsync_WithStaticHandler_ExecutesSuccessfullyAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -176,7 +176,7 @@ public class MediatorTests
     #region CommandResult Tests
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResult_ReturnsSuccessfulResult()
+    public async Task InvokeAsync_WithCommandResult_ReturnsSuccessfulResultAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -196,7 +196,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResult_ReturnsFailedResult()
+    public async Task InvokeAsync_WithCommandResult_ReturnsFailedResultAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -216,7 +216,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResultGeneric_ReturnsSuccessfulResultWithValue()
+    public async Task InvokeAsync_WithCommandResultGeneric_ReturnsSuccessfulResultWithValueAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -239,7 +239,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResultGeneric_ReturnsFailedResultWithoutValue()
+    public async Task InvokeAsync_WithCommandResultGeneric_ReturnsFailedResultWithoutValueAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -260,7 +260,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResultList_ReturnsSuccessfulResultWithList()
+    public async Task InvokeAsync_WithCommandResultList_ReturnsSuccessfulResultWithListAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -285,7 +285,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResultComplex_HandlesBusinessLogicValidation()
+    public async Task InvokeAsync_WithCommandResultComplex_HandlesBusinessLogicValidationAsync()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -306,7 +306,7 @@ public class MediatorTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithCommandResultComplex_ReturnsCreatedId()
+    public async Task InvokeAsync_WithCommandResultComplex_ReturnsCreatedIdAsync()
     {
         // Arrange
         var services = new ServiceCollection();

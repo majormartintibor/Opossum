@@ -12,6 +12,12 @@ internal class EventTypeIndex
     // Per-instance lock for defense in depth
     // Protects Read-Modify-Write operations on index files
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly bool _flushImmediately;
+
+    public EventTypeIndex(bool flushImmediately = false)
+    {
+        _flushImmediately = flushImmediately;
+    }
 
     /// <summary>
     /// Adds a position to the index for a specific event type.
@@ -44,7 +50,7 @@ internal class EventTypeIndex
             }
 
             // Write updated positions atomically
-            await PositionIndexFile.WritePositionsAsync(indexFilePath, positions).ConfigureAwait(false);
+            await PositionIndexFile.WritePositionsAsync(indexFilePath, positions, _flushImmediately).ConfigureAwait(false);
         }
         finally
         {
@@ -62,12 +68,6 @@ internal class EventTypeIndex
         ArgumentException.ThrowIfNullOrWhiteSpace(eventType);
 
         var indexFilePath = GetIndexFilePath(indexPath, eventType);
-
-        if (!File.Exists(indexFilePath))
-        {
-            return [];
-        }
-
         var positions = await PositionIndexFile.ReadPositionsAsync(indexFilePath).ConfigureAwait(false);
         return [.. positions];
     }

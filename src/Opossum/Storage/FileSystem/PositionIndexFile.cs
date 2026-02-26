@@ -25,8 +25,8 @@ internal static class PositionIndexFile
             return [];
         }
 
-        var maxRetries = 5;
-        var retryDelay = 10;
+        var maxRetries = 3;  // reads are non-destructive — fail fast
+        var retryDelay = 1;   // 1 ms is sufficient for transient read conflicts
 
         for (int attempt = 0; attempt < maxRetries; attempt++)
         {
@@ -68,8 +68,11 @@ internal static class PositionIndexFile
     /// <summary>
     /// Writes positions to an index file atomically using a temp-file + move strategy.
     /// Ensures readers always see either the old or the new complete file, never a partial write.
+    /// When <paramref name="flushToDisk"/> is <see langword="true"/>, the temp file is physically
+    /// flushed to storage via <see cref="RandomAccess.FlushToDisk"/> before the atomic rename,
+    /// providing the same durability guarantee as event and ledger files.
     /// </summary>
-    public static async Task WritePositionsAsync(string indexFilePath, List<long> positions)
+    public static async Task WritePositionsAsync(string indexFilePath, List<long> positions, bool flushToDisk = false)
     {
         var indexData = new IndexData { Positions = positions };
         var json = JsonSerializer.Serialize(indexData, _jsonOptions);
@@ -87,6 +90,12 @@ internal static class PositionIndexFile
         {
             await writer.WriteAsync(json).ConfigureAwait(false);
             await writer.FlushAsync().ConfigureAwait(false);
+        }
+
+        if (flushToDisk)
+        {
+            using var handle = File.OpenHandle(tempFilePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            await Task.Run(() => RandomAccess.FlushToDisk(handle)).ConfigureAwait(false);
         }
 
         await AtomicMoveWithRetryAsync(tempFilePath, indexFilePath).ConfigureAwait(false);

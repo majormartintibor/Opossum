@@ -37,7 +37,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAppends_SerializedExecution_AllEventsStored()
+    public async Task ConcurrentAppends_SerializedExecution_AllEventsStoredAsync()
     {
         // Arrange
         var appendCount = 50;
@@ -74,7 +74,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentReadsDuringWrites_EventuallyConsistent()
+    public async Task ConcurrentReadsDuringWrites_EventuallyConsistentAsync()
     {
         // Arrange
         var writeCount = 100;
@@ -120,7 +120,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAppendsWithOptimisticConcurrency_DetectsConflicts()
+    public async Task ConcurrentAppendsWithOptimisticConcurrency_DetectsConflictsAsync()
     {
         // Arrange
         var resourceId = Guid.NewGuid();
@@ -177,7 +177,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task StressTest_HighConcurrentLoad_MaintainsIntegrity()
+    public async Task StressTest_HighConcurrentLoad_MaintainsIntegrityAsync()
     {
         // Arrange
         var entityCount = 20;
@@ -219,7 +219,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAppendsToMultipleContexts_Isolated()
+    public async Task ConcurrentAppendsToMultipleContexts_IsolatedAsync()
     {
         // This test would require multi-context support in fixture
         // For now, testing within single context demonstrates locking works
@@ -261,7 +261,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentQueryByEventType_ReturnsConsistentResults()
+    public async Task ConcurrentQueryByEventType_ReturnsConsistentResultsAsync()
     {
         // Arrange
         var eventCount = 100;
@@ -297,7 +297,7 @@ public class EventStoreThreadSafetyTests : IDisposable
     }
 
     [Fact]
-    public async Task ConcurrentAppendWithFailIfMatch_SerializesCorrectly()
+    public async Task ConcurrentAppendWithFailIfMatch_SerializesCorrectlyAsync()
     {
         // Arrange
         var userId = Guid.NewGuid();

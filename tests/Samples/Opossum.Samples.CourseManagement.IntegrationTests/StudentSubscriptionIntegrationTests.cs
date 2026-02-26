@@ -24,7 +24,7 @@ public class StudentSubscriptionIntegrationTests
     [InlineData("Standard")]
     [InlineData("Professional")]
     [InlineData("Master")]
-    public async Task UpdateStudentSubscription_ValidTier_ReturnsOk(string tier)
+    public async Task UpdateStudentSubscription_ValidTier_ReturnsOkAsync(string tier)
     {
         // Arrange - Register student first
         var registerRequest = new
@@ -48,7 +48,7 @@ public class StudentSubscriptionIntegrationTests
     }
 
     [Fact]
-    public async Task UpdateStudentSubscription_NonExistentStudent_ReturnsBadRequest()
+    public async Task UpdateStudentSubscription_NonExistentStudent_ReturnsBadRequestAsync()
     {
         // Arrange
         var nonExistentStudentId = Guid.NewGuid();
@@ -65,7 +65,7 @@ public class StudentSubscriptionIntegrationTests
     }
 
     [Fact]
-    public async Task UpdateStudentSubscription_Then_GetStudent_ReflectsNewTier()
+    public async Task UpdateStudentSubscription_Then_GetStudent_ReflectsNewTierAsync()
     {
         // Arrange - Register student
         var registerRequest = new

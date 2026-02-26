@@ -331,6 +331,11 @@ csharp_preserve_single_line_blocks     = true
 # NAMING CONVENTIONS
 # ============================================================
 
+# IDE1006 is the diagnostic ID for ALL naming rule violations below.
+# Without an explicit severity here the CLI build silently skips every
+# naming check even when EnforceCodeStyleInBuild is true.
+dotnet_diagnostic.IDE1006.severity = warning
+
 # Async methods must be suffixed with Async
 dotnet_naming_rule.async_methods_end_in_async.symbols   = async_method_symbols
 dotnet_naming_rule.async_methods_end_in_async.style     = async_suffix_style
@@ -355,6 +360,12 @@ dotnet_naming_style.interface_prefix_style.required_prefix = I
 dotnet_naming_style.interface_prefix_style.capitalization  = pascal_case
 
 # Private / protected fields → _camelCase
+# ⚠️  The static readonly trap: a field is still a field regardless of
+#    static/readonly modifiers — it is NOT a constant and must use _camelCase.
+# ✅  private static readonly JsonSerializerOptions _jsonOptions = new();
+# ✅  private readonly SemaphoreSlim _lock = new(1, 1);
+# ❌  private static readonly JsonSerializerOptions JsonOptions = new();   ← PascalCase is WRONG here
+# ❌  private static readonly JsonSerializerOptions SerializerOptions = new();
 dotnet_naming_rule.private_fields_underscore.symbols   = private_field_symbols
 dotnet_naming_rule.private_fields_underscore.style     = underscore_camel_style
 dotnet_naming_rule.private_fields_underscore.severity  = warning

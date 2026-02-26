@@ -21,7 +21,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_ValidRequest_ReturnsCreated()
+    public async Task EnrollStudent_ValidRequest_ReturnsCreatedAsync()
     {
         // Arrange - Create student and course
         var (studentId, courseId) = await CreateStudentAndCourseAsync();
@@ -35,7 +35,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_DuplicateEnrollment_ReturnsBadRequest()
+    public async Task EnrollStudent_DuplicateEnrollment_ReturnsBadRequestAsync()
     {
         // Arrange - Create and enroll student once
         var (studentId, courseId) = await CreateStudentAndCourseAsync();
@@ -55,7 +55,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_NonExistentStudent_ReturnsBadRequest()
+    public async Task EnrollStudent_NonExistentStudent_ReturnsBadRequestAsync()
     {
         // Arrange - Create only course
         var courseId = await CreateCourseAsync("Test Course", maxStudents: 30);
@@ -73,7 +73,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_NonExistentCourse_ReturnsBadRequest()
+    public async Task EnrollStudent_NonExistentCourse_ReturnsBadRequestAsync()
     {
         // Arrange - Create only student
         var studentId = await CreateStudentAsync($"test.{Guid.NewGuid()}@example.com");
@@ -91,7 +91,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_CourseAtCapacity_ReturnsBadRequest()
+    public async Task EnrollStudent_CourseAtCapacity_ReturnsBadRequestAsync()
     {
         // Arrange - Create course with capacity of 2
         var courseId = await CreateCourseAsync("Small Course", maxStudents: 2);
@@ -115,7 +115,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_ExceedsStudentEnrollmentLimit_ReturnsBadRequest()
+    public async Task EnrollStudent_ExceedsStudentEnrollmentLimit_ReturnsBadRequestAsync()
     {
         // Arrange - Create student with Basic tier (max 2 courses)
         var studentId = await CreateStudentAsync($"student.{Guid.NewGuid()}@example.com");
@@ -139,7 +139,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_UpgradeTier_AllowsMoreEnrollments()
+    public async Task EnrollStudent_UpgradeTier_AllowsMoreEnrollmentsAsync()
     {
         // Arrange - Create student with Basic tier (max 2 courses)
         var studentId = await CreateStudentAsync($"student.{Guid.NewGuid()}@example.com");
@@ -170,7 +170,7 @@ public class CourseEnrollmentIntegrationTests
     }
 
     [Fact]
-    public async Task EnrollStudent_ConcurrentEnrollments_HandlesRaceCondition()
+    public async Task EnrollStudent_ConcurrentEnrollments_HandlesRaceConditionAsync()
     {
         // Arrange - Create course with capacity of 1
         var courseId = await CreateCourseAsync("Tiny Course", maxStudents: 1);

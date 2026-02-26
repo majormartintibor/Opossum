@@ -270,6 +270,6 @@ public static class DecisionModelExtensions
                 return Query.All();
             allItems.AddRange(query.QueryItems);
         }
-        return Query.FromItems([.. allItems]);
+        return Query.FromItems([.. allItems.Distinct()]);
     }
 }

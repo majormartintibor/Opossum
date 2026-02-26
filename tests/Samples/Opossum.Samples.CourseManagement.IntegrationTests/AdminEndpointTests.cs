@@ -22,7 +22,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task POST_RebuildAll_ReturnsOkWithResult()
+    public async Task POST_RebuildAll_ReturnsOkWithResultAsync()
     {
         // Act
         var response = await _client.PostAsync("/admin/projections/rebuild", null);
@@ -38,7 +38,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task POST_RebuildAll_WithForceAll_RebuildsAllProjections()
+    public async Task POST_RebuildAll_WithForceAll_RebuildsAllProjectionsAsync()
     {
         // Act - Rebuild with forceAll=true (should rebuild ALL projections regardless of checkpoints)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=true", null);
@@ -53,7 +53,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task POST_RebuildAll_WithForceAllFalse_OnlyRebuildsProjectionsWithMissingCheckpoints()
+    public async Task POST_RebuildAll_WithForceAllFalse_OnlyRebuildsProjectionsWithMissingCheckpointsAsync()
     {
         // Arrange - Test database is already seeded with students and courses by fixture
         // Use forceAll=true first to ensure we start from a known state (other tests may have already rebuilt)
@@ -89,7 +89,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task POST_RebuildSpecific_WithValidProjectionName_ReturnsOk()
+    public async Task POST_RebuildSpecific_WithValidProjectionName_ReturnsOkAsync()
     {
         // Act
         var response = await _client.PostAsync("/admin/projections/CourseDetails/rebuild", null);
@@ -103,7 +103,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task POST_RebuildSpecific_WithInvalidProjectionName_ReturnsNotFound()
+    public async Task POST_RebuildSpecific_WithInvalidProjectionName_ReturnsNotFoundAsync()
     {
         // Act
         var response = await _client.PostAsync("/admin/projections/NonExistentProjection/rebuild", null);
@@ -116,7 +116,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task POST_RebuildSpecific_RebuildsOnlySpecifiedProjection()
+    public async Task POST_RebuildSpecific_RebuildsOnlySpecifiedProjectionAsync()
     {
         // Arrange - Get initial checkpoints
         var initialCheckpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
@@ -141,7 +141,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task GET_Status_ReturnsRebuildStatus()
+    public async Task GET_Status_ReturnsRebuildStatusAsync()
     {
         // Act
         var response = await _client.GetAsync("/admin/projections/status");
@@ -157,7 +157,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task GET_Status_WhenNotRebuilding_ReturnsNotRebuildingStatus()
+    public async Task GET_Status_WhenNotRebuilding_ReturnsNotRebuildingStatusAsync()
     {
         // Act
         var response = await _client.GetAsync("/admin/projections/status");
@@ -174,7 +174,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task GET_Checkpoints_ReturnsAllProjectionCheckpoints()
+    public async Task GET_Checkpoints_ReturnsAllProjectionCheckpointsAsync()
     {
         // Act
         var response = await _client.GetAsync("/admin/projections/checkpoints");
@@ -200,7 +200,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task GET_Checkpoints_AfterRebuild_ReturnsUpdatedCheckpoints()
+    public async Task GET_Checkpoints_AfterRebuild_ReturnsUpdatedCheckpointsAsync()
     {
         // Arrange - Get initial checkpoints
         var initialResponse = await _client.GetAsync("/admin/projections/checkpoints");
@@ -231,7 +231,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task RebuildResult_HasBasicStructure()
+    public async Task RebuildResult_HasBasicStructureAsync()
     {
         // This is a lightweight test - detailed structure validation is in AdminEndpointResultStructureTests
         // which uses minimal data for fast execution
@@ -248,7 +248,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task AdminEndpoints_AreAccessibleWithoutAuthentication()
+    public async Task AdminEndpoints_AreAccessibleWithoutAuthenticationAsync()
     {
         // This test documents that admin endpoints are currently NOT protected
         // In production, these should require authentication/authorization
@@ -268,7 +268,7 @@ public class AdminEndpointTests
     }
 
     [Fact]
-    public async Task RebuildAll_ReturnsSuccessfully()
+    public async Task RebuildAll_ReturnsSuccessfullyAsync()
     {
         // Lightweight smoke test - detailed parallelism verification is in AdminEndpointResultStructureTests
         // which uses minimal data for fast execution

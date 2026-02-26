@@ -31,8 +31,7 @@ var serviceProvider = ConfigureServices(configuration);
 
 // Get Opossum configuration values
 var rootPath = configuration["Opossum:RootPath"] ?? throw new InvalidOperationException("Opossum:RootPath not found in configuration");
-var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>() ?? throw new InvalidOperationException("Opossum:Contexts not found in configuration");
-var contextName = contexts.FirstOrDefault() ?? throw new InvalidOperationException("No context configured in Opossum:Contexts");
+var contextName = configuration["Opossum:StoreName"] ?? throw new InvalidOperationException("Opossum:StoreName not found in configuration");
 
 // Run seeding
 var seeder = new DataSeeder(serviceProvider, config, rootPath, contextName);
@@ -95,8 +94,7 @@ static SeedingConfiguration ParseArguments(string[] args)
 static void DisplayConfiguration(SeedingConfiguration config, IConfiguration configuration)
 {
     var rootPath = configuration["Opossum:RootPath"];
-    var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>();
-    var contextName = contexts?.FirstOrDefault() ?? "N/A";
+    var contextName = configuration["Opossum:StoreName"] ?? "N/A";
 
     Console.WriteLine("Configuration:");
     Console.WriteLine($"  Database Path: {rootPath}");
@@ -133,17 +131,13 @@ static IServiceProvider ConfigureServices(IConfiguration configuration)
 
     services.AddOpossum(options =>
     {
-        // Add contexts from configuration
-        var contexts = configuration.GetSection("Opossum:Contexts").Get<string[]>();
-        if (contexts != null)
+        var storeName = configuration["Opossum:StoreName"];
+        if (storeName is not null)
         {
-            foreach (var context in contexts)
-            {
-                options.UseStore(context);
-            }
+            options.UseStore(storeName);
         }
 
-        // Bind all properties from configuration (RootPath, FlushEventsImmediately, etc.)
+        // Bind remaining properties from configuration (RootPath, FlushEventsImmediately, etc.)
         configuration.GetSection("Opossum").Bind(options);
     });
 

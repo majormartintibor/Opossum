@@ -6,7 +6,7 @@ namespace Opossum.Mediator;
 public sealed class HandlerDiscoveryService
 {
     private readonly List<Assembly> _assemblies = [];
-    private static readonly string[] ValidMethodNames = ["Handle", "HandleAsync", "Consume", "ConsumeAsync"];
+    private static readonly string[] _validMethodNames = ["Handle", "HandleAsync", "Consume", "ConsumeAsync"];
 
     public void IncludeAssembly(Assembly assembly)
     {
@@ -50,7 +50,7 @@ public sealed class HandlerDiscoveryService
     private bool IsValidHandlerMethod(MethodInfo method)
     {
         // Valid method names
-        if (!ValidMethodNames.Contains(method.Name))
+        if (!_validMethodNames.Contains(method.Name))
         {
             return false;
         }
