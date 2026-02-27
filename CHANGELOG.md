@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0-preview.2] - Unreleased
+
+### Added
+- **`IEventStore.ReadLastAsync(Query, CancellationToken)`** — new method that returns the
+  event with the highest sequence position matching the given query, or `null` when no
+  events match. Only a single event file is read from storage regardless of total matches,
+  making it significantly more efficient than `ReadAsync([Descending])[0]` for large event
+  streams.
+  Enables the **consecutive-sequence DCB pattern** (e.g. invoice numbering without gaps):
+  read the last `InvoiceCreatedEvent` → derive the next number → append with
+  `AfterSequencePosition = last?.Position` so any concurrent invoice append is detected
+  and retried. `null` from `ReadLastAsync` maps directly to `AfterSequencePosition = null`,
+  which rejects the append if *any* matching event already exists — covering the
+  "first-ever invoice" bootstrap invariant for free.
+- **`EventStore.ReadLast` OpenTelemetry activity** — `ReadLastAsync` emits a dedicated
+  `EventStore.ReadLast` activity with `db.operation = "read_last"` and `opossum.event_count`
+  tag, consistent with the existing `EventStore.Read` activity.
+- **Invoice feature in `Opossum.Samples.CourseManagement`** — demonstrates the
+  `ReadLastAsync` consecutive-sequence pattern end-to-end: `POST /invoices` creates invoices
+  with a guaranteed gap-free number enforced by DCB; `GET /invoices` and
+  `GET /invoices/{invoiceNumber}` expose the `InvoiceProjection` read model.
+
+---
+
 ## [0.4.0-preview.1] - 2026-02-26
 
 ### Known Issues

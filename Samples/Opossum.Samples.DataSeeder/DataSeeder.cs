@@ -4,6 +4,7 @@ using Opossum.Extensions;
 using Opossum.Mediator;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.Events;
+using Opossum.Samples.CourseManagement.InvoiceCreation;
 using Tier = Opossum.Samples.CourseManagement.EnrollmentTier.EnrollmentTier;
 
 namespace Opossum.Samples.DataSeeder;
@@ -52,6 +53,9 @@ public class DataSeeder
 
         Console.WriteLine("\n🎓 Phase 5: Enrolling students in courses...");
         await SeedEnrollmentsAsync();
+
+        Console.WriteLine("\n🧾 Phase 6: Creating invoices...");
+        await SeedInvoicesAsync();
     }
 
     private void ResetDatabase()
@@ -337,6 +341,50 @@ public class DataSeeder
         Console.WriteLine($"   ✅ Created {totalEnrollments} enrollments in {attempts} attempts.                    ");
         Console.WriteLine($"      Skipped - Duplicates: {skippedDuplicates}, Capacity: {skippedCapacity}, Student Limit: {skippedStudentLimit}");
         Console.WriteLine($"      💡 Efficiency: {(double)totalEnrollments / attempts * 100:F1}% successful enrollments");
+    }
+
+    private async Task SeedInvoicesAsync()
+    {
+        if (_config.InvoiceCount <= 0)
+        {
+            Console.WriteLine("   ⏭️  Skipping invoice seeding (count is 0).");
+            return;
+        }
+
+        int created = 0;
+
+        for (int i = 0; i < _config.InvoiceCount; i++)
+        {
+            // Pick a random customer from registered students, or use a fresh Guid when
+            // seeding invoices in isolation (--students 0).
+            var customerId = _students.Count > 0
+                ? _students[_random.Next(_students.Count)].StudentId
+                : Guid.NewGuid();
+
+            // Generate a random amount between $10.00 and $9,999.99
+            var amount = Math.Round(_random.Next(1000, 999999) / 100m, 2);
+
+            var command = new CreateInvoiceCommand(
+                CustomerId: customerId,
+                Amount: amount);
+
+            // Dispatching through the mediator exercises the full DCB pattern:
+            // ReadLastAsync → derive next number → AppendAsync with AppendCondition.
+            var result = await _mediator.InvokeAsync<CommandResult<int>>(command);
+
+            if (result.Success)
+            {
+                TotalEventsCreated++;
+                created++;
+            }
+
+            if ((i + 1) % 10 == 0)
+            {
+                Console.Write($"   Created {created}/{_config.InvoiceCount} invoices (#{result.Value})...\r");
+            }
+        }
+
+        Console.WriteLine($"   ✅ Created {created} invoices (numbers 1–{created}).       ");
     }
 
     // ============================================================================

@@ -45,10 +45,10 @@ public class AdminEndpointTests
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - All 4 sample app projections should be rebuilt
+        // Assert - All 5 sample app projections should be rebuilt
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(4, result.TotalRebuilt);
+        Assert.Equal(5, result.TotalRebuilt);
         Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
@@ -63,14 +63,14 @@ public class AdminEndpointTests
 
         Assert.NotNull(setupResult);
         Assert.True(setupResult.Success);
-        Assert.Equal(4, setupResult.TotalRebuilt); // All 4 projections rebuilt
+        Assert.Equal(5, setupResult.TotalRebuilt); // All 5 projections rebuilt
 
         // Verify all projections now have non-zero checkpoints (processed seeded events)
         var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
         checkpointsResponse.EnsureSuccessStatusCode();
         var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
-        Assert.Equal(4, checkpoints.Count);
+        Assert.Equal(5, checkpoints.Count);
         Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint > 0,
             $"All checkpoints should be > 0 after processing seeded events"));
 

@@ -628,6 +628,156 @@ public class FileSystemEventStoreReadTests : IDisposable
     }
 
     // ========================================================================
+    // ReadLastAsync Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task ReadLastAsync_WithNoEvents_ReturnsNullAsync()
+    {
+        // Act
+        var result = await _store.ReadLastAsync(Query.All());
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithSingleMatchingEvent_ReturnsThatEventAsync()
+    {
+        // Arrange
+        await AppendEventWithTypeAsync("OrderCreated");
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.FromEventTypes("OrderCreated"));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(1, result.Position);
+        Assert.Equal("OrderCreated", result.Event.EventType);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithMultipleMatchingEvents_ReturnsHighestPositionAsync()
+    {
+        // Arrange — positions 1, 2, 3
+        await AppendEventWithTypeAsync("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
+        await AppendEventWithTypeAsync("OrderCreated");
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.FromEventTypes("OrderCreated"));
+
+        // Assert — returns position 3, not 1 or 2
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Position);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithInterleavedTypes_ReturnsLastOfMatchingTypeAsync()
+    {
+        // Arrange
+        await AppendEventWithTypeAsync("OrderCreated");  // pos 1
+        await AppendEventWithTypeAsync("OrderShipped");  // pos 2
+        await AppendEventWithTypeAsync("OrderCreated");  // pos 3
+        await AppendEventWithTypeAsync("OrderShipped");  // pos 4
+        await AppendEventWithTypeAsync("OrderShipped");  // pos 5
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.FromEventTypes("OrderCreated"));
+
+        // Assert — last OrderCreated is at position 3, not 5
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Position);
+        Assert.Equal("OrderCreated", result.Event.EventType);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithQueryAll_ReturnsGlobalLastEventAsync()
+    {
+        // Arrange
+        await AppendTestEventsAsync(5);
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.All());
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(5, result.Position);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithNonMatchingQuery_ReturnsNullAsync()
+    {
+        // Arrange
+        await AppendEventWithTypeAsync("OrderCreated");
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.FromEventTypes("NonExistent"));
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithTagFilter_ReturnsLastMatchingEventAsync()
+    {
+        // Arrange
+        var prodTag = new Tag("env", "prod");
+        await AppendEventWithTagsAsync(prodTag);                             // pos 1
+        await AppendEventWithTagsAsync(new Tag("env", "dev"));   // pos 2
+        await AppendEventWithTagsAsync(prodTag);                             // pos 3
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.FromTags(prodTag));
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(3, result.Position);
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithNullQuery_ThrowsArgumentNullExceptionAsync()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _store.ReadLastAsync(null!));
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_WithNoContextConfigured_ThrowsInvalidOperationExceptionAsync()
+    {
+        // Arrange
+        var optionsNoContext = new OpossumOptions { RootPath = _tempRootPath };
+        var storeNoContext = new FileSystemEventStore(optionsNoContext);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => storeNoContext.ReadLastAsync(Query.All()));
+    }
+
+    [Fact]
+    public async Task ReadLastAsync_PreservesFullEventDataAsync()
+    {
+        // Arrange
+        var correlationId = Guid.NewGuid();
+        var timestamp = new DateTimeOffset(2025, 6, 1, 10, 0, 0, TimeSpan.Zero);
+
+        var evt = CreateTestEvent("InvoiceCreated", new TestDomainEvent { Data = "INV-00001" });
+        evt.Metadata = new Metadata { CorrelationId = correlationId, Timestamp = timestamp };
+        await _store.AppendAsync([evt], null);
+
+        // Act
+        var result = await _store.ReadLastAsync(Query.FromEventTypes("InvoiceCreated"));
+
+        // Assert — all fields survive the round-trip
+        Assert.NotNull(result);
+        Assert.Equal("InvoiceCreated", result.Event.EventType);
+        Assert.Equal("INV-00001", ((TestDomainEvent)result.Event.Event).Data);
+        Assert.Equal(correlationId, result.Metadata.CorrelationId);
+        Assert.Equal(timestamp, result.Metadata.Timestamp);
+    }
+
+    // ========================================================================
     // Helper Methods
     // ========================================================================
 

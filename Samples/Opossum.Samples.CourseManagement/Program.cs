@@ -7,6 +7,7 @@ using Opossum.Samples.CourseManagement.CourseDetails;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.CourseShortInfo;
 using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
+using Opossum.Samples.CourseManagement.InvoiceCreation;
 using Opossum.Samples.CourseManagement.StudentDetails;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
@@ -156,6 +157,22 @@ app.UseExceptionHandler(exceptionHandlerApp =>
             return;
         }
 
+        // Map BadHttpRequestException (e.g. malformed/missing JSON body) to its intended status code.
+        // Without this, ASP.NET Core's 400 "Failed to read parameter" errors are swallowed as 500.
+        if (exception is BadHttpRequestException badRequest)
+        {
+            context.Response.StatusCode = badRequest.StatusCode;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = badRequest.StatusCode,
+                Title = "Bad Request",
+                Detail = badRequest.Message,
+                Instance = context.Request.Path,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+            });
+            return;
+        }
+
         // Default handler for other exceptions
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await context.Response.WriteAsJsonAsync(new ProblemDetails
@@ -181,6 +198,8 @@ app.MapGetCoursesShortInfoEndpoint();
 app.MapGetCourseDetailsEndpoint();
 app.MapModifyCourseStudentLimitEndpoint();
 app.MapEnrollStudentToCourseEndpoint();
+app.MapCreateInvoiceEndpoint();
+app.MapGetInvoicesEndpoint();
 
 // ============================================================================
 // ADMIN ENDPOINTS - Projection Management

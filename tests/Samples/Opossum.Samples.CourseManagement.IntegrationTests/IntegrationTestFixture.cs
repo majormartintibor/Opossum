@@ -71,7 +71,7 @@ public class IntegrationTestFixture : IDisposable
 
     /// <summary>
     /// Seeds the test database with sample domain events for all projection types.
-    /// Creates students, courses, and enrollments so projections have real data to process.
+    /// Creates students, courses, enrollments, and invoices so projections have real data to process.
     /// </summary>
     private async Task SeedTestDataAsync()
     {
@@ -101,6 +101,13 @@ public class IntegrationTestFixture : IDisposable
                     StudentLimit = 10
                 });
             }
+
+            // Create 1 invoice so InvoiceProjection has events to process
+            await Client.PostAsJsonAsync("/invoices", new
+            {
+                CustomerId = Guid.NewGuid(),
+                Amount = 99.99m
+            });
 
             // Give the system a moment to process events
             await Task.Delay(200);

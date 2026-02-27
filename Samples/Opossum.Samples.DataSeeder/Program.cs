@@ -72,6 +72,14 @@ static SeedingConfiguration ParseArguments(string[] args)
                 }
                 break;
 
+            case "--invoices":
+                if (i + 1 < args.Length && int.TryParse(args[i + 1], out int invoices))
+                {
+                    config.InvoiceCount = invoices;
+                    i++;
+                }
+                break;
+
             case "--reset":
                 config.ResetDatabase = true;
                 break;
@@ -101,6 +109,7 @@ static void DisplayConfiguration(SeedingConfiguration config, IConfiguration con
     Console.WriteLine($"  Context:       {contextName}");
     Console.WriteLine($"  Students:      {config.StudentCount}");
     Console.WriteLine($"  Courses:       {config.CourseCount}");
+    Console.WriteLine($"  Invoices:      {config.InvoiceCount}");
     Console.WriteLine($"  Est. Events:   ~{config.EstimatedEventCount}");
     Console.WriteLine($"  Reset DB:      {(config.ResetDatabase ? "YES" : "NO")}");
     Console.WriteLine();
@@ -160,6 +169,7 @@ static void DisplayHelp()
     Console.WriteLine("Options:");
     Console.WriteLine("  --students <count>   Number of students to create (default: 350)");
     Console.WriteLine("  --courses <count>    Number of courses to create (default: 75)");
+    Console.WriteLine("  --invoices <count>   Number of invoices to create (default: 50)");
     Console.WriteLine("  --reset              Delete existing database before seeding");
     Console.WriteLine("  --no-confirm         Skip confirmation prompt");
     Console.WriteLine("  --help, -h           Show this help message");

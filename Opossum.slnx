@@ -112,6 +112,7 @@
     <File Path="docs/future-plans/0.4.0-roadmap.md" />
     <File Path="docs/future-plans/0.5.0-roadmap.md" />
     <File Path="docs/future-plans/batched-flush-redesign-plan.md" />
+    <File Path="docs/future-plans/docfx-documentation-website.md" />
   </Folder>
   <Folder Name="/docs/guides/">
     <File Path="docs/guides/configureawait-guide.md" />

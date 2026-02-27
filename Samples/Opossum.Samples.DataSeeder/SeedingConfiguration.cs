@@ -4,6 +4,7 @@ public class SeedingConfiguration
 {
     public int StudentCount { get; set; } = 350;
     public int CourseCount { get; set; } = 75;
+    public int InvoiceCount { get; set; } = 50;
 
     public bool ResetDatabase { get; set; } = false;
     public bool RequireConfirmation { get; set; } = true;
@@ -21,9 +22,10 @@ public class SeedingConfiguration
 
     // Estimated event count for display
     public int EstimatedEventCount =>
-        StudentCount +  // StudentRegisteredEvent
-        CourseCount +   // CourseCreatedEvent
-        (int)(StudentCount * 0.3) +  // ~30% tier upgrades
-        (int)(CourseCount * 0.2) +   // ~20% capacity changes
-        StudentCount * 5;     // ~5 enrollments per student avg
+        StudentCount +              // StudentRegisteredEvent
+        CourseCount +               // CourseCreatedEvent
+        (int)(StudentCount * 0.3) + // ~30% tier upgrades
+        (int)(CourseCount * 0.2) +  // ~20% capacity changes
+        StudentCount * 5 +          // ~5 enrollments per student avg
+        InvoiceCount;               // InvoiceCreatedEvent
 }
