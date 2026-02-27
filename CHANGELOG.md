@@ -12,7 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0-preview.2] - Unreleased
 
 ### Added
-- **`IEventStore.ReadLastAsync(Query, CancellationToken)`** — new method that returns the
+- **`ReadLastBenchmarks`** — new BenchmarkDotNet suite in `Opossum.BenchmarkTests` covering
+  `ReadLastAsync` at three store scales (100 / 1K / 10K events) for event-type queries,
+  tag queries, and `Query.All()`. Validates the single-file-read invariant and surfaces the
+  `GetAllPositionsAsync` full-array allocation cost when using `Query.All()` with `ReadLastAsync`.
+- **`IEventStore.ReadLastAsync(Query, CancellationToken)`**
   event with the highest sequence position matching the given query, or `null` when no
   events match. Only a single event file is read from storage regardless of total matches,
   making it significantly more efficient than `ReadAsync([Descending])[0]` for large event
