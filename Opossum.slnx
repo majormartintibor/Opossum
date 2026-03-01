@@ -109,6 +109,9 @@
     <File Path="docs/decisions/005-cross-process-append-safety.md" />
     <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
+  <Folder Name="/docs/design/">
+    <File Path="docs/design/dataseeder-redesign.md" />
+  </Folder>
   <Folder Name="/docs/features/">
     <File Path="docs/features/immutablemetadata.md" />
     <File Path="docs/features/ledger.md" />
