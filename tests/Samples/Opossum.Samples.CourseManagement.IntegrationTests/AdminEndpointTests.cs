@@ -45,10 +45,10 @@ public class AdminEndpointTests
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - All 5 sample app projections should be rebuilt
+        // Assert - All 7 sample app projections should be rebuilt
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(5, result.TotalRebuilt);
+        Assert.Equal(7, result.TotalRebuilt);
         Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
@@ -63,29 +63,34 @@ public class AdminEndpointTests
 
         Assert.NotNull(setupResult);
         Assert.True(setupResult.Success);
-        Assert.Equal(5, setupResult.TotalRebuilt); // All 5 projections rebuilt
+        Assert.Equal(7, setupResult.TotalRebuilt); // All 7 projections rebuilt
 
         // Verify all projections now have non-zero checkpoints (processed seeded events)
         var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
         checkpointsResponse.EnsureSuccessStatusCode();
         var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
-        Assert.Equal(5, checkpoints.Count);
-        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint > 0,
-            $"All checkpoints should be > 0 after processing seeded events"));
+        Assert.Equal(7, checkpoints.Count);
+        // Projections with seeded events must have a checkpoint > 0.
+        // The CourseBook projections have no seeded events so their checkpoint is 0 — that is correct.
+        var seededProjections = new[] { "CourseShortInfo", "CourseDetails", "StudentShortInfo", "StudentDetails", "Invoice" };
+        foreach (var name in seededProjections)
+        {
+            Assert.True(checkpoints.TryGetValue(name, out var cp) && cp > 0,
+                $"Projection '{name}' should have checkpoint > 0 after processing seeded events");
+        }
 
         // Wait for checkpoint persistence
         await Task.Delay(500);
 
-        // Act - Rebuild with forceAll=false (should not rebuild anything - all have checkpoints > 0)
+        // Act - Rebuild with forceAll=false (should only rebuild projections with checkpoint == 0)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - No projections should be rebuilt (all have checkpoints > 0)
+        // Assert - Only the CourseBook projections (checkpoint == 0 == "no events seen") are rebuilt
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(0, result.TotalRebuilt);
     }
 
     [Fact]

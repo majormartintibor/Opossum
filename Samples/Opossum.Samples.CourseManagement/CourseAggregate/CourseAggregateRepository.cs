@@ -34,6 +34,12 @@ namespace Opossum.Samples.CourseManagement.CourseAggregate;
 ///   </item>
 /// </list>
 /// <para>
+/// <see cref="SaveAsync"/> also accepts an optional <c>conditionOverride</c> that replaces
+/// the default course-scoped condition. <see cref="CourseEnrollmentService"/> uses this
+/// to supply a compound condition spanning both the course and the student entity queries —
+/// without this repository needing to know anything about <see cref="StudentAggregate"/>.
+/// </para>
+/// <para>
 /// On conflict, <see cref="SaveAsync"/> throws
 /// <see cref="Opossum.Exceptions.AppendConditionFailedException"/>.
 /// The caller is responsible for catching it, reloading via <see cref="LoadAsync"/>,
@@ -59,25 +65,35 @@ public sealed class CourseAggregateRepository(IEventStore eventStore)
 
     /// <summary>
     /// Atomically appends all events recorded since <see cref="CourseAggregate.Create"/>
-    /// or the last successful <see cref="SaveAsync"/> call, guarded by the DCB
-    /// optimistic-concurrency condition.
+    /// or the last successful <see cref="SaveAsync"/> call, guarded by an
+    /// <see cref="AppendCondition"/>.
     /// </summary>
+    /// <param name="aggregate">The course aggregate with recorded events to append.</param>
+    /// <param name="conditionOverride">
+    /// When provided, replaces the default course-scoped condition. Pass a compound
+    /// condition here (e.g. from <see cref="CourseEnrollmentService"/>) when the append
+    /// must guard against concurrent writes to more than just this course.
+    /// When <see langword="null"/>, a standard <c>courseId</c>-scoped condition is built
+    /// automatically from <see cref="CourseAggregate.Version"/>.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
     /// <exception cref="Opossum.Exceptions.AppendConditionFailedException">
-    /// Thrown when a concurrent write invalidated the aggregate's version.
+    /// Thrown when a concurrent write invalidated the condition.
     /// Reload the aggregate with <see cref="LoadAsync"/> and retry the command.
     /// </exception>
-    public async Task SaveAsync(CourseAggregate aggregate, CancellationToken cancellationToken = default)
+    public async Task SaveAsync(
+        CourseAggregate aggregate,
+        AppendCondition? conditionOverride = null,
+        CancellationToken cancellationToken = default)
     {
         var recordedEvents = aggregate.PullRecordedEvents();
         if (recordedEvents.Length == 0)
             return;
 
-        // The same query used to load the aggregate — this is the DCB consistency boundary.
-        var query = Query.FromTags(new Tag("courseId", aggregate.CourseId.ToString()));
-
-        var condition = new AppendCondition
+        var condition = conditionOverride ?? new AppendCondition
         {
-            FailIfEventsMatch = query,
+            // The same query used to load the aggregate — this is the DCB consistency boundary.
+            FailIfEventsMatch = Query.FromTags(new Tag("courseId", aggregate.CourseId.ToString())),
             // null when Version == 0 (new aggregate): reject if ANY course event already exists.
             // Otherwise: reject only if a new event was appended after our last read.
             AfterSequencePosition = aggregate.Version == 0 ? null : aggregate.Version

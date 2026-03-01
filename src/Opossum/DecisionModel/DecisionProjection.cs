@@ -72,6 +72,43 @@ public sealed class DecisionProjection<TState> : IDecisionProjection<TState>
         _apply = apply;
     }
 
+    /// <summary>
+    /// Creates a time-aware <see cref="DecisionProjection{TState}"/> whose fold function
+    /// receives the current time from a <see cref="TimeProvider"/>.
+    /// Defaults to <see cref="TimeProvider.System"/> in production.
+    /// Inject a custom <see cref="TimeProvider"/> in tests to control wall-clock time.
+    /// </summary>
+    /// <param name="initialState">The starting state before any events are applied.</param>
+    /// <param name="query">
+    /// The query that selects relevant events and guards the append condition.
+    /// </param>
+    /// <param name="apply">
+    /// A pure function that folds a single event into the current state using a
+    /// <see cref="TimeProvider"/> to access the current time.
+    /// </param>
+    /// <param name="timeProvider">
+    /// The time provider used to get "now" during folding.
+    /// Defaults to <see cref="TimeProvider.System"/> when <see langword="null"/>.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="query"/> or <paramref name="apply"/> is <see langword="null"/>.
+    /// </exception>
+    public DecisionProjection(
+        TState initialState,
+        Query query,
+        Func<TState, SequencedEvent, TimeProvider, TState> apply,
+        TimeProvider? timeProvider = null)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(apply);
+
+        var tp = timeProvider ?? TimeProvider.System;
+
+        InitialState = initialState;
+        Query = query;
+        _apply = (state, evt) => apply(state, evt, tp);
+    }
+
     /// <inheritdoc/>
     public TState InitialState { get; }
 

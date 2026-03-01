@@ -150,64 +150,27 @@ This is fully supported today. The only difference from the JS reference is aest
 
 ---
 
-## 4. Domain Fit in `Opossum.Samples.CourseManagement`
+## 4. Chosen Domain Feature: Course Announcement + Retract
 
-The sample app is a course/student management system. Introducing a bare "order placement"
-concept would be a foreign domain. Two natural integration paths exist:
+**Course Announcement** was selected as the showcase feature. An instructor posts an
+announcement to a course. The browser submits, the network drops before the response
+arrives, and the instructor's client retries. Without idempotency the same announcement
+appears twice in the course feed.
 
-### Option A — Add Idempotency to an Existing Command
+The domain is a perfect fit for the DCB spec's stated goal: *"constraints that are not
+directly related to the domain."* A course can legitimately have many announcements — there
+is no domain rule that says "you can only post one announcement." The idempotency token is
+therefore the **sole** mechanism preventing the duplicate; it is not supplementing a domain
+constraint that would already solve the problem.
 
-Add an optional `IdempotencyToken` to `EnrollStudentToCourseCommand`. The enrollment handler
-would gain a third projection alongside the existing two (`CourseCapacity`,
-`StudentEnrollmentLimit`). This uses the 3-projection `BuildDecisionModelAsync` overload and
-requires no new event type — the `idempotency` tag is just added to `StudentEnrolledToCourseEvent`.
-
-**Pros:** No new domain concepts; shows composed projections in context.  
-**Cons:** Complicates an already 3-projection handler; the existing `AlreadyEnrolled` projection
-already partially serves the same purpose for this specific command.
-
-### Option B — New Self-Contained Feature: Course Registration via Idempotent Token
-
-Add a new `RegisterForCourse` feature (distinct from the current enrollment flow) that
-demonstrates idempotent course sign-up. A student sends a client-generated `registrationToken`
-when registering. The feature is self-contained and mirrors the DCB spec example almost
-verbatim, just with course-domain names instead of order-domain names.
-
-**Pros:** Clean 1:1 mapping to the spec; clearly labelled for documentation; no risk of
-breaking existing features.  
-**Cons:** Slight domain overlap with enrollment.
-
-### Option C — New Thin Domain: Order / Payment (separate section of the sample)
-
-Add a minimal `Orders` section to the sample app that is explicitly presented as
-"DCB Pattern Showcase — Idempotency". Only two routes: `POST /orders` (place order with
-idempotency token) and `GET /orders/{id}` (read model). Completely isolated from the
-course domain.
-
-**Pros:** Exact mirror of the spec example; no domain awkwardness.  
-**Cons:** Introduces a second domain concept into what is presented as a single-domain sample.
+The feature supports a natural extension: a **retract flow** that demonstrates the DCB spec
+note *"allow a token to be reused once the order was placed."* After retraction the original
+token is freed — the instructor can re-post the same announcement (corrected, for example)
+using the same idempotency token their client already holds.
 
 ---
 
-## 5. What Would Need to Be Created
-
-Regardless of which domain option is chosen, the implementation needs:
-
-| Artefact | Notes |
-|---|---|
-| `OrderPlacedEvent` (or domain-equivalent) | Record implementing `IEvent`; holds `orderId` + `idempotencyToken` |
-| `PlaceOrderCommand` / request DTO | Carries `OrderId (Guid)` + `IdempotencyToken (Guid)` |
-| `IdempotencyTokenWasUsedProjection(Guid token)` | `DecisionProjection<bool>`, initial `false`, query on `idempotency` tag, apply `(_, _) => true` |
-| Command handler | `BuildDecisionModelAsync` → check → `AppendAsync` with condition |
-| Minimal endpoint | `POST /orders` returns 201 on first call, 409 (or 400) on re-submission |
-| Unit tests | Two cases from the spec: duplicate token → error, fresh token → success |
-| Integration tests | Full round-trip via the Opossum file system event store |
-
-No changes to the Opossum core library are required.
-
----
-
-## 6. Summary
+## 5. Summary
 
 | Question | Answer |
 |---|---|
@@ -218,10 +181,232 @@ No changes to the Opossum core library are required.
 | Does `AppendCondition` scope correctly to the narrow query? | **Yes** |
 | Is retry-on-conflict available? | **Yes** (`ExecuteDecisionAsync`) |
 | Are there any library-level changes needed? | **No** |
-| Can the extended "also check orderId uniqueness" variant be built? | **Yes** (2-projection overload) |
-| Best domain fit for the sample? | **Option B** (new self-contained idempotent registration feature) or **Option C** (thin `Orders` showcase section) |
+| Can the extended "token reuse after retract" variant be built? | **Yes** — stateful projection with two event types |
+| Does the domain have a natural uniqueness constraint on announcements? | **No** — making the token the genuine sole guard |
+| Best domain fit for the sample? | **Course Announcement + Retract** |
 
 **Conclusion:** The "Prevent Record Duplication" example can be showcased in the Opossum sample
 application in its current state without any modifications to the core library. The pattern
 maps cleanly onto existing Opossum primitives and is structurally almost identical to the
 `AlreadyEnrolled` projection that is already present in the sample.
+
+---
+
+## 6. Why Course Announcements Are the Right Domain Fit
+
+The DCB spec states: *"This example demonstrates how DCB allows to enforce constraints that
+are not directly related to the domain."*
+
+For a domain event like `CourseFeePaymentProcessedEvent`, a `CourseFeePaid` projection
+scoped to `(courseId, studentId)` would naturally exist alongside any idempotency guard —
+payment is inherently a domain-constrained operation. The idempotency token would then be
+supplementing a domain constraint that already solves the safety problem, which obscures the
+pattern.
+
+Course announcements have no such natural uniqueness rule. A course can have ten
+announcements from Monday alone. The domain language has no concept of "already announced."
+The *only* reason the same announcement should not appear twice is that it was an accidental
+retry — which is precisely the infrastructure concern the idempotency token is designed to
+address.
+
+This makes the token the **honest** sole guard, not a supplement. The showcase is then about
+what the spec actually claims: enforcing an infrastructure constraint on top of an event store,
+using the same DCB primitives, without any domain-level backing.
+
+---
+
+## 7. Implementation Plan
+
+### 7.1 New Events
+
+| Event | Fields | Tags |
+|---|---|---|
+| `CourseAnnouncementPostedEvent` | `AnnouncementId`, `CourseId`, `Title`, `Body`, `IdempotencyToken` | `courseId:{id}`, `idempotency:{token}` |
+| `CourseAnnouncementRetractedEvent` | `AnnouncementId`, `CourseId`, `IdempotencyToken` | `courseId:{id}`, `idempotency:{token}` |
+
+`AnnouncementId` is server-assigned (a new `Guid` created in the command handler).
+`IdempotencyToken` is client-generated and stored in both events. The retracted event carries
+the **original** token so the `IdempotencyTokenWasUsed` projection can observe both events
+and derive the current state — this is what enables token reuse after retraction.
+
+### 7.2 API Design
+
+**Post announcement**
+
+```
+POST /courses/{courseId}/announcements
+Body: { "title": "...", "body": "...", "idempotencyToken": "..." }
+→ 201 Created  { "announcementId": "..." }
+→ 400 Bad Request  "Course does not exist"   — prerequisite not met
+→ 400 Bad Request  "Re-submission detected"  — token already used (caught at decision model)
+```
+
+**Retract announcement**
+
+```
+POST /courses/{courseId}/announcements/{idempotencyToken}/retract
+(no body)
+→ 200 OK
+→ 400 Bad Request  "Announcement not found"
+→ 400 Bad Request  "Announcement has already been retracted"
+```
+
+The idempotency token doubles as the stable announcement reference in the retract URL. The
+client already holds the token from the original post response — no separate lookup is needed.
+
+### 7.3 Feature 1 — Post Course Announcement
+
+#### Decision Model: 2 Composed Projections
+
+One business prerequisite and the idempotency guard. The domain has no "already posted"
+uniqueness constraint, so the token is the sole mechanism preventing duplicates (see § 6).
+
+---
+
+**Projection 1 — `CourseExists(courseId)` → `bool`**
+
+A prerequisite: the course must exist before an announcement can be posted.
+
+```
+Query   : CourseCreatedEvent — tag courseId:{id}
+Apply   : (_, _) => true
+Initial : false
+Guard   : if (!courseExists) → "Course does not exist"
+```
+
+---
+
+**Projection 2 — `IdempotencyTokenWasUsed(token)` → `bool`**
+
+The sole guard against duplicate announcements. This is the "Prevent Record Duplication"
+pattern from the DCB spec.
+
+```
+Query   : CourseAnnouncementPostedEvent + CourseAnnouncementRetractedEvent — tag idempotency:{token}
+Apply   : CourseAnnouncementPostedEvent    → true    (token consumed)
+          CourseAnnouncementRetractedEvent → false   (token freed — see § 7.4)
+Initial : false
+Guard   : if (tokenWasUsed) → "Re-submission detected: this request has already been processed"
+```
+
+The query is scoped exclusively to the `idempotency` tag. Two instructors posting two
+different announcements simultaneously use independent tokens and independent
+`AppendCondition` instances — they never block each other. Two concurrent retries of the
+same post share the same token: only one append succeeds; the retry's decision model reads
+`tokenWasUsed = true` and returns the re-submission error without any special handling.
+
+#### Handler Logic
+
+```
+1. BuildDecisionModelAsync(CourseExists, IdempotencyTokenWasUsed)
+2. if (!courseExists)   → Fail("Course does not exist")
+3. if (tokenWasUsed)    → Fail("Re-submission detected")
+4. var announcementId = Guid.NewGuid()
+5. AppendAsync(CourseAnnouncementPostedEvent, appendCondition)
+6. return Ok(announcementId)
+```
+
+Wrapped in `ExecuteDecisionAsync` for automatic retry on `AppendConditionFailedException`.
+
+### 7.4 Feature 2 — Retract Course Announcement (Token Reuse Extension)
+
+#### Domain Story
+
+An instructor posts an announcement, then realises it contained an error and retracts it.
+They correct the text and want to re-post. Their client still holds the original idempotency
+token — after retraction, that token is freed and can be reused for the corrected post.
+
+#### Decision Model: 1 Projection
+
+**`RetractableAnnouncement(idempotencyToken)` → `RetractableAnnouncementState?`**
+
+```
+Query   : CourseAnnouncementPostedEvent + CourseAnnouncementRetractedEvent — tag idempotency:{token}
+Apply   : CourseAnnouncementPostedEvent    → RetractableAnnouncementState(AnnouncementId, CourseId, IsRetracted: false)
+          CourseAnnouncementRetractedEvent → state with { IsRetracted = true }
+Initial : null
+```
+
+`null` means no announcement was found for this token. `IsRetracted = true` means the
+announcement exists but has already been retracted.
+
+#### Handler Logic
+
+```
+1. BuildDecisionModelAsync(RetractableAnnouncement(idempotencyToken))
+2. if (state is null)        → Fail("Announcement not found")
+3. if (state.IsRetracted)    → Fail("Announcement has already been retracted")
+4. AppendAsync(CourseAnnouncementRetractedEvent with idempotency:{token} tag, appendCondition)
+5. return Ok()
+```
+
+#### How Token Reuse Works
+
+After retraction:
+
+1. `CourseAnnouncementRetractedEvent` is stored with `idempotency:{originalToken}` tag.
+2. On the next post attempt, `IdempotencyTokenWasUsed(originalToken)` loads both events in
+   sequence order: posted first (→ `true`), retracted second (→ `false`).
+3. Final state is `false` — the token is free.
+4. `AppendCondition.AfterSequencePosition` is set to the retraction event's position,
+   guarding the new post against any concurrent activity on this token since the retraction.
+
+No logic changes are needed in the post handler. The token reuse is a *consequence of the
+event fold*, not a special case carved out in the handler.
+
+### 7.5 Folder and File Structure
+
+```
+Samples/Opossum.Samples.CourseManagement/
+  Events/
+    CourseAnnouncementPostedEvent.cs        (new)
+    CourseAnnouncementRetractedEvent.cs     (new)
+  CourseAnnouncement/
+    Endpoint.cs                             (new) — POST /courses/{id}/announcements
+    PostCourseAnnouncementCommand.cs        (new) — command + handler
+    CourseAnnouncementProjections.cs        (new) — CourseExists + IdempotencyTokenWasUsed
+  CourseAnnouncementRetraction/
+    Endpoint.cs                             (new) — POST /courses/{id}/announcements/{token}/retract
+    RetractCourseAnnouncementCommand.cs     (new) — command + handler
+    CourseAnnouncementRetractionProjection.cs (new) — RetractableAnnouncement projection
+```
+
+### 7.6 Test Plan
+
+#### Unit Tests — `CourseAnnouncementProjections`
+
+Projection logic only — no event store, no file system.
+
+| Test | Projection | Given | Expected state |
+|---|---|---|---|
+| No events | `IdempotencyTokenWasUsed` | `[]` | `false` |
+| Matching posted event | `IdempotencyTokenWasUsed` | `[Posted(T)]` | `true` |
+| Different token | `IdempotencyTokenWasUsed` | `[Posted(T)]` | `false` (queried with T2) |
+| Token freed by retraction | `IdempotencyTokenWasUsed` | `[Posted(T), Retracted(T)]` | `false` |
+| Token re-consumed after retraction | `IdempotencyTokenWasUsed` | `[Posted(T), Retracted(T), Posted(T)]` | `true` |
+
+#### Unit Tests — `CourseAnnouncementRetractionProjection`
+
+| Test | Given | Expected state |
+|---|---|---|
+| No events | `[]` | `null` |
+| Announcement exists | `[Posted(T)]` | `{IsRetracted: false}` |
+| Already retracted | `[Posted(T), Retracted(T)]` | `{IsRetracted: true}` |
+
+#### Integration Tests — Post Announcement
+
+| Scenario | Expected |
+|---|---|
+| First post with fresh token | 201 Created |
+| Re-submission with same token | 400 "Re-submission detected" |
+| Post to non-existent course | 400 "Course does not exist" |
+| Same token after retraction | 201 Created — token was freed |
+| New token after retraction | 201 Created — fresh token always works |
+
+#### Integration Tests — Retract Announcement
+
+| Scenario | Expected |
+|---|---|
+| Retract existing announcement | 200 OK |
+| Retract non-existent token | 400 "Announcement not found" |
+| Double retraction | 400 "Announcement has already been retracted" |

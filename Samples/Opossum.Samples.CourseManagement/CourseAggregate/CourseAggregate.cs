@@ -46,6 +46,7 @@ namespace Opossum.Samples.CourseManagement.CourseAggregate;
 public sealed class CourseAggregate
 {
     private readonly List<IEvent> _recordedEvents = [];
+    private readonly HashSet<Guid> _enrolledStudentIds = [];
 
     /// <summary>The identifier of this course.</summary>
     public Guid CourseId { get; private set; }
@@ -126,12 +127,20 @@ public sealed class CourseAggregate
     }
 
     /// <summary>
-    /// Subscribes a student to this course. Only enforces course-level capacity —
-    /// student existence is validated at the endpoint level.
+    /// Subscribes a student to this course.
+    /// Enforces course-level capacity and duplicate enrollment.
+    /// The student's tier-based enrollment limit is enforced at the domain-service level
+    /// by <see cref="CourseEnrollmentService"/> before this method is called.
     /// </summary>
-    /// <exception cref="InvalidOperationException">When the course is fully booked.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// When the student is already subscribed, or the course is fully booked.
+    /// </exception>
     public void SubscribeStudent(Guid studentId)
     {
+        if (_enrolledStudentIds.Contains(studentId))
+            throw new InvalidOperationException(
+                $"Student \"{studentId}\" is already subscribed to course \"{CourseId}\".");
+
         if (EnrollmentCount >= Capacity)
             throw new InvalidOperationException($"Course \"{CourseId}\" is already fully booked.");
 
@@ -169,8 +178,9 @@ public sealed class CourseAggregate
             case CourseStudentLimitModifiedEvent modified:
                 Capacity = modified.NewMaxStudentCount;
                 break;
-            case StudentEnrolledToCourseEvent:
+            case StudentEnrolledToCourseEvent enrolled:
                 EnrollmentCount++;
+                _enrolledStudentIds.Add(enrolled.StudentId);
                 break;
         }
     }

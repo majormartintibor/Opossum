@@ -497,6 +497,53 @@ Three `BuildDecisionModelAsync` overloads are available: single-projection (`Bui
 
 See the [Full Example](#-full-example) section for a complete real-world walkthrough enforcing three invariants across two independent tag-based queries in a single read.
 
+### Idempotency Tokens — Prevent Record Duplication
+
+Enforce **"process this request exactly once"** using a client-generated idempotency token stored as a tag. This is the DCB pattern for infrastructure constraints — constraints that are **not** directly related to the domain.
+
+> Full specification: <https://dcb.events/examples/prevent-record-duplication/>
+
+The key insight: the domain may allow an operation to happen multiple times (a course can have many announcements), but an accidental HTTP retry should not create duplicates. The idempotency token is the **sole guard** — and unlike a domain uniqueness constraint, it is controlled entirely by the client.
+
+```csharp
+// The projection folds the token's lifecycle: Posted → true, Retracted → false (token freed).
+// The query is scoped exclusively to the idempotency tag, so two concurrent requests with
+// DIFFERENT tokens produce completely independent AppendConditions — they never block each other.
+IDecisionProjection<bool> IdempotencyTokenWasUsed(Guid token) =>
+    new DecisionProjection<bool>(
+        initialState: false,
+        query: Query.FromItems(new QueryItem
+        {
+            EventTypes = [nameof(AnnouncementPostedEvent), nameof(AnnouncementRetractedEvent)],
+            Tags = [new Tag("idempotency", token.ToString())]
+        }),
+        apply: (_, evt) => evt.Event.Event switch
+        {
+            AnnouncementPostedEvent    => true,   // token consumed
+            AnnouncementRetractedEvent => false,  // token freed — may be reused
+            _                          => false
+        });
+
+// In the command handler — compose with a business prerequisite:
+var (courseExists, tokenWasUsed, appendCondition) = await eventStore.BuildDecisionModelAsync(
+    CourseExists(command.CourseId),
+    IdempotencyTokenWasUsed(command.IdempotencyToken));
+
+if (!courseExists)   return Fail("Course does not exist.");
+if (tokenWasUsed)    return Fail("Re-submission detected.");
+
+await eventStore.AppendAsync(
+    new AnnouncementPostedEvent(Guid.NewGuid(), command.CourseId, command.Title, command.IdempotencyToken)
+        .ToDomainEvent()
+        .WithTag("courseId", command.CourseId.ToString())
+        .WithTag("idempotency", command.IdempotencyToken.ToString()),
+    appendCondition);
+```
+
+**Token reuse after retraction:** When an announcement is retracted, the `AnnouncementRetractedEvent` is stored with the **same** `idempotency` tag. On the next post attempt the projection folds both events in sequence order — `Posted → true`, then `Retracted → false` — and the final state is `false`. The token is free with no changes to the post handler.
+
+See `CourseAnnouncementProjections` and `CourseAnnouncementRetractionProjection` in the sample application for the full implementation.
+
 ### Dynamic Consistency Boundaries (DCB)
 
 Enforce **optimistic concurrency** using append conditions:

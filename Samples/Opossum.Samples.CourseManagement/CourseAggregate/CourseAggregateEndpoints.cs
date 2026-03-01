@@ -1,7 +1,4 @@
-using Opossum.Core;
 using Opossum.Exceptions;
-using Opossum.Extensions;
-using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.CourseAggregate;
 
@@ -22,9 +19,19 @@ namespace Opossum.Samples.CourseManagement.CourseAggregate;
 /// </para>
 /// <para><b>Retry pattern:</b> when <see cref="CourseAggregateRepository.SaveAsync"/> detects
 /// a concurrent write it throws <see cref="AppendConditionFailedException"/>. The handlers
-/// below catch that exception, reload the aggregate (getting the updated state), and reapply
-/// the command — up to <see cref="MaxRetries"/> times. On the final attempt the exception is
-/// not caught and propagates to the global exception handler, which maps it to HTTP 409.
+/// below catch that exception, reload the aggregate(s), and reapply the command — up to
+/// <see cref="MaxRetries"/> times. On the final attempt the exception is not caught and
+/// propagates to the global exception handler, which maps it to HTTP 409.
+/// </para>
+/// <para><b>Full invariant parity with the DCB Decision Model:</b><br/>
+/// The subscription endpoint (<c>POST /courses/aggregate/{id}/subscriptions</c>) enforces
+/// all three invariants — course capacity, student tier limit, and duplicate enrollment
+/// — achieving exact parity with <c>EnrollStudentToCourseCommand</c>.
+/// This is handled by <see cref="CourseEnrollmentService"/>, a domain service that
+/// coordinates <see cref="CourseAggregate"/> and <see cref="StudentAggregate"/>.
+/// Each repository stays single-aggregate-focused; the service owns the cross-aggregate
+/// logic and the compound <see cref="AppendCondition"/>.
+/// See <c>docs/analysis/aggregate-vs-dcb-comparison.md</c> for the full comparison.
 /// </para>
 /// </remarks>
 public static class CourseAggregateEndpoints
@@ -102,42 +109,35 @@ public static class CourseAggregateEndpoints
     private static async Task<IResult> SubscribeStudentAsync(
         Guid courseId,
         [FromBody] SubscribeStudentRequest request,
-        [FromServices] CourseAggregateRepository repository,
-        [FromServices] IEventStore eventStore)
+        [FromServices] CourseEnrollmentService enrollmentService)
     {
-        // Validate student existence before touching the aggregate — the aggregate only enforces
-        // course-level invariants (capacity). Cross-entity validation stays at the endpoint level,
-        // consistent with how EnrollStudentToCourseCommand handles this.
-        var studentQuery = Query.FromItems(new QueryItem
-        {
-            EventTypes = [nameof(StudentRegisteredEvent)],
-            Tags = [new Tag("studentId", request.StudentId.ToString())]
-        });
-        var studentEvents = await eventStore.ReadAsync(studentQuery);
-        if (studentEvents.Length == 0)
-            return Results.BadRequest($"Student '{request.StudentId}' is not registered.");
-
         for (var attempt = 0; attempt < MaxRetries; attempt++)
         {
-            var aggregate = await repository.LoadAsync(courseId);
-            if (aggregate is null)
-                return Results.NotFound($"Course '{courseId}' does not exist.");
-
             try
             {
-                aggregate.SubscribeStudent(request.StudentId);
-                await repository.SaveAsync(aggregate);
+                // CourseEnrollmentService loads both aggregates independently, checks all
+                // invariants, and appends with a compound AppendCondition that guards against
+                // concurrent writes to either entity. Each call is a fresh load — retries
+                // naturally pick up the latest state.
+                var result = await enrollmentService.EnrollStudentAsync(courseId, request.StudentId);
+
+                if (!result.Success)
+                {
+                    // Translate "does not exist" failures to 404 — REST convention for
+                    // addressing a resource that was never created.
+                    return result.ErrorMessage is not null && result.ErrorMessage.Contains("does not exist")
+                        ? Results.NotFound(result.ErrorMessage)
+                        : Results.BadRequest(result.ErrorMessage);
+                }
+
                 return Results.Created(
                     $"/courses/aggregate/{courseId}/subscriptions/{request.StudentId}",
                     new { courseId, studentId = request.StudentId });
             }
-            catch (InvalidOperationException ex)
-            {
-                return Results.BadRequest(ex.Message);
-            }
             catch (AppendConditionFailedException) when (attempt < MaxRetries - 1)
             {
-                // Concurrent write detected — reload with fresh state and try again.
+                // Concurrent write detected — the next loop iteration reloads both
+                // aggregates fresh via CourseEnrollmentService.
             }
         }
 

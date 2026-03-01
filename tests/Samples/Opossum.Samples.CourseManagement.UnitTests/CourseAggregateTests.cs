@@ -294,6 +294,34 @@ public class CourseAggregateTests
         Assert.Empty(aggregate.PullRecordedEvents());
     }
 
+    [Fact]
+    public void SubscribeStudent_AlreadyEnrolled_ThrowsInvalidOperationException()
+    {
+        var aggregate = Aggregate.Reconstitute([
+            MakeEvent(new CourseCreatedEvent(_courseId, "Math 101", "Basic maths", 10), position: 1),
+            MakeEvent(new StudentEnrolledToCourseEvent(_courseId, _studentId), position: 2)
+        ]);
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            (Action)(() => aggregate.SubscribeStudent(_studentId)));
+
+        Assert.Contains("already subscribed", ex.Message);
+    }
+
+    [Fact]
+    public void SubscribeStudent_AlreadyEnrolled_DoesNotRecordEvent()
+    {
+        var aggregate = Aggregate.Reconstitute([
+            MakeEvent(new CourseCreatedEvent(_courseId, "Math 101", "Basic maths", 10), position: 1),
+            MakeEvent(new StudentEnrolledToCourseEvent(_courseId, _studentId), position: 2)
+        ]);
+
+        Assert.Throws<InvalidOperationException>(
+            (Action)(() => aggregate.SubscribeStudent(_studentId)));
+
+        Assert.Empty(aggregate.PullRecordedEvents());
+    }
+
     // â”€â”€ PullRecordedEvents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     [Fact]

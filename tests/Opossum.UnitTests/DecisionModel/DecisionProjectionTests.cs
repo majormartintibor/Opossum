@@ -291,4 +291,145 @@ public class DecisionProjectionTests
     }
 
     #endregion
+
+    #region TimeProvider constructor overload
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private static SequencedEvent MakeTimestampedEvent(IEvent payload, DateTimeOffset timestamp, long position = 1) =>
+        new()
+        {
+            Position = position,
+            Event = new DomainEvent
+            {
+                EventType = payload.GetType().Name,
+                Event = payload,
+                Tags = []
+            },
+            Metadata = new Opossum.Core.Metadata { Timestamp = timestamp }
+        };
+
+    [Fact]
+    public void TimeProviderOverload_NullQuery_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new DecisionProjection<bool>(false, null!, (s, _, _) => s));
+    }
+
+    [Fact]
+    public void TimeProviderOverload_NullApply_ThrowsArgumentNullException()
+    {
+        Assert.Throws<ArgumentNullException>(() =>
+            new DecisionProjection<bool>(false, AnyQuery(), (Func<bool, SequencedEvent, TimeProvider, bool>)null!));
+    }
+
+    [Fact]
+    public void TimeProviderOverload_NullTimeProvider_DefaultsToSystemTimeProvider()
+    {
+        // The apply delegate must be called (no NullReferenceException) when timeProvider is null
+        var called = false;
+        var projection = new DecisionProjection<bool>(
+            initialState: false,
+            query: AnyQuery(),
+            apply: (_, _, tp) =>
+            {
+                called = true;
+                Assert.NotNull(tp);
+                return true;
+            },
+            timeProvider: null);
+
+        projection.Apply(false, MakeSequencedEvent(new TestEvent("x")));
+
+        Assert.True(called);
+    }
+
+    [Fact]
+    public void TimeProviderOverload_CustomTimeProvider_IsPassedToApply()
+    {
+        var fixedTime = new DateTimeOffset(2025, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        var tp = new FixedTimeProvider(fixedTime);
+        DateTimeOffset? capturedNow = null;
+
+        var projection = new DecisionProjection<bool>(
+            initialState: false,
+            query: AnyQuery(),
+            apply: (_, _, provider) =>
+            {
+                capturedNow = provider.GetUtcNow();
+                return true;
+            },
+            timeProvider: tp);
+
+        projection.Apply(false, MakeSequencedEvent(new TestEvent("x")));
+
+        Assert.Equal(fixedTime, capturedNow);
+    }
+
+    [Fact]
+    public void TimeProviderOverload_WithinGracePeriod_ReturnsNewState()
+    {
+        var eventTime = new DateTimeOffset(2025, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        var gracePeriod = TimeSpan.FromMinutes(30);
+        // "now" is 5 minutes after the event — within grace
+        var tp = new FixedTimeProvider(eventTime + TimeSpan.FromMinutes(5));
+
+        var projection = new DecisionProjection<bool>(
+            initialState: false,
+            query: AnyQuery(),
+            apply: (_, evt, provider) =>
+            {
+                var age = provider.GetUtcNow() - evt.Metadata.Timestamp;
+                return age <= gracePeriod;
+            },
+            timeProvider: tp);
+
+        var evt = MakeTimestampedEvent(new TestEvent("priceChanged"), eventTime);
+        var result = projection.Apply(projection.InitialState, evt);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void TimeProviderOverload_AfterGracePeriodExpired_ReturnsOldState()
+    {
+        var eventTime = new DateTimeOffset(2025, 6, 1, 12, 0, 0, TimeSpan.Zero);
+        var gracePeriod = TimeSpan.FromMinutes(30);
+        // "now" is 2 hours after the event — grace period expired
+        var tp = new FixedTimeProvider(eventTime + TimeSpan.FromHours(2));
+
+        var projection = new DecisionProjection<bool>(
+            initialState: false,
+            query: AnyQuery(),
+            apply: (_, evt, provider) =>
+            {
+                var age = provider.GetUtcNow() - evt.Metadata.Timestamp;
+                return age <= gracePeriod;
+            },
+            timeProvider: tp);
+
+        var evt = MakeTimestampedEvent(new TestEvent("priceChanged"), eventTime);
+        var result = projection.Apply(projection.InitialState, evt);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void TimeProviderOverload_InitialStateAndQueryAccessible()
+    {
+        var query = Query.FromEventTypes("TestEvent");
+        var projection = new DecisionProjection<int>(
+            initialState: 42,
+            query: query,
+            apply: (s, _, _) => s,
+            timeProvider: null);
+
+        Assert.Equal(42, projection.InitialState);
+        Assert.Same(query, projection.Query);
+    }
+
+    #endregion
 }

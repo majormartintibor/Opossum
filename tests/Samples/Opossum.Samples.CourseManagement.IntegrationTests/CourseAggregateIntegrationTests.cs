@@ -166,6 +166,50 @@ public class CourseAggregateIntegrationTests
         Assert.Contains("fully booked", body, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task SubscribeStudent_StudentAtTierLimit_ReturnsBadRequestAsync()
+    {
+        // Students start on the Basic tier, which allows a maximum of 2 course enrollments.
+        // This test verifies that the aggregate pattern now enforces the cross-aggregate
+        // tier-limit invariant via StudentAggregate — exactly mirroring the DCB approach.
+        var studentId = await CreateStudentAsync();
+        var course1 = await CreateCourseAsync(capacity: 10);
+        var course2 = await CreateCourseAsync(capacity: 10);
+        var course3 = await CreateCourseAsync(capacity: 10);
+
+        // Fill the 2-course Basic tier limit
+        var r1 = await SubscribeStudentAsync(course1, studentId);
+        Assert.Equal(HttpStatusCode.Created, r1.StatusCode);
+        var r2 = await SubscribeStudentAsync(course2, studentId);
+        Assert.Equal(HttpStatusCode.Created, r2.StatusCode);
+
+        // Third enrollment must be rejected by the student tier-limit guard
+        var response = await SubscribeStudentAsync(course3, studentId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("enrollment limit", body, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task SubscribeStudent_AlreadySubscribed_ReturnsBadRequestAsync()
+    {
+        var courseId = await CreateCourseAsync(capacity: 10);
+        var studentId = await CreateStudentAsync();
+
+        // First subscription succeeds
+        await SubscribeStudentAsync(courseId, studentId);
+
+        // Second attempt for the same student + course must be rejected
+        var response = await SubscribeStudentAsync(courseId, studentId);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Contains("already subscribed", body, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task<Guid> CreateCourseAsync(int capacity = 30)

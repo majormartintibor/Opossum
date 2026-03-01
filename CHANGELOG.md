@@ -9,9 +9,141 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0-preview.4] - Unreleased
+
+### Added
+
+- **`TimeProvider` constructor overload in `DecisionProjection<TState>`** — a new constructor
+  overload accepts `Func<TState, SequencedEvent, TimeProvider, TState>` plus an optional
+  `TimeProvider?` parameter (defaults to `TimeProvider.System`). Enables time-dependent fold
+  functions to be unit-tested without external packages by injecting a `FixedTimeProvider`.
+  This is a purely additive, non-breaking change; all existing projections compile without
+  modification.
+
+- **N-ary `BuildDecisionModelAsync` overload** — new
+  `BuildDecisionModelAsync<TState>(IReadOnlyList<IDecisionProjection<TState>>, CancellationToken)`
+  extension method on `IEventStore`. Issues a single `ReadAsync` call for a runtime-variable
+  list of homogeneous projections and returns `(IReadOnlyList<TState> States, AppendCondition)`.
+  Enables the DCB runtime-variable-N pattern (e.g. shopping cart) as a first-class library
+  feature. Throws `ArgumentException` on empty list. Fully covered by unit and integration tests.
+
+- **Dynamic Course Book Price feature in `Opossum.Samples.CourseManagement`** — implements the
+  DCB "Dynamic Product Price" example (https://dcb.events/examples/dynamic-product-price/)
+  adapted to Course Books:
+  - **F1 — Single book, fixed price**: `PurchaseCourseBookCommand` uses
+    `PriceWithGracePeriod` decision projection; displayed price must match stored price.
+  - **F2 — Grace period**: `CourseBookPriceProjections.PriceWithGracePeriod(bookId, timeProvider?)`
+    uses the new `TimeProvider` constructor overload — within 30 minutes of a price change
+    both the old and new price are accepted.
+  - **F3 — Shopping cart**: `OrderCourseBooksCommand` uses the new N-ary
+    `BuildDecisionModelAsync` overload — one projection per cart item, one event-store read,
+    one `AppendCondition` spanning all books.
+  - Four new events: `CourseBookDefinedEvent`, `CourseBookPriceChangedEvent`,
+    `CourseBookPurchasedEvent`, `CourseBooksOrderedEvent`.
+  - `CourseBookPriceState` record with `IsValidPrice(decimal)` business method.
+  - `CourseBookPriceProjections`: `CurrentPrice`, `PriceWithGracePeriod`, `BookExists`.
+  - Two read-side projections: `CourseBookCatalogProjection` and
+    `CourseBookOrderHistoryProjection`.
+  - Six API endpoints under the **"Course Books (Dynamic Price)"** tag:
+    `POST /course-books`, `PATCH /course-books/{id}/price`,
+    `POST /course-books/{id}/purchase`, `POST /course-books/order`,
+    `GET /course-books`, `GET /course-books/orders`.
+  - 18 unit tests (library + sample projections) and 14 integration tests covering all
+    three features, admin endpoint projection counts, and concurrency guards.
+
+- **`docs/analysis/dynamic-course-book-price-feasibility.md`** — full feasibility analysis
+  and implementation plan for the DCB "Dynamic Product Price" example adapted to Course Books.
+  Documents both library gaps (time injection, N-ary projections) and their resolution.
+
+---
+
+## [0.4.0-preview.3] - Unreleased
+
+### Added
+- **Exam Registration Token feature in `Opossum.Samples.CourseManagement`** — implements the
+  DCB "Opt-In Token" pattern (https://dcb.events/examples/opt-in-token/).
+  - Three new events: `ExamRegistrationTokenIssuedEvent`, `ExamRegistrationTokenRedeemedEvent`,
+    `ExamRegistrationTokenRevokedEvent`.
+  - `ExamTokenStatus` enum (`NotIssued | Issued | Revoked | Redeemed`) and `ExamTokenState`
+    record that carry both the lifecycle status and the `ExamId` in a single projection fold.
+  - `ExamRegistrationTokenProjections` with `TokenStatus(tokenId)` and `CourseExists(courseId)`
+    factory methods — the token-scoped query replaces an entire "valid tokens" read model.
+  - Three command handlers: `IssueExamRegistrationTokenCommandHandler` (unconditional append
+    guarded by `CourseExists`), `RedeemExamRegistrationTokenCommandHandler` (wrapped in
+    `ExecuteDecisionAsync` for retry), `RevokeExamRegistrationTokenCommandHandler`.
+  - Three API endpoints: `POST /exams/{examId}/registration-tokens`,
+    `POST /exams/registration-tokens/{tokenId}/redeem`,
+    `DELETE /exams/registration-tokens/{tokenId}`.
+  - 13 unit tests (pure in-memory projection folds) and 10 integration tests (all scenarios
+    from the DCB spec: issue, redeem, redeem-unknown, redeem-already-used, revoke,
+    redeem-revoked, revoke-already-redeemed).
+- **Full DCB examples coverage analysis** — all 7 examples from https://dcb.events/examples/
+  mapped against `Opossum` and `Opossum.Samples.CourseManagement`.
+- **`docs/analysis/course-subscriptions-feasibility.md`** — documents the mapping of the
+  DCB "Course Subscriptions" example to the existing `CourseEnrollment` feature, including
+  the three-projection decision model, domain enrichment (subscription tiers), and the
+  second implementation via the Event-Sourced Aggregate pattern.
+- **`docs/analysis/unique-username-feasibility.md`** — documents the mapping of the DCB
+  "Unique Username" example to student email uniqueness in `StudentRegistration`. Explains
+  why the intentional use of the raw DCB API (direct `ReadAsync` + `AppendCondition`) is a
+  valid alternative to `BuildDecisionModelAsync`, and preserves both styles in the sample.
+- **`docs/analysis/invoice-number-feasibility.md`** — documents the mapping of the DCB
+  "Invoice Number" example to `InvoiceCreation`, including the `ReadLastAsync` primitive,
+  the global (tag-free) consistency boundary, and the bootstrap-race guard.
+- **`docs/analysis/opt-in-token-feasibility.md`** — feasibility analysis and full
+  implementation plan for the DCB "Opt-In Token" example. Domain adaptation: Course
+  Enrollment Token (instructor issues a single-use invitation token; student redeems it to
+  enroll). Demonstrates DCB as a read-model replacement — no persistent token projection
+  needed for validation. Includes optional revocation extension, 7-step implementation
+  order, and open questions for the implementation session.
+
+---
+
 ## [0.4.0-preview.2] - Unreleased
 
 ### Added
+- **`StudentAggregate` and `StudentAggregateRepository`** in `Opossum.Samples.CourseManagement`
+  — a second Event-Sourced Aggregate alongside `CourseAggregate`, giving the sample two
+  complete, single-responsibility aggregates each backed by their own repository.
+- **`CourseEnrollmentService`** domain service — coordinates `CourseAggregate` and
+  `StudentAggregate` to enforce all three enrollment invariants (course capacity, student
+  tier limit, duplicate enrollment) in the Aggregate pattern approach. Two independent
+  repository loads are safe because store positions are globally monotonically increasing;
+  the compound `AppendCondition` uses `MAX(course.Version, student.Version)` as its
+  watermark. `CourseAggregateRepository.SaveAsync` accepts an optional `AppendCondition`
+  override so the domain service can supply the compound condition without either repository
+  needing to know about the other aggregate.
+- **`docs/analysis/aggregate-vs-dcb-comparison.md`** — full side-by-side analysis of the
+  DCB Decision Model vs Event-Sourced Aggregate pattern for cross-entity invariant
+  enforcement, including the two-independent-reads safety proof and an asset count table.
+- **2 new integration tests** for the aggregate enrollment endpoint: tier-limit rejection
+  and duplicate-enrollment rejection.
+- **9 new unit tests** for `StudentAggregate` (reconstitution, tier folding, limit
+  computation) and 2 new unit tests for `CourseAggregate.SubscribeStudent` (already-enrolled
+  guard).
+
+- **Course Announcement feature in `Opossum.Samples.CourseManagement`** — implements the DCB
+  "Prevent Record Duplication" pattern from <https://dcb.events/examples/prevent-record-duplication/>.
+  Two new endpoint groups under the **"Course Announcement (Idempotency Pattern)"** Scalar tag:
+  - `POST /courses/{courseId}/announcements` — post an announcement with a client-generated
+    idempotency token; re-submission with the same token is detected and rejected before any
+    event is appended.
+  - `POST /courses/{courseId}/announcements/{idempotencyToken}/retract` — retract an
+    announcement; stores a `CourseAnnouncementRetractedEvent` carrying the original token,
+    which frees the token for reuse (the `IdempotencyTokenWasUsed` projection folds
+    `Posted → true`, then `Retracted → false`, so no handler changes are required).
+  The feature demonstrates that idempotency can be enforced via a tag-scoped Decision Model
+  projection without any domain-level uniqueness constraint — the token is the sole guard.
+  Includes `CourseAnnouncementProjections` (`CourseExists` + `IdempotencyTokenWasUsed`) and
+  `CourseAnnouncementRetractionProjection` (`RetractableAnnouncement`).
+- **13 unit tests** in `Opossum.Samples.CourseManagement.UnitTests` covering all projection
+  initial states, query tag scoping, apply logic, and the full `Post → Retract → Post` token
+  reuse cycle — no I/O required.
+- **9 integration tests** in `Opossum.Samples.CourseManagement.IntegrationTests` covering
+  first post, re-submission detection, non-existent course, retraction, double retraction,
+  and both same-token and new-token re-post after retraction.
+- **README section "Idempotency Tokens — Prevent Record Duplication"** added under
+  "Decision Model Projections" documenting the pattern with a self-contained code example.
 - **Event-Sourced Aggregate example in `Opossum.Samples.CourseManagement`** — implements the
   DCB aggregate pattern from <https://dcb.events/examples/event-sourced-aggregate/#dcb-approach>
   using Opossum's existing API. Three new endpoints under the **"Aggregate (Event-Sourced)"**
