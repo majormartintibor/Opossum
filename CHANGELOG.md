@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+- **README.md comprehensive update** — fully documents all 7 DCB examples (https://dcb.events/examples/)
+  implemented in the sample app:
+  - Added **DCB Examples Coverage** table mapping all examples to sample locations
+  - Added **Consecutive Sequences — Invoice Numbers** section documenting the `ReadLastAsync`
+    pattern for gap-free numbering
+  - Added **Dynamic Product Price — Course Books** section documenting the `TimeProvider`
+    constructor overload and N-ary `BuildDecisionModelAsync` overload (shopping cart)
+  - Added **Opt-In Token — Server-Generated Single-Use Tokens** section documenting the enum
+    lifecycle projection and event store as token registry
+  - Added **OpenTelemetry** section documenting `OpossumTelemetry.ActivitySourceName` and
+    traced operations (`EventStore.Append`, `EventStore.Read`, `EventStore.ReadLast`,
+    `Projection.Rebuild`)
+  - Updated **API Reference**: `IEventStore` now shows `ReadLastAsync`; Extension Methods
+    show N-ary `BuildDecisionModelAsync` and metadata builder methods (`WithCorrelationId`,
+    `WithCausationId`); Query Building shows `Query.FromEventTypes()` and `Query.FromTags()`
+  - Added **`CommandResult<T>`** documentation in the API Reference
+  - Clarified distinction between client-generated idempotency tokens and server-generated
+    Opt-In tokens throughout
+
 ---
 
 ## [0.4.0-preview.4] - Unreleased
