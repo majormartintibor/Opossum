@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0-preview.2] - Unreleased
 
 ### Added
+- **Event-Sourced Aggregate example in `Opossum.Samples.CourseManagement`** — implements the
+  DCB aggregate pattern from <https://dcb.events/examples/event-sourced-aggregate/#dcb-approach>
+  using Opossum's existing API. Three new endpoints under the **"Aggregate (Event-Sourced)"**
+  Scalar tag (`POST /courses/aggregate`, `PATCH /courses/aggregate/{id}/capacity`,
+  `POST /courses/aggregate/{id}/subscriptions`) demonstrate `CourseAggregate` (pure C#,
+  no Opossum machinery) and `CourseAggregateRepository` (tag-scoped `AppendCondition` as the
+  DCB optimistic lock). Reuses the existing `CourseCreatedEvent`,
+  `CourseStudentLimitModifiedEvent`, and `StudentEnrolledToCourseEvent` — both approaches
+  share a single unified event log. The sample is a living side-by-side comparison of the
+  DCB Decision Model pattern and the Event-Sourced Aggregate pattern; pick one for a real
+  application.
+
 - **`ReadLastBenchmarks`** — new BenchmarkDotNet suite in `Opossum.BenchmarkTests` covering
   `ReadLastAsync` at three store scales (100 / 1K / 10K events) for event-type queries,
   tag queries, and `Query.All()`. Validates the single-file-read invariant and surfaces the

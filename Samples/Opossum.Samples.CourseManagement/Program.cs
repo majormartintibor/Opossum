@@ -2,6 +2,7 @@ using Opossum.DependencyInjection;
 using Opossum.Exceptions;
 using Opossum.Mediator;
 using Opossum.Projections;
+using Opossum.Samples.CourseManagement.CourseAggregate;
 using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.CourseDetails;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
@@ -78,6 +79,15 @@ builder.Services.AddOpossum(options =>
 
 // Add Problem Details support (RFC 7807)
 builder.Services.AddProblemDetails();
+
+// ============================================================================
+// AGGREGATE PATTERN SUPPORT
+// ============================================================================
+// CourseAggregateRepository is a plain class that wraps IEventStore with the
+// DCB load → command → save pattern described at:
+// https://dcb.events/examples/event-sourced-aggregate/#dcb-approach
+// Registered as scoped — one instance per HTTP request.
+builder.Services.AddScoped<CourseAggregateRepository>();
 
 // Add OpenAPI with native .NET support (respects JsonStringEnumConverter)
 builder.Services.AddOpenApi();
@@ -200,6 +210,15 @@ app.MapModifyCourseStudentLimitEndpoint();
 app.MapEnrollStudentToCourseEndpoint();
 app.MapCreateInvoiceEndpoint();
 app.MapGetInvoicesEndpoint();
+
+// ============================================================================
+// AGGREGATE ENDPOINTS — Event-Sourced Aggregate pattern (alternative to DCB Decision Model)
+// ============================================================================
+// These endpoints showcase the same course domain using an Event-Sourced Aggregate
+// instead of Decision Model projections. Both write to the same event log.
+// You do not need both in a real application — see CourseAggregateEndpoints.cs.
+// ============================================================================
+app.MapCourseAggregateEndpoints();
 
 // ============================================================================
 // ADMIN ENDPOINTS - Projection Management

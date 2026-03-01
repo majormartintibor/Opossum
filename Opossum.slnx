@@ -26,6 +26,7 @@
   <Folder Name="/docs/analysis/">
     <File Path="docs/analysis/dcb-compliance-analysis.md" />
     <File Path="docs/analysis/dotnet-eventsourcing-comparison.md" />
+    <File Path="docs/analysis/event-sourced-aggregate-feasibility.md" />
     <File Path="docs/analysis/throughput-research-and-improvement-paths.md" />
     <File Path="docs/analysis/use-case-fit-post-adr005.md" />
   </Folder>

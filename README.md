@@ -21,6 +21,7 @@ Opossum turns your file system into a fully functional event store with projecti
 - [How Events Are Stored](#-how-events-are-stored)
 - [API Reference](#-api-reference)
 - [Full Example](#-full-example)
+- [Event-Sourced Aggregate — Alternative Write-Side Pattern](#-event-sourced-aggregate--alternative-write-side-pattern)
 - [Performance](#-performance)
 - [Known Limitations](#️-known-limitations)
 
@@ -1043,6 +1044,169 @@ public sealed class EnrollStudentToCourseCommandHandler
 **Why this matters:** Three separate business rules — spanning two independent tag-based queries (course events tagged with `courseId`, student events tagged with `studentId`) — are enforced with a single read and a single atomic append condition. There are no distributed locks, no sagas, and no two-phase commits. The DCB pattern handles concurrent writes through optimistic concurrency with automatic retry built in to `ExecuteDecisionAsync`.
 
 See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) for the full working application including read-side projections and API endpoints.
+
+---
+
+## 🔄 Event-Sourced Aggregate — Alternative Write-Side Pattern
+
+> **This is an alternative to the Decision Model pattern shown above — not a required addition.**
+> Pick one style and apply it consistently. The sample includes both so you can compare them
+> side by side on the same domain.
+
+Opossum also supports the classic [Event-Sourced Aggregate](https://dcb.events/examples/event-sourced-aggregate/#dcb-approach) pattern. Instead of stateless ephemeral projections, all course state is encapsulated in a reconstituted aggregate object. The DCB insight is that **the repository replaces the traditional named-stream lock with a tag-scoped `AppendCondition`** — no stream concept needed.
+
+### Choosing Between the Two Patterns
+
+| | DCB Decision Model | Event-Sourced Aggregate |
+|---|---|---|
+| **State lives in** | Ephemeral in-memory fold, discarded after each command | Reconstituted aggregate object |
+| **Invariants span** | Multiple entity types in one read (e.g. course capacity AND student tier) | One entity type (course only) |
+| **Retry handled by** | `ExecuteDecisionAsync` (automatic exponential backoff) | Manual retry loop in the caller |
+| **Concurrency boundary** | Union of all projection queries | All events for a single `courseId` tag |
+| **Best for** | Cross-cutting business rules | Rich domain models with many entity-internal invariants |
+
+### How the Aggregate Repository Works
+
+```csharp
+// Load: query by tag — no named stream needed
+public async Task<CourseAggregate?> LoadAsync(Guid courseId)
+{
+    var query = Query.FromTags(new Tag("courseId", courseId.ToString()));
+    var events = await eventStore.ReadAsync(query);
+
+    if (events.Length == 0)
+        return null;                            // course does not exist
+
+    return CourseAggregate.Reconstitute(events); // replay events into state
+}
+
+// Save: append with the DCB tag-scoped optimistic lock
+public async Task SaveAsync(CourseAggregate aggregate, CancellationToken ct = default)
+{
+    var query = Query.FromTags(new Tag("courseId", aggregate.CourseId.ToString()));
+
+    var condition = new AppendCondition
+    {
+        FailIfEventsMatch = query,
+        // null when Version == 0 (new): reject if ANY course event already exists.
+        // Otherwise: reject only if a new event appeared after our last read.
+        AfterSequencePosition = aggregate.Version == 0 ? null : aggregate.Version
+    };
+
+    var newEvents = aggregate.PullRecordedEvents()
+        .Select(e => (NewEvent)(e.ToDomainEvent()
+            .WithTag("courseId", aggregate.CourseId.ToString())
+            .WithTimestamp(DateTimeOffset.UtcNow)))
+        .ToArray();
+
+    // Throws AppendConditionFailedException on conflict — reload and retry.
+    await eventStore.AppendAsync(newEvents, condition, ct);
+}
+```
+
+### The Aggregate Class (pure C#, no Opossum machinery)
+
+```csharp
+public sealed class CourseAggregate
+{
+    private readonly List<IEvent> _recordedEvents = [];
+
+    public Guid CourseId { get; private set; }
+    public int Capacity { get; private set; }
+    public int EnrollmentCount { get; private set; }
+
+    // Global store position of the last event seen — used as AfterSequencePosition.
+    // Note: this is store-wide monotonic, not a per-aggregate counter.
+    public long Version { get; private set; }
+
+    public static CourseAggregate Create(Guid id, string name, string description, int maxStudents)
+    {
+        var instance = new CourseAggregate();
+        instance.RecordEvent(new CourseCreatedEvent(id, name, description, maxStudents));
+        return instance;
+    }
+
+    public static CourseAggregate Reconstitute(SequencedEvent[] events)
+    {
+        var instance = new CourseAggregate();
+        foreach (var e in events)
+        {
+            instance.Apply(e.Event.Event);
+            instance.Version = e.Position;
+        }
+        return instance;
+    }
+
+    public void ChangeCapacity(int newCapacity)
+    {
+        if (newCapacity == Capacity)
+            throw new InvalidOperationException($"Course already has capacity {newCapacity}.");
+        if (newCapacity < EnrollmentCount)
+            throw new InvalidOperationException($"Can't set capacity below current enrollment.");
+
+        RecordEvent(new CourseStudentLimitModifiedEvent(CourseId, newCapacity));
+    }
+
+    public void SubscribeStudent(Guid studentId)
+    {
+        if (EnrollmentCount >= Capacity)
+            throw new InvalidOperationException("Course is already fully booked.");
+
+        RecordEvent(new StudentEnrolledToCourseEvent(CourseId, studentId));
+    }
+
+    public IEvent[] PullRecordedEvents()
+    {
+        var events = _recordedEvents.ToArray();
+        _recordedEvents.Clear();
+        return events;
+    }
+
+    private void RecordEvent(IEvent @event) { _recordedEvents.Add(@event); Apply(@event); }
+
+    private void Apply(IEvent @event)
+    {
+        switch (@event)
+        {
+            case CourseCreatedEvent c:   CourseId = c.CourseId; Capacity = c.MaxStudentCount; break;
+            case CourseStudentLimitModifiedEvent m: Capacity = m.NewMaxStudentCount; break;
+            case StudentEnrolledToCourseEvent:      EnrollmentCount++; break;
+        }
+    }
+}
+```
+
+### Retry Pattern in the Endpoint
+
+```csharp
+// Reload → reapply → retry on concurrent write; last attempt propagates → HTTP 409
+for (var attempt = 0; attempt < MaxRetries; attempt++)
+{
+    var aggregate = await repository.LoadAsync(courseId);
+    if (aggregate is null)
+        return Results.NotFound();
+
+    try
+    {
+        aggregate.ChangeCapacity(request.NewCapacity);
+        await repository.SaveAsync(aggregate);
+        return Results.Ok();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);   // invariant violation — no retry
+    }
+    catch (AppendConditionFailedException) when (attempt < MaxRetries - 1)
+    {
+        // concurrent write — reload fresh state and try again
+    }
+}
+```
+
+The full implementation lives in
+[`Samples/Opossum.Samples.CourseManagement/CourseAggregate/`](Samples/Opossum.Samples.CourseManagement/CourseAggregate/).
+Aggregate endpoints are tagged **"Aggregate (Event-Sourced)"** in the Scalar UI to distinguish
+them from the Decision Model endpoints tagged **"Commands"**.
 
 ---
 
