@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   share a single unified event log. The sample is a living side-by-side comparison of the
   DCB Decision Model pattern and the Event-Sourced Aggregate pattern; pick one for a real
   application.
+- **22 unit tests for `CourseAggregate`** in `Opossum.Samples.CourseManagement.UnitTests`
+  covering all factories, business methods, recorded-event accumulation/flushing, and version
+  semantics — no I/O required.
+- **9 integration tests for the aggregate endpoints** in
+  `Opossum.Samples.CourseManagement.IntegrationTests`.
 
 - **`ReadLastBenchmarks`** — new BenchmarkDotNet suite in `Opossum.BenchmarkTests` covering
   `ReadLastAsync` at three store scales (100 / 1K / 10K events) for event-type queries,
