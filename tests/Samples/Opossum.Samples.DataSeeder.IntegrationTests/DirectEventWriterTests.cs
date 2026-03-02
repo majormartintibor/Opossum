@@ -145,6 +145,34 @@ public sealed class DirectEventWriterTests : IDisposable
         Assert.Equal(5L, doc.RootElement.GetProperty("EventCount").GetInt64());
     }
 
+    // ── Cross-process lock file ───────────────────────────────────────────────
+
+    [Fact]
+    public async Task WriteAsync_CreatesStoreLockFile_ForCrossProcessCoordinationAsync()
+    {
+        await new DirectEventWriter().WriteAsync(CreateStudentEvents(1), _contextPath);
+
+        var lockFilePath = Path.Combine(_contextPath, ".store.lock");
+        Assert.True(File.Exists(lockFilePath),
+            ".store.lock must be created by DirectEventWriter so the seeded database is " +
+            "structurally identical to one initialised through the normal IEventStore path.");
+    }
+
+    [Fact]
+    public async Task WriteAsync_DoesNotOverwrite_ExistingStoreLockFileAsync()
+    {
+        // Pre-create a lock file with known content (simulates a file left by a prior process).
+        var lockFilePath = Path.Combine(_contextPath, ".store.lock");
+        Directory.CreateDirectory(_contextPath);
+        await File.WriteAllTextAsync(lockFilePath, "sentinel");
+
+        await new DirectEventWriter().WriteAsync(CreateStudentEvents(1), _contextPath);
+
+        // Content must be unchanged — the writer must not truncate an existing lock file.
+        var content = await File.ReadAllTextAsync(lockFilePath);
+        Assert.Equal("sentinel", content);
+    }
+
     // ── Append semantics ──────────────────────────────────────────────────────
 
     [Fact]

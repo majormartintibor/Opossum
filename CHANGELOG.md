@@ -17,6 +17,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `EventStoreWriter` and `SeedPlan.RunAsync` also accept the parameter (ignored when `null`)
   so the interface stays backward-compatible with all existing tests.
 
+### Fixed
+- **DataSeeder: `.store.lock` file missing after seeding** — `DirectEventWriter` bypasses the
+  normal `IEventStore` / `CrossProcessLockManager` path, so the cross-process lock sentinel file
+  was never created. The seeded database would work correctly (the first `IEventStore` lock
+  acquisition creates the file via `FileMode.OpenOrCreate`), but the store looked structurally
+  incomplete. `DirectEventWriter.WriteAsync` now creates an empty `.store.lock` if it does not
+  already exist, making the seeded layout identical to one produced through the normal
+  initialisation path.
+
 ### Changed
 - **Admin rebuild endpoint now defaults to `forceAll=true`** —
   `POST /admin/projections/rebuild` previously defaulted to `forceAll=false`, which only

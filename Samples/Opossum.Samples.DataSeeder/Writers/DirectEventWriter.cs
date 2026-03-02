@@ -58,6 +58,15 @@ public sealed class DirectEventWriter : IEventWriter
         Directory.CreateDirectory(Path.Combine(contextPath, "Indices", "EventType"));
         Directory.CreateDirectory(Path.Combine(contextPath, "Indices", "Tags"));
 
+        // Create the cross-process lock sentinel if absent.
+        // CrossProcessLockManager uses FileMode.OpenOrCreate, so the file is created lazily on
+        // the first IEventStore lock acquisition. DirectEventWriter bypasses that path entirely,
+        // leaving the file missing after seeding. Creating it here makes the seeded store
+        // structurally identical to one produced by the normal IEventStore initialisation path.
+        var lockFilePath = Path.Combine(contextPath, ".store.lock");
+        if (!File.Exists(lockFilePath))
+            await File.WriteAllBytesAsync(lockFilePath, [], cancellationToken).ConfigureAwait(false);
+
         // Build the complete in-memory index map before any I/O — O(total tags) time.
         var indexMap = BuildIndexMap(events, contextPath, startOffset);
 
