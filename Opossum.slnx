@@ -209,5 +209,7 @@
   <Folder Name="/tests/Samples/">
     <Project Path="tests/Samples/Opossum.Samples.CourseManagement.IntegrationTests/Opossum.Samples.CourseManagement.IntegrationTests.csproj" />
     <Project Path="tests/Samples/Opossum.Samples.CourseManagement.UnitTests/Opossum.Samples.CourseManagement.UnitTests.csproj" />
+    <Project Path="tests/Samples/Opossum.Samples.DataSeeder.IntegrationTests/Opossum.Samples.DataSeeder.IntegrationTests.csproj" />
+    <Project Path="tests/Samples/Opossum.Samples.DataSeeder.UnitTests/Opossum.Samples.DataSeeder.UnitTests.csproj" />
   </Folder>
 </Solution>

@@ -1,429 +1,258 @@
-# Opossum Baseline Data Seeder
+# Opossum Data Seeder
 
 ## Overview
 
-The **Opossum.Samples.DataSeeder** is a console application that generates realistic baseline data for testing the Opossum event sourcing library at production scale. It simulates a 1-year operational history of a private school course management system.
+The **Opossum.Samples.DataSeeder** is a high-performance console application that generates realistic baseline data for the Opossum event sourcing sample at any scale — from a quick ~620-event exploration dataset up to a ~5 million-event production-scale load test.
 
-## Purpose
+It covers all nine event-producing DCB-pattern examples implemented in `Opossum.Samples.CourseManagement`, making every Swagger endpoint immediately exercisable after seeding.
 
-After completing the sample application development, this seeder enables:
-- **Performance Testing**: Evaluate query performance with ~2,295 events
-- **Index Validation**: Verify EventType and Tag indices work correctly at scale
-- **Ledger Validation**: Ensure sequence position tracking remains consistent
-- **Concurrency Testing**: Test DCB (Dynamic Consistency Boundary) pattern with realistic data
-- **Baseline Dataset**: Provide reproducible test data for integration tests
+---
 
-## Data Model
-
-### Entities Created
-
-| Entity | Count | Event Types Generated |
-|--------|-------|----------------------|
-| **Students** | 350 | StudentRegisteredEvent (350) |
-| **Courses** | 75 | CourseCreatedEvent (75) |
-| **Tier Upgrades** | ~105 (30%) | StudentSubscriptionUpdatedEvent (~105) |
-| **Capacity Changes** | ~15 (20%) | CourseStudentLimitModifiedEvent (~15) |
-| **Enrollments** | ~1,750 (avg 5/student) | StudentEnrolledToCourseEvent (~1,750) |
-
-**Total Events: ~2,295**
-
-### Temporal Distribution
-
-The seeder creates events with realistic timestamps simulating a 1-year operational period:
-
-```
-Timeline (365 days ago → Today)
-├─ [365-180 days] Student Registrations (6-12 months ago)
-├─ [365-200 days] Course Creation (7-12 months ago)
-├─ [180-30 days]  Tier Upgrades (1-6 months ago)
-├─ [150-60 days]  Capacity Changes (2-5 months ago)
-└─ [120-1 days]   Student Enrollments (recent activity)
-```
-
-This creates:
-- Older base data (students/courses established months ago)
-- Medium-age modifications (tier upgrades, capacity changes)
-- Recent activity (enrollments in last 4 months)
-
-### Student Distribution by Tier
-
-| Tier | Percentage | Count | Max Courses |
-|------|-----------|-------|-------------|
-| Basic | 20% | 70 | 2 |
-| Standard | 40% | 140 | 4 |
-| Professional | 30% | 105 | 6 |
-| Master | 10% | 35 | 10 |
-
-### Course Distribution by Size
-
-| Size Category | Percentage | Count | Capacity Range |
-|---------------|-----------|-------|----------------|
-| Small | 27% | 20 | 10-15 students |
-| Medium | 53% | 40 | 20-30 students |
-| Large | 20% | 15 | 40-60 students |
-
-## Usage
-
-### Basic Usage (Default Settings)
+## Quick Start
 
 ```bash
 cd Samples/Opossum.Samples.DataSeeder
 dotnet run
 ```
 
-This creates:
-- 350 students
-- 75 courses
-- ~2,295 total events
-- Database at: `D:\Database\OpossumSampleApp`
-
-### Custom Configuration
-
-```bash
-# Create more data
-dotnet run -- --students 500 --courses 100
-
-# Reset database before seeding
-dotnet run -- --reset
-
-# Skip confirmation prompt (CI/automation)
-dotnet run -- --reset --no-confirm
-
-# Combine options
-dotnet run -- --students 1000 --courses 200 --reset --no-confirm
-```
-
-### Command Line Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--students <count>` | Number of students to create | 350 |
-| `--courses <count>` | Number of courses to create | 75 |
-| `--reset` | Delete existing database before seeding | false |
-| `--no-confirm` | Skip confirmation prompt | false |
-| `--help`, `-h` | Display help message | - |
-
-## Seeding Phases
-
-The seeder executes in **5 sequential phases** to create a realistic event history:
-
-### Phase 1: Student Registration
-- Creates `StudentCount` students (default: 350)
-- Generates realistic names from predefined lists
-- Creates email addresses: `{firstname}.{lastname}@school.edu`
-- Assigns tier based on distribution percentages
-- Timestamps: 6-12 months ago
-- Tags: Each event tagged with `studentId`
-
-**Progress:** Reports every 50 students
-
-### Phase 2: Course Creation
-- Creates `CourseCount` courses (default: 75)
-- Generates course names based on size category
-  - Small: Subject-based (e.g., "Mathematics", "Physics")
-  - Medium/Large: Subject + Level (e.g., "Chemistry - Level 2")
-- Assigns capacity based on size distribution
-- Timestamps: 7-12 months ago
-- Tags: Each event tagged with `courseId`
-
-**Progress:** Reports every 10 courses
-
-### Phase 3: Tier Upgrades
-- Upgrades ~30% of students to next tier
-- Students progress through tiers: Basic → Standard → Professional → Master
-- Cannot upgrade Master tier students
-- Timestamps: 1-6 months ago
-- Tags: Each event tagged with `studentId`
-
-**Purpose:** Creates multiple events per student aggregate
-
-### Phase 4: Capacity Changes
-- Modifies capacity for ~20% of courses
-- Increases/decreases capacity within size category range
-- Small: ±2 students
-- Medium: ±5 students
-- Large: ±10 students
-- Timestamps: 2-5 months ago
-- Tags: Each event tagged with `courseId`
-
-**Purpose:** Creates multiple events per course aggregate
-
-### Phase 5: Student Enrollments
-- Enrolls students in courses (avg ~5 enrollments per student)
-- Respects business rules:
-  - Student tier limits (Basic: 2, Standard: 4, Professional: 6, Master: 10)
-  - Course capacity limits
-- Tracks enrollments to prevent:
-  - Duplicate enrollments (same student in same course)
-  - Capacity violations
-  - Tier limit violations
-- Timestamps: Recent (0-120 days ago)
-- Tags: Each event tagged with both `studentId` AND `courseId`
-
-**Progress:** Reports every 100 enrollments
-
-## Expected Storage Structure
-
-After seeding completes, the database will have:
-
-```
-D:\Database\OpossumSampleApp\
-├── events\                           [2,295 files]
-│   ├── 0000000001.json              (First student)
-│   ├── 0000000002.json
-│   ├── ...
-│   └── 0000002295.json              (Last enrollment)
-│
-├── Indices\
-│   ├── EventType\                    [5 files]
-│   │   ├── StudentRegisteredEvent.json
-│   │   │   → { "Positions": [1, 2, ..., 350] }
-│   │   ├── CourseCreatedEvent.json
-│   │   │   → { "Positions": [351, 352, ..., 425] }
-│   │   ├── StudentSubscriptionUpdatedEvent.json
-│   │   │   → { "Positions": [426, ..., 530] }
-│   │   ├── CourseStudentLimitModifiedEvent.json
-│   │   │   → { "Positions": [531, ..., 545] }
-│   │   └── StudentEnrolledToCourseEvent.json
-│   │       → { "Positions": [546, ..., 2295] }
-│   │
-│   └── Tags\                         [425 files]
-│       ├── studentId_<guid1>.json   → Multiple positions
-│       ├── studentId_<guid2>.json   → Multiple positions
-│       ├── ...                       (350 student tag files)
-│       ├── courseId_<guid1>.json    → Multiple positions
-│       ├── courseId_<guid2>.json    → Multiple positions
-│       └── ...                       (75 course tag files)
-│
-└── .ledger
-    → { "LastSequencePosition": 2295, "EventCount": 2295 }
-```
-
-**Total Files Created: 2,726**
-- 2,295 event files
-- 5 EventType index files
-- 425 Tag index files (350 students + 75 courses)
-- 1 ledger file
-
-## Deterministic Randomization
-
-The seeder uses a **fixed random seed (42)** to ensure:
-- ✅ **Reproducible Results**: Same data every run
-- ✅ **Consistent Testing**: Reliable baseline for comparisons
-- ✅ **Debugging**: Easier to investigate specific scenarios
-
-You can modify the seed in `DataSeeder.cs` if needed:
-```csharp
-private readonly Random _random = new Random(42); // Change seed here
-```
-
-## Validation
-
-### Verify Seeding Success
-
-1. **Check Event Count:**
-   ```bash
-   # Count event files
-   ls D:\Database\OpossumSampleApp\events | Measure-Object
-   ```
-   Should show ~2,295 files
-
-2. **Check Ledger:**
-   ```json
-   // D:\Database\OpossumSampleApp\.ledger
-   {
-     "LastSequencePosition": 2295,
-     "EventCount": 2295
-   }
-   ```
-
-3. **Check EventType Indices:**
-   - `Indices/EventType/StudentRegisteredEvent.json` → 350 positions
-   - `Indices/EventType/CourseCreatedEvent.json` → 75 positions
-   - `Indices/EventType/StudentEnrolledToCourseEvent.json` → ~1,750 positions
-
-4. **Check Tag Indices:**
-   ```bash
-   # Count student tag files
-   ls D:\Database\OpossumSampleApp\Indices\Tags\studentId_*.json | Measure-Object
-   # Should show 350 files
-
-   # Count course tag files
-   ls D:\Database\OpossumSampleApp\Indices\Tags\courseId_*.json | Measure-Object
-   # Should show 75 files
-   ```
-
-### Query Through Sample App
-
-Test the seeded data using the sample application endpoints:
-
-```bash
-cd Samples/Opossum.Samples.CourseManagement
-dotnet run
-```
-
-**Query Endpoints:**
-- `GET /students` → Should return 350 students
-- `GET /students/{studentId}` → Should return student details
-- `GET /courses` → Should return 75 courses
-- `GET /courses/{courseId}` → Should return course details
-
-## Implementation Details
-
-### Storage Integrity
-
-The seeder uses **only the Opossum public API** (`IEventStore.AppendAsync`), ensuring:
-- ✅ All indices are correctly maintained
-- ✅ Ledger stays synchronized
-- ✅ Atomic operations are respected
-- ✅ No risk of corrupted storage
-
-See [STORAGE_ANALYSIS.md](./STORAGE_ANALYSIS.md) for detailed analysis of Opossum's storage implementation.
-
-### Event Builder Pattern
-
-All events are created using the fluent API:
-
-```csharp
-var @event = new StudentRegisteredEvent(studentId, firstName, lastName, email)
-    .ToDomainEvent()
-    .WithTag("studentId", studentId.ToString())
-    .WithTimestamp(GetRandomPastTimestamp(365, 180));
-
-await _eventStore.AppendAsync(@event);
-```
-
-This ensures:
-- Proper event metadata
-- Tag assignment for indexing
-- Custom timestamps for temporal distribution
-
-### Business Rule Compliance
-
-The seeder respects all business rules defined in the sample application:
-
-1. **Student Tier Limits:**
-   - Basic: Max 2 courses
-   - Standard: Max 4 courses
-   - Professional: Max 6 courses
-   - Master: Max 10 courses
-
-2. **Course Capacity Limits:**
-   - Cannot enroll more students than capacity
-   - Capacity modified in Phase 4 before enrollments
-
-3. **No Duplicate Enrollments:**
-   - Tracks enrollments per student-course pair
-   - Prevents same student enrolling in same course twice
-
-## Performance Characteristics
-
-### Execution Time
-
-Expected seeding time (default configuration):
-- **Phase 1 (350 students):** ~5-10 seconds
-- **Phase 2 (75 courses):** ~1-2 seconds
-- **Phase 3 (105 upgrades):** ~2-3 seconds
-- **Phase 4 (15 changes):** ~1 second
-- **Phase 5 (1,750 enrollments):** ~30-60 seconds
-
-**Total: ~40-80 seconds** (depending on disk I/O)
-
-### Disk Space
-
-Expected storage size:
-- **Event files:** ~5-10 MB (JSON, ~2-5 KB per event)
-- **Indices:** ~50-100 KB (compact JSON arrays)
-- **Total:** ~5-15 MB
-
-## Next Steps After Seeding
-
-1. **Test Query Performance:**
-   ```bash
-   cd Samples/Opossum.Samples.CourseManagement
-   dotnet run
-   # Query endpoints and measure response times
-   ```
-
-2. **Run Integration Tests:**
-   ```bash
-   cd tests/Opossum.IntegrationTests
-   dotnet test
-   ```
-
-3. **Test Concurrency:**
-   - Use enrollment endpoint with multiple concurrent requests
-   - Verify DCB retry logic handles conflicts correctly
-
-4. **Monitor Performance:**
-   - Track query response times with ~2,295 events
-   - Identify optimization opportunities if needed
-
-## Troubleshooting
-
-### "Database already exists" Error
-
-**Solution:** Use `--reset` flag:
-```bash
-dotnet run -- --reset
-```
-
-### Enrollment Phase Takes Long Time
-
-**Expected:** Phase 5 creates ~1,750 events, which can take 30-60 seconds.
-
-**Progress:** Watch console output (reports every 100 enrollments)
-
-### Different Event Count Each Run
-
-**Issue:** Random seed not fixed or configuration changed.
-
-**Solution:** Verify `DataSeeder.cs` uses fixed seed (42) and same configuration.
-
-## Configuration
-
-Default configuration in `SeedingConfiguration.cs`:
-
-```csharp
-public class SeedingConfiguration
-{
-    public string RootPath { get; set; } = @"D:\Database";
-    public int StudentCount { get; set; } = 350;
-    public int CourseCount { get; set; } = 75;
-    public bool ResetDatabase { get; set; } = false;
-    public bool RequireConfirmation { get; set; } = true;
-
-    // Distribution percentages
-    public double BasicTierPercentage { get; set; } = 0.20;     // 20%
-    public double StandardTierPercentage { get; set; } = 0.40;  // 40%
-    public double ProfessionalTierPercentage { get; set; } = 0.30; // 30%
-    public double MasterTierPercentage { get; set; } = 0.10;    // 10%
-
-    public double SmallCoursePercentage { get; set; } = 0.27;   // 27%
-    public double MediumCoursePercentage { get; set; } = 0.53;  // 53%
-    public double LargeCoursePercentage { get; set; } = 0.20;   // 20%
-
-    public int EstimatedEventCount =>
-        StudentCount +           // Phase 1: Student registrations
-        CourseCount +            // Phase 2: Course creation
-        (int)(StudentCount * 0.3) +  // Phase 3: ~30% tier upgrades
-        (int)(CourseCount * 0.2) +   // Phase 4: ~20% capacity changes
-        (int)(StudentCount * 5);     // Phase 5: ~5 enrollments/student
-}
-```
-
-## Related Documentation
-
-- [STORAGE_ANALYSIS.md](./STORAGE_ANALYSIS.md) - Deep analysis of Opossum storage implementation
-- [../Opossum.Samples.CourseManagement/API_DESIGN_PATTERNS.md](../Opossum.Samples.CourseManagement/API_DESIGN_PATTERNS.md) - API design patterns
-- [../Opossum.Samples.CourseManagement/RETRY_LOGIC_DCB.md](../Opossum.Samples.CourseManagement/RETRY_LOGIC_DCB.md) - Concurrency handling with DCB
-
-## License
-
-Part of the Opossum event sourcing library samples.
+The interactive menu guides you through preset selection, a reset prompt, and a confirmation summary before writing anything to disk.
 
 ---
 
-**Ready to Seed! 🌱**
+## Architecture
 
-Run `dotnet run` to create your baseline dataset and start testing Opossum at production scale.
+The seeder is organised in three independent layers:
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    LAYER 1: GENERATORS                       │
+│   Pure C#, no I/O.  All business invariants enforced here.   │
+│                                                              │
+│  StudentGenerator     CourseGenerator     BookGenerator      │
+│  AnnouncementGen      ExamTokenGenerator  InvoiceGenerator   │
+└───────────────────────────────┬──────────────────────────────┘
+                                │ IReadOnlyList<SeedEvent>
+                                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                   LAYER 2: ORCHESTRATOR                      │
+│   Coordinates generators, assigns positions, sorts by        │
+│   timestamp, manages cross-feature shared state.             │
+│                                                              │
+│                     SeedPlan                                 │
+└───────────────────────────────┬──────────────────────────────┘
+                                │ IReadOnlyList<SequencedSeedEvent>
+                                ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    LAYER 3: WRITER                           │
+│   I/O only — no domain logic.  Two implementations:         │
+│                                                              │
+│  DirectEventWriter  ←── default (high-performance)          │
+│  EventStoreWriter   ←── fallback (--use-event-store)        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Layer 1 — Generators
+
+Nine stateless generator classes produce `SeedEvent` lists in dependency order. Each generator reads shared state from a `SeedContext` populated by earlier generators and enforces all domain invariants in pure code — no I/O, no event-store reads.
+
+| Generator | Events produced | Key invariants enforced |
+|---|---|---|
+| `StudentGenerator` | `StudentRegisteredEvent` | Unique emails; tier distribution |
+| `TierUpgradeGenerator` | `StudentSubscriptionUpdatedEvent` | Non-Master students only |
+| `CourseGenerator` | `CourseCreatedEvent` | Unique IDs; capacity bounds |
+| `CapacityChangeGenerator` | `CourseStudentLimitModifiedEvent` | Minimum capacity of 10 |
+| `EnrollmentGenerator` | `StudentEnrolledToCourseEvent` | No duplicates; capacity; tier limit |
+| `InvoiceGenerator` | `InvoiceCreatedEvent` | Sequential numbers from counter |
+| `AnnouncementGenerator` | `CourseAnnouncementPostedEvent`, `CourseAnnouncementRetractedEvent` | Unique `AnnouncementId` + `IdempotencyToken` per announcement |
+| `ExamTokenGenerator` | `ExamRegistrationTokenIssuedEvent`, `ExamRegistrationTokenRedeemedEvent`, `ExamRegistrationTokenRevokedEvent` | Redeemed/revoked mutually exclusive; timestamps ordered correctly |
+| `CourseBookGenerator` | `CourseBookDefinedEvent`, `CourseBookPriceChangedEvent`, `CourseBookPurchasedEvent`, `CourseBooksOrderedEvent` | One book per course; `PricePaid` matches in-memory price at purchase time |
+
+### Layer 2 — SeedPlan
+
+`SeedPlan` collects all generator output into one flat list, stable-sorts by `Metadata.Timestamp`, assigns sequential 1-based positions, then hands the result to the writer.
+
+### Layer 3 — Writers
+
+**`DirectEventWriter`** (default) achieves maximum write throughput by:
+- Building all index structures in memory across the full batch
+- Writing all event JSON files in parallel (default: `Environment.ProcessorCount` threads)
+- Flushing each index file and the `.ledger` exactly **once** at the end — O(1) per-event I/O regardless of batch size
+- Appending to existing databases by reading the current ledger offset first
+
+**`EventStoreWriter`** (fallback) delegates to `IEventStore.AppendAsync`. Suitable for small datasets or when you want DCB enforcement during seeding.
+
+---
+
+## Presets
+
+| Preset | Students | Courses | Books | Invoices | Est. total events |
+|---|---|---|---|---|---|
+| **Small** | 40 | 8 | 8 | 30 | ~620 |
+| **Medium** | 7,000 | 1,400 | 1,400 | 2,500 | ~104,000 |
+| **Large** | 70,000 | 14,000 | 14,000 | 15,000 | ~1,030,000 |
+| **Prod** | 350,000 | 70,000 | 70,000 | 75,000 | ~5,150,000 |
+
+All presets use the same per-entity multipliers:
+- 3 announcements per course, ~20% retracted
+- 2 exams per course, 5 tokens per exam (~70% redeemed, ~10% revoked)
+- ~40% of books get a price change; ~20 single-book purchases per book
+- ~30% of students get a tier upgrade; ~20% of courses get a capacity change
+
+---
+
+## Interactive Console Menu
+
+When started without `--size`, the seeder presents a step-by-step menu:
+
+```
+🌱 Opossum Data Seeder
+======================
+
+Database: D:\Database\OpossumSampleApp
+
+Select a dataset size:
+  [1] Small   ~620 events       — explore the data model
+  [2] Medium  ~104 000 events   — growing business, a few months of data
+  [3] Large   ~1 030 000 events — established platform, 1-3 years of data
+  [4] Prod    ~5 150 000 events — large-scale performance testing
+
+Your choice (1-4): _
+```
+
+After selection a reset prompt and a confirmation summary are shown before any writes occur.
+
+---
+
+## CLI Flags
+
+For scripted runs (CI, benchmarks) all prompts can be bypassed:
+
+```
+Usage: dotnet run -- [flags]
+
+  --size <small|medium|large|prod>   Select a preset non-interactively
+  --reset                            Delete existing data before seeding
+  --no-confirm                       Skip all confirmation prompts
+  --use-event-store                  Use IEventStore instead of DirectEventWriter
+  --parallelism <n>                  File write threads (default: cpu count)
+  --help, -h                         Display this help message
+```
+
+**Examples:**
+
+```bash
+# CI seed for integration tests — fast, deterministic, no prompts
+dotnet run -- --size small --reset --no-confirm
+
+# Large dataset for manual performance testing
+dotnet run -- --size large --reset --no-confirm
+
+# Append a medium dataset without erasing existing data
+dotnet run -- --size medium --no-confirm
+
+# Use the EventStore writer (applies DCB enforcement, slower for large datasets)
+dotnet run -- --size small --reset --no-confirm --use-event-store
+```
+
+---
+
+## Event Catalogue
+
+The seeder produces 15 distinct event types covering all DCB-pattern examples:
+
+| Event | Tags | Timestamp window |
+|---|---|---|
+| `StudentRegisteredEvent` | `studentEmail`, `studentId` | 365–180 days ago |
+| `CourseCreatedEvent` | `courseId` | 365–200 days ago |
+| `CourseBookDefinedEvent` | `bookId`, `courseId` | 300–250 days ago |
+| `CourseBookPriceChangedEvent` | `bookId` | 200–100 days ago |
+| `StudentSubscriptionUpdatedEvent` | `studentId` | 180–30 days ago |
+| `CourseStudentLimitModifiedEvent` | `courseId` | 150–60 days ago |
+| `ExamRegistrationTokenIssuedEvent` | `examToken`, `examId`, `courseId` | 60–14 days ago |
+| `ExamRegistrationTokenRedeemedEvent` | `examToken`, `examId`, `studentId` | Issued + 1–5 days |
+| `ExamRegistrationTokenRevokedEvent` | `examToken`, `examId` | Issued + 1–3 days |
+| `CourseAnnouncementPostedEvent` | `courseId`, `idempotency` | 90–30 days ago |
+| `CourseAnnouncementRetractedEvent` | `courseId`, `idempotency` | Posted + 1–7 days |
+| `StudentEnrolledToCourseEvent` | `courseId`, `studentId` | 120–1 days ago |
+| `CourseBookPurchasedEvent` | `bookId`, `studentId`, `courseId` | 100–7 days ago |
+| `CourseBooksOrderedEvent` | `bookId` (per item), `studentId`, `courseId` | 100–7 days ago |
+| `InvoiceCreatedEvent` | `invoiceNumber` | 90–1 days ago |
+
+---
+
+## Configuration
+
+`SeedingConfiguration` exposes all knobs that the presets set. You can start from a preset and override individual properties programmatically:
+
+```csharp
+var config = SeedingPresets.Medium();
+config.AnnouncementsPerCourse = 5;
+config.TokensPerExam = 10;
+```
+
+Key properties:
+
+| Property | Default | Description |
+|---|---|---|
+| `StudentCount` | 10,000 | Number of students |
+| `CourseCount` | 2,000 | Number of courses |
+| `CourseBookCount` | 2,000 | Number of books (one per course) |
+| `InvoiceCount` | 1,000 | Number of invoices |
+| `MultiBookOrders` | 200 | Number of multi-book cart orders |
+| `AnnouncementsPerCourse` | 3 | Announcements posted per course |
+| `AnnouncementRetractionPercentage` | 20 | % of announcements retracted |
+| `ExamsPerCourse` | 2 | Exams per course |
+| `TokensPerExam` | 5 | Registration tokens per exam |
+| `TokenRedemptionPercentage` | 70 | % of tokens redeemed |
+| `TokenRevocationPercentage` | 10 | % of tokens revoked |
+| `TierUpgradePercentage` | 30 | % of students upgraded |
+| `CapacityChangePercentage` | 20 | % of courses with capacity change |
+| `PriceChangePercentage` | 40 | % of books with a price change |
+| `SingleBookPurchasesPerBook` | 20 | Individual purchases per book |
+| `UseEventStoreWriter` | false | Use `IEventStore` writer instead |
+| `WriteParallelism` | 0 (= cpu count) | Parallel file-write threads |
+| `ResetDatabase` | false | Clear database before seeding |
+| `RequireConfirmation` | true | Prompt before writing |
+
+---
+
+## Database Location
+
+The seeder reads the database path from the CourseManagement sample app's `appsettings.Development.json`:
+
+```json
+{
+  "Opossum": {
+    "RootPath": "D:\\Database",
+    "StoreName": "OpossumSampleApp"
+  }
+}
+```
+
+The context path written to is `{RootPath}/{StoreName}`.
+
+---
+
+## On-Disk Layout
+
+After seeding, the database has this structure:
+
+```
+{RootPath}/{StoreName}/
+  .ledger
+  events/
+    0000000001.json
+    0000000002.json
+    ...
+  Indices/
+    EventType/
+      StudentRegisteredEvent.json
+      CourseCreatedEvent.json
+      ...
+    Tags/
+      studentId_<guid>.json
+      courseId_<guid>.json
+      ...
+```
+
+The format is byte-for-bit identical to what `IEventStore.AppendAsync` produces — `DirectEventWriter` uses the same JSON serialisation options, the same temp-file + atomic-rename strategy, and the same index file schema as Opossum's internal `EventFileManager`.

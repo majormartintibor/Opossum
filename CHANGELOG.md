@@ -8,6 +8,143 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **DataSeeder Session 9 — Final Polish**
+  Completed the DataSeeder redesign with cleanup and documentation tasks:
+  — Deleted the legacy monolithic `DataSeeder.cs` class (all functionality has been fully
+  replaced by the nine dedicated generator classes, `SeedPlan` orchestrator, `DirectEventWriter`,
+  and `EventStoreWriter` introduced in Sessions 5–8).
+  — Rewrote `Samples/Opossum.Samples.DataSeeder/README.md` from scratch to document the
+  new three-layer architecture (generators → `SeedPlan` → writer), all four presets with
+  event-count estimates, the interactive console menu flow, all CLI flags with examples,
+  the complete 15-event-type catalogue with tags and timestamp windows, all
+  `SeedingConfiguration` properties, and the on-disk layout guarantee.
+  — Updated `docs/design/dataseeder-redesign.md` status from `Draft` to `Implemented`.
+
+### Added
+- **DataSeeder Session 8 — Console UX and Presets**
+  Replaced the legacy monolithic `Program.cs` entry point with a fully redesigned interactive
+  console experience that wires the complete generator + `SeedPlan` + writer pipeline:
+  — `SeedingPresets` static class: four factory methods (`Small`, `Medium`, `Large`, `Prod`)
+  returning pre-calibrated `SeedingConfiguration` instances covering ~620, ~104 000,
+  ~1 030 000, and ~5 150 000 events respectively.
+  — `SeedingConfiguration` extended with `PresetName` (display name set by presets),
+  `UseEventStoreWriter` (opt-in fallback to `IEventStore.AppendAsync`), and
+  `WriteParallelism` (max concurrent file-write threads; 0 = `ProcessorCount`).
+  `EstimatedEventCount` replaced with an improved formula from the design document that
+  accounts for all nine event-producing generators (students, tier upgrades, enrollments,
+  capacity changes, announcements, exam tokens, books, book purchases, invoices).
+  — Rewritten `Program.cs`: on startup displays the database path, then presents a
+  four-option interactive preset menu (`[1] Small … [4] Prod`) followed by a reset prompt
+  and a confirmation summary showing preset name, entity counts, estimated event count,
+  reset flag, and writer description. After confirmation, resets the directory if requested,
+  instantiates all nine generators in dependency order, selects the writer, and invokes
+  `SeedPlan.RunAsync`. Prints elapsed time and total events written on completion.
+  — CLI flag support bypasses the interactive menu for scripted / CI runs:
+  `--size <small|medium|large|prod>`, `--reset`, `--no-confirm`, `--use-event-store`,
+  `--parallelism <n>`, `--help`. Example: `dotnet run -- --size small --reset --no-confirm`.
+  — `SeedPlan.RunAsync` now returns `Task<int>` (total events written) instead of `Task`,
+  enabling the caller to display the exact written count.
+  — 12 new integration tests in `SeederEndToEndTests` covering:
+  end-to-end round-trip (Small preset → `DirectEventWriter` → `IEventStore.ReadAsync`),
+  correct student and course event counts, ascending position order, presence of all nine
+  expected event types, all four preset shape assertions, and
+  `EstimatedEventCount` scaling and boundary behaviour.
+
+- **DataSeeder Session 7 — New Feature Generators**
+  Three new generator classes covering all DCB-pattern feature areas that previously had
+  no seed data, completing the feature-coverage goal of the DataSeeder redesign:
+  — `AnnouncementGenerator`: produces `CourseAnnouncementPostedEvent` records (3 per course
+  by default) and `CourseAnnouncementRetractedEvent` records (~20% of announcements).
+  Each announcement receives a unique `AnnouncementId` and a unique `IdempotencyToken`;
+  retraction events reuse the same token as the corresponding posted event, matching the
+  Idempotency / Prevent-Record-Duplication DCB pattern exactly.
+  Tags emitted: `courseId`, `idempotency`.
+  — `ExamTokenGenerator`: produces `ExamRegistrationTokenIssuedEvent` (2 exams × 5 tokens
+  per course by default), `ExamRegistrationTokenRedeemedEvent` (~70% of tokens), and
+  `ExamRegistrationTokenRevokedEvent` (~10% of tokens). Invariants enforced in pure code:
+  each token has a unique `TokenId`; redeemed and revoked events are mutually exclusive per
+  token; redemption student is drawn from enrolled students in the token's course (via
+  `SeedContext.EnrolledPairs`); redeemed/revoked timestamps always follow the issued
+  timestamp.
+  Tags emitted: `examToken`, `examId`, `courseId` (issued); `examToken`, `examId`,
+  `studentId` (redeemed); `examToken`, `examId` (revoked).
+  — `CourseBookGenerator`: produces `CourseBookDefinedEvent`, `CourseBookPriceChangedEvent`,
+  `CourseBookPurchasedEvent`, and `CourseBooksOrderedEvent` records. Books are assigned
+  to courses (one per course up to `CourseBookCount`; extras distributed round-robin);
+  price changes are applied to ~40% of books; `PricePaid` on every purchase and order item
+  always matches the current in-memory price at generation time — no event-store reads.
+  Multi-book orders prefer same-course books when possible; all four event types carry the
+  correct `courseId` tag. Populates `SeedContext.Books` for downstream consumers.
+  Tags emitted: `bookId`, `courseId` (defined + purchased + ordered); `bookId`
+  (price changed); `studentId`, `bookId` per item, `courseId` (ordered).
+  — `BookInfo` record added to `Core/` to represent a defined book's `BookId` and
+  `CourseId` in `SeedContext`.
+  — `SeedContext.Books` list added for downstream generator access.
+  — `SeedingConfiguration` gains 10 new properties: `AnnouncementsPerCourse` (3),
+  `AnnouncementRetractionPercentage` (20), `ExamsPerCourse` (2), `TokensPerExam` (5),
+  `TokenRedemptionPercentage` (70), `TokenRevocationPercentage` (10), `CourseBookCount`
+  (200), `PriceChangePercentage` (40), `SingleBookPurchasesPerBook` (20),
+  `MultiBookOrders` (200).
+  — 52 new unit tests across three test classes (`AnnouncementGeneratorTests`,
+  `ExamTokenGeneratorTests`, `CourseBookGeneratorTests`) in the existing
+  `Opossum.Samples.DataSeeder.UnitTests` project, all using fixed seed `Random(42)`:
+  event counts, tag presence, tag/payload consistency, ordering invariants (issued before
+  redeemed/revoked), mutual exclusion of lifecycle states, price consistency, and
+  empty/boundary conditions.
+
+
+  Six new generator classes porting all logic from the legacy `DataSeeder.cs` into the
+  `ISeedGenerator` pattern. Each generator is a stateless pure function — no I/O, no
+  event-store reads — enforcing all domain invariants via in-memory data structures:
+  — `StudentGenerator`: produces `StudentRegisteredEvent` records; enforces unique e-mail
+  addresses (counter suffix on collision) and tier distribution matching config percentages;
+  populates `SeedContext.Students`.
+  — `TierUpgradeGenerator`: produces `StudentSubscriptionUpdatedEvent` for
+  `TierUpgradePercentage%` of non-Master students; updates `SeedContext.Students` so
+  downstream generators see the upgraded tier limits.
+  — `CourseGenerator`: produces `CourseCreatedEvent` records across Small / Medium / Large
+  size categories; capacity drawn from per-category bounds; populates `SeedContext.Courses`.
+  — `CapacityChangeGenerator`: produces `CourseStudentLimitModifiedEvent` for
+  `CapacityChangePercentage%` of courses; enforces minimum capacity of 10; updates
+  `SeedContext.Courses`.
+  — `EnrollmentGenerator`: produces `StudentEnrolledToCourseEvent` records using a partial
+  Fisher-Yates shuffle over the available-course pool; enforces no duplicate pairs, course
+  capacity, and student tier limit entirely in O(MaxCourses) per student via swap-remove;
+  populates `SeedContext.CourseEnrollmentCounts`, `StudentEnrollmentCounts`, and
+  `EnrolledPairs`.
+  — `InvoiceGenerator`: produces `InvoiceCreatedEvent` records with sequential invoice
+  numbers from an in-memory counter (no store read required).
+  — `GeneratorHelper`: shared static class with name arrays, `RandomTimestamp`, and
+  `CreateSeedEvent` helpers.
+  — `SeedingConfiguration` gains `TierUpgradePercentage` (default: 30) and
+  `CapacityChangePercentage` (default: 20); `EstimatedEventCount` updated to use these.
+  — New `Opossum.Samples.DataSeeder.UnitTests` project with 50 unit tests covering all six
+  generators: event count, tag presence, key invariant properties, context-state updates,
+  and timestamp windows — all deterministic via `Random(42)`.
+
+
+- **DataSeeder core infrastructure (Session 5 of the DataSeeder Redesign plan)**
+  — `SeedEvent` record (pre-position event wrapper), `SequencedSeedEvent` record
+  (event with pre-assigned position), `SeedContext` class (shared mutable state for
+  generators), `StudentInfo` and `CourseInfo` value records, `ISeedGenerator` interface,
+  `IEventWriter` interface, and `SeedPlan` orchestrator (stable-sorts by timestamp, assigns
+  1-based positions, delegates to writer).
+  — `DirectEventWriter`: high-performance file-system writer that accumulates all index
+  structures in memory across the full batch and flushes each index file exactly once,
+  achieving O(1) per-event index I/O regardless of batch size. Event files are written in
+  parallel (default: `Environment.ProcessorCount` threads). Uses the same JSON format as
+  Opossum's internal serializer and the same temp-file + atomic-rename strategy as
+  `EventFileManager`. Supports appending to existing databases by reading the current ledger
+  position and offsetting all new positions accordingly.
+  — `EventStoreWriter`: thin `IEventStore`-backed fallback writer for small datasets.
+  — `SeedEventSerializer`: internal replication of Opossum's `JsonEventSerializer` (including
+  `PolymorphicEventConverter`) so that `DirectEventWriter` produces byte-for-bit compatible
+  event files without requiring access to Opossum internals.
+  — New integration test project `Opossum.Samples.DataSeeder.IntegrationTests` with 8 tests
+  covering event file creation, EventStore round-trip deserialization, EventType and Tag index
+  creation, ledger correctness, multi-batch append/merge, and `SeedPlan` timestamp sorting.
+  — `GlobalUsings.cs` added to `Opossum.Samples.DataSeeder`; duplicate external usings removed
+  from `DataSeeder.cs` and `Program.cs` per the project's using-statement conventions.
 - **`StudentPurchasedBooksProjection` and `GET /students/{studentId}/purchased-books` endpoint** —
   new persisted projection (`IProjectionDefinition<StudentPurchasedBooksState>`) keyed by
   `studentId` tag. Folds `CourseBookPurchasedEvent` and `CourseBooksOrderedEvent` into a

@@ -1,6 +1,6 @@
 # DataSeeder Redesign Plan
 
-**Status:** Draft  
+**Status:** Implemented
 **Scope:** `Opossum.Samples.DataSeeder`  
 **Motivation:** Feature coverage gaps + performance ceiling for large-scale manual testing
 
