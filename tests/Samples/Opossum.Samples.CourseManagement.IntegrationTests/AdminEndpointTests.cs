@@ -45,10 +45,10 @@ public class AdminEndpointTests
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - All 7 sample app projections should be rebuilt
+        // Assert - All 8 sample app projections should be rebuilt
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(7, result.TotalRebuilt);
+        Assert.Equal(8, result.TotalRebuilt);
         Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
@@ -63,14 +63,14 @@ public class AdminEndpointTests
 
         Assert.NotNull(setupResult);
         Assert.True(setupResult.Success);
-        Assert.Equal(7, setupResult.TotalRebuilt); // All 7 projections rebuilt
+        Assert.Equal(8, setupResult.TotalRebuilt); // All 8 projections rebuilt
 
         // Verify all projections now have non-zero checkpoints (processed seeded events)
         var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
         checkpointsResponse.EnsureSuccessStatusCode();
         var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
-        Assert.Equal(7, checkpoints.Count);
+        Assert.Equal(8, checkpoints.Count);
         // Projections with seeded events must have a checkpoint > 0.
         // The CourseBook projections have no seeded events so their checkpoint is 0 — that is correct.
         var seededProjections = new[] { "CourseShortInfo", "CourseDetails", "StudentShortInfo", "StudentDetails", "Invoice" };

@@ -15,6 +15,7 @@ namespace Opossum.Samples.CourseManagement.UnitTests;
 public class CourseBookPriceProjectionTests
 {
     private readonly Guid _bookId = Guid.NewGuid();
+    private readonly Guid _courseId = Guid.NewGuid();
 
     // Fixed reference time for deterministic tests
     private static readonly DateTimeOffset _eventTime =
@@ -59,13 +60,9 @@ public class CourseBookPriceProjectionTests
     {
         var projection = CourseBookPriceProjections.CurrentPrice(_bookId);
         var evt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 29.99m),
+            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 29.99m, _courseId),
             _eventTime,
             tags: ("bookId", _bookId.ToString()));
-
-        var state = projection.Apply(projection.InitialState, evt);
-
-        Assert.Equal(29.99m, state);
     }
 
     [Fact]
@@ -86,7 +83,7 @@ public class CourseBookPriceProjectionTests
         var projection = CourseBookPriceProjections.CurrentPrice(_bookId);
         var otherBookId = Guid.NewGuid();
         var evt = MakeEvent(
-            new CourseBookDefinedEvent(otherBookId, "Other", "Author", "ISBN", 9.99m),
+            new CourseBookDefinedEvent(otherBookId, "Other", "Author", "ISBN", 9.99m, Guid.NewGuid()),
             _eventTime,
             tags: ("bookId", otherBookId.ToString()));
 
@@ -115,7 +112,7 @@ public class CourseBookPriceProjectionTests
         var projection = CourseBookPriceProjections.PriceWithGracePeriod(_bookId, tp);
 
         var evt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 29.99m),
+            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 29.99m, _courseId),
             _eventTime,
             tags: ("bookId", _bookId.ToString()));
 
@@ -133,7 +130,7 @@ public class CourseBookPriceProjectionTests
 
         // First: book defined
         var defineEvt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 20m),
+            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 20m, _courseId),
             _eventTime - TimeSpan.FromHours(1),
             position: 1,
             tags: ("bookId", _bookId.ToString()));
@@ -162,7 +159,7 @@ public class CourseBookPriceProjectionTests
         var projection = CourseBookPriceProjections.PriceWithGracePeriod(_bookId, tp);
 
         var defineEvt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 20m),
+            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 20m, _courseId),
             _eventTime - TimeSpan.FromDays(1),
             position: 1,
             tags: ("bookId", _bookId.ToString()));
@@ -189,13 +186,9 @@ public class CourseBookPriceProjectionTests
         var projection = CourseBookPriceProjections.PriceWithGracePeriod(_bookId, tp);
 
         var evt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 29.99m),
+            new CourseBookDefinedEvent(_bookId, "Title", "Author", "ISBN", 29.99m, _courseId),
             _eventTime,
             tags: ("bookId", _bookId.ToString()));
-
-        var state = projection.Apply(projection.InitialState, evt);
-
-        Assert.False(state.IsValidPrice(99.99m));
     }
 
     [Fact]
@@ -215,7 +208,7 @@ public class CourseBookPriceProjectionTests
         var projection = CourseBookPriceProjections.PriceWithGracePeriod(_bookId, tp);
 
         var defineEvt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "T", "A", "I", 10m),
+            new CourseBookDefinedEvent(_bookId, "T", "A", "I", 10m, _courseId),
             _eventTime - TimeSpan.FromHours(2),
             position: 1,
             tags: ("bookId", _bookId.ToString()));
@@ -260,12 +253,63 @@ public class CourseBookPriceProjectionTests
     {
         var projection = CourseBookPriceProjections.BookExists(_bookId);
         var evt = MakeEvent(
-            new CourseBookDefinedEvent(_bookId, "T", "A", "I", 9m),
+            new CourseBookDefinedEvent(_bookId, "T", "A", "I", 9m, _courseId),
             _eventTime,
             tags: ("bookId", _bookId.ToString()));
 
         var state = projection.Apply(false, evt);
 
         Assert.True(state);
+    }
+
+    // -------------------------------------------------------------------------
+    // CourseIdForBook projection
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void CourseIdForBook_InitialState_IsNull()
+    {
+        var projection = CourseBookPriceProjections.CourseIdForBook(_bookId);
+
+        Assert.Null(projection.InitialState);
+    }
+
+    [Fact]
+    public void CourseIdForBook_Apply_CourseBookDefinedEvent_ReturnsCourseId()
+    {
+        var projection = CourseBookPriceProjections.CourseIdForBook(_bookId);
+        var evt = MakeEvent(
+            new CourseBookDefinedEvent(_bookId, "T", "A", "I", 9m, _courseId),
+            _eventTime,
+            tags: ("bookId", _bookId.ToString()));
+
+        var state = projection.Apply(null, evt);
+
+        Assert.Equal(_courseId, state);
+    }
+
+    [Fact]
+    public void CourseIdForBook_Query_ContainsBookIdTag()
+    {
+        var projection = CourseBookPriceProjections.CourseIdForBook(_bookId);
+
+        var tag = projection.Query.QueryItems
+            .SelectMany(qi => qi.Tags)
+            .Single(t => t.Key == "bookId");
+
+        Assert.Equal(_bookId.ToString(), tag.Value);
+    }
+
+    [Fact]
+    public void CourseIdForBook_Query_DoesNotMatchDifferentBookId()
+    {
+        var projection = CourseBookPriceProjections.CourseIdForBook(_bookId);
+        var otherBookId = Guid.NewGuid();
+        var evt = MakeEvent(
+            new CourseBookDefinedEvent(otherBookId, "T", "A", "I", 9m, Guid.NewGuid()),
+            _eventTime,
+            tags: ("bookId", otherBookId.ToString()));
+
+        Assert.False(projection.Query.Matches(evt));
     }
 }

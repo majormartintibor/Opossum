@@ -7,8 +7,8 @@ using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.CourseBookManagement;
 
-public sealed record DefineCourseBookRequest(string Title, string Author, string Isbn, decimal Price);
-public sealed record DefineCourseBookCommand(Guid BookId, string Title, string Author, string Isbn, decimal Price);
+public sealed record DefineCourseBookRequest(string Title, string Author, string Isbn, decimal Price, Guid CourseId);
+public sealed record DefineCourseBookCommand(Guid BookId, string Title, string Author, string Isbn, decimal Price, Guid CourseId);
 
 public static class DefineCourseBookEndpoint
 {
@@ -19,7 +19,7 @@ public static class DefineCourseBookEndpoint
             [FromServices] IMediator mediator) =>
         {
             var bookId = Guid.NewGuid();
-            var command = new DefineCourseBookCommand(bookId, request.Title, request.Author, request.Isbn, request.Price);
+            var command = new DefineCourseBookCommand(bookId, request.Title, request.Author, request.Isbn, request.Price, request.CourseId);
             var result = await mediator.InvokeAsync<CommandResult>(command);
 
             if (!result.Success)
@@ -30,7 +30,7 @@ public static class DefineCourseBookEndpoint
         .WithName("DefineCourseBook")
         .WithTags("Course Books (Dynamic Price)")
         .WithSummary("Define a new course book (admin)")
-        .WithDescription("Adds a new course book to the catalog with an initial price.");
+        .WithDescription("Adds a new course book to the catalog with an initial price. The book must be associated with a course via its CourseId.");
     }
 }
 
@@ -51,9 +51,11 @@ public sealed class DefineCourseBookCommandHandler
                 Title: command.Title,
                 Author: command.Author,
                 Isbn: command.Isbn,
-                Price: command.Price)
+                Price: command.Price,
+                CourseId: command.CourseId)
             .ToDomainEvent()
             .WithTag("bookId", command.BookId.ToString())
+            .WithTag("courseId", command.CourseId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
 
         await eventStore.AppendAsync(newEvent, appendCondition);

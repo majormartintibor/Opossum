@@ -88,6 +88,16 @@ public sealed class OrderCourseBooksCommandHandler
                     "Please refresh and try again.");
         }
 
+        // Read course IDs for all cart items — course-book associations are immutable,
+        // so this secondary read does not need to be part of the AppendCondition.
+        var courseIdProjections = command.Items
+            .Select(item => CourseBookPriceProjections.CourseIdForBook(item.BookId))
+            .ToList();
+
+        var (courseIds, _) = await eventStore.BuildDecisionModelAsync(
+            (IReadOnlyList<IDecisionProjection<Guid?>>)courseIdProjections,
+            cancellationToken);
+
         var orderItems = command.Items
             .Select(item => new CourseBookOrderItem(item.BookId, item.DisplayedPrice))
             .ToList();
@@ -100,6 +110,9 @@ public sealed class OrderCourseBooksCommandHandler
 
         foreach (var item in command.Items)
             builder = builder.WithTag("bookId", item.BookId.ToString());
+
+        foreach (var courseId in courseIds.Where(id => id is not null).Select(id => id!.Value).Distinct())
+            builder = builder.WithTag("courseId", courseId.ToString());
 
         NewEvent orderedEvent = builder.WithTimestamp(DateTimeOffset.UtcNow);
 

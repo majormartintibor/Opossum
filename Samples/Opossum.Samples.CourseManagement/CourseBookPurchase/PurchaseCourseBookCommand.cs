@@ -60,27 +60,32 @@ public sealed class PurchaseCourseBookCommandHandler
         IEventStore eventStore,
         CancellationToken cancellationToken)
     {
-        var model = await eventStore.BuildDecisionModelAsync(
+        var (priceState, courseId, appendCondition) = await eventStore.BuildDecisionModelAsync(
             CourseBookPriceProjections.PriceWithGracePeriod(command.BookId),
+            CourseBookPriceProjections.CourseIdForBook(command.BookId),
             cancellationToken);
 
-        if (model.State.CurrentPrice is null)
+        if (priceState.CurrentPrice is null)
             return CommandResult.Fail($"Course book '{command.BookId}' does not exist.");
 
-        if (!model.State.IsValidPrice(command.DisplayedPrice))
+        if (!priceState.IsValidPrice(command.DisplayedPrice))
             return CommandResult.Fail(
                 $"The displayed price {command.DisplayedPrice:C} is no longer valid. Please refresh and try again.");
 
-        NewEvent purchaseEvent = new CourseBookPurchasedEvent(
+        var builder = new CourseBookPurchasedEvent(
                 BookId: command.BookId,
                 StudentId: command.StudentId,
                 PricePaid: command.DisplayedPrice)
             .ToDomainEvent()
             .WithTag("bookId", command.BookId.ToString())
-            .WithTag("studentId", command.StudentId.ToString())
-            .WithTimestamp(DateTimeOffset.UtcNow);
+            .WithTag("studentId", command.StudentId.ToString());
 
-        await eventStore.AppendAsync(purchaseEvent, model.AppendCondition);
+        if (courseId is not null)
+            builder = builder.WithTag("courseId", courseId.Value.ToString());
+
+        NewEvent purchaseEvent = builder.WithTimestamp(DateTimeOffset.UtcNow);
+
+        await eventStore.AppendAsync(purchaseEvent, appendCondition);
         return CommandResult.Ok();
     }
 }

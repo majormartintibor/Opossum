@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using Opossum.Core;
+using Opossum.Samples.CourseManagement.Events;
 
 namespace Opossum.Samples.CourseManagement.IntegrationTests;
 
@@ -19,6 +22,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 public class CourseBookPurchaseIntegrationTests
 {
     private readonly HttpClient _client;
+    private readonly IntegrationTestFixture _fixture;
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -26,6 +30,7 @@ public class CourseBookPurchaseIntegrationTests
 
     public CourseBookPurchaseIntegrationTests(IntegrationTestFixture fixture)
     {
+        _fixture = fixture;
         _client = fixture.Client;
     }
 
@@ -221,15 +226,66 @@ public class CourseBookPurchaseIntegrationTests
     }
 
     // -------------------------------------------------------------------------
+    // courseId tag on stored events (Session 2)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task PurchaseBook_StoresCourseIdTagAsync()
+    {
+        var courseId = Guid.NewGuid();
+        var bookId = await DefineBookAndGetIdAsync("CourseId Tag Book", "Author", "ISBN-CIT1", 25m, courseId);
+        var studentId = Guid.NewGuid();
+
+        var response = await PurchaseBookAsync(bookId, studentId, 25m);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+        var events = await eventStore.ReadAsync(
+            Query.FromItems(new QueryItem
+            {
+                EventTypes = [nameof(CourseBookPurchasedEvent)],
+                Tags = [new Tag("studentId", studentId.ToString())]
+            }), null);
+
+        var purchaseEvent = Assert.Single(events);
+        Assert.Contains(purchaseEvent.Event.Tags, t => t.Key == "courseId" && t.Value == courseId.ToString());
+    }
+
+    [Fact]
+    public async Task OrderBooks_StoresCourseIdTagAsync()
+    {
+        var courseId = Guid.NewGuid();
+        var book1 = await DefineBookAndGetIdAsync("CourseId Order A", "Author A", "ISBN-COA1", 20m, courseId);
+        var book2 = await DefineBookAndGetIdAsync("CourseId Order B", "Author B", "ISBN-COB1", 30m, courseId);
+        var studentId = Guid.NewGuid();
+
+        var response = await OrderBooksAsync(studentId, (book1, 20m), (book2, 30m));
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        using var scope = _fixture.Factory.Services.CreateScope();
+        var eventStore = scope.ServiceProvider.GetRequiredService<IEventStore>();
+        var events = await eventStore.ReadAsync(
+            Query.FromItems(new QueryItem
+            {
+                EventTypes = [nameof(CourseBooksOrderedEvent)],
+                Tags = [new Tag("studentId", studentId.ToString())]
+            }), null);
+
+        var orderEvent = Assert.Single(events);
+        Assert.Contains(orderEvent.Event.Tags, t => t.Key == "courseId" && t.Value == courseId.ToString());
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
-    private async Task<HttpResponseMessage> DefineBookAsync(string title, string author, string isbn, decimal price) =>
-        await _client.PostAsJsonAsync("/course-books", new { title, author, isbn, price });
+    private async Task<HttpResponseMessage> DefineBookAsync(string title, string author, string isbn, decimal price, Guid? courseId = null) =>
+        await _client.PostAsJsonAsync("/course-books", new { title, author, isbn, price, courseId = courseId ?? Guid.NewGuid() });
 
-    private async Task<Guid> DefineBookAndGetIdAsync(string title, string author, string isbn, decimal price)
+    private async Task<Guid> DefineBookAndGetIdAsync(string title, string author, string isbn, decimal price, Guid? courseId = null)
     {
-        var response = await DefineBookAsync(title, author, isbn, price);
+        var response = await DefineBookAsync(title, author, isbn, price, courseId);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var body = await ReadJsonAsync(response);
         return Guid.Parse(body.GetProperty("id").GetString()!);

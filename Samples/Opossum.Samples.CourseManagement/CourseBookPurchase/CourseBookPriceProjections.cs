@@ -77,4 +77,19 @@ public static class CourseBookPriceProjections
                 Tags = [new Tag("bookId", bookId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event is CourseBookDefinedEvent ? true : state);
+
+    /// <summary>
+    /// Returns the <see cref="CourseBookDefinedEvent.CourseId"/> for the given book,
+    /// or <see langword="null"/> when the book does not exist.
+    /// Used to tag purchase and order events with the course the book belongs to.
+    /// </summary>
+    public static IDecisionProjection<Guid?> CourseIdForBook(Guid bookId) =>
+        new DecisionProjection<Guid?>(
+            initialState: null,
+            query: Query.FromItems(new QueryItem
+            {
+                EventTypes = [nameof(CourseBookDefinedEvent)],
+                Tags = [new Tag("bookId", bookId.ToString())]
+            }),
+            apply: (_, evt) => evt.Event.Event is CourseBookDefinedEvent e ? e.CourseId : null);
 }

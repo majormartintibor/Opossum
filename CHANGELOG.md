@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`StudentPurchasedBooksProjection` and `GET /students/{studentId}/purchased-books` endpoint** —
+  new persisted projection (`IProjectionDefinition<StudentPurchasedBooksState>`) keyed by
+  `studentId` tag. Folds `CourseBookPurchasedEvent` and `CourseBooksOrderedEvent` into a
+  per-student deduplicated book list. Each `PurchasedBookEntry` aggregates `TotalPaid`,
+  `PurchaseCount`, `FirstPurchasedAt`, and `LastPurchasedAt` across all individual purchases and
+  cart orders for the same `bookId`. Returns 404 when the student has no purchase history.
+  Covered by unit tests (`StudentPurchasedBooksProjectionTests`) and integration tests
+  (`StudentPurchasedBooksIntegrationTests`). _Session 3 of the DataSeeder Redesign plan._
+
+- **`CourseId` property on `CourseBookDefinedEvent`**
+  course book to its associated course. `DefineCourseBookRequest`, `DefineCourseBookCommand`, and
+  the `POST /course-books` endpoint all accept the new `CourseId` field. The
+  `DefineCourseBookCommandHandler` now emits a `courseId` tag alongside the existing `bookId` tag
+  on every `CourseBookDefinedEvent`. This is a prerequisite for the `CourseBuyersProjection`
+  (Session 4). All existing unit and integration tests updated.
+
+- **`CourseBookPriceProjections.CourseIdForBook(bookId)` projection** — new decision projection
+  that reads `CourseBookDefinedEvent` for a given `bookId` and returns the associated `CourseId`
+  (or `null` when the book does not exist). Used by purchase command handlers to tag purchase events
+  with the course the book belongs to.
+
+- **`courseId` tag on `CourseBookPurchasedEvent`** — `PurchaseCourseBookCommandHandler` now uses
+  the binary `BuildDecisionModelAsync` overload to read both `PriceWithGracePeriod` and
+  `CourseIdForBook` in a single store read. The emitted `CourseBookPurchasedEvent` carries a
+  `courseId` tag when the book has an associated course. No extra I/O round-trip.
+
+- **`courseId` tag on `CourseBooksOrderedEvent`** — `OrderCourseBooksCommandHandler` makes a
+  second N-ary `BuildDecisionModelAsync` call (one `CourseIdForBook` projection per cart item)
+  after price validation. Unique `courseId` values from all items are added as tags on the
+  `CourseBooksOrderedEvent`. Course-book associations are immutable so this secondary read
+  does not need to participate in the `AppendCondition`.
+
+  All new projections and tag behaviour are covered by unit tests (`CourseIdForBook_*`) and
+  integration tests (`PurchaseBook_StoresCourseIdTagAsync`, `OrderBooks_StoresCourseIdTagAsync`).
+
 ### Documentation
 - **README.md comprehensive update** — fully documents all 7 DCB examples (https://dcb.events/examples/)
   implemented in the sample app:
