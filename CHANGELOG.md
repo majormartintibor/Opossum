@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   so the interface stays backward-compatible with all existing tests.
 
 ### Fixed
+- **CourseManagement integration tests: pagination query parameters** — `GetCatalog_ReturnsOkAsync`,
+  `GetOrderHistory_ReturnsOkAsync`, `GetOrderHistory_FilterByStudentId_ReturnsOkAsync`, and
+  `GetInvoices_ReturnsListOrderedByNumberAsync` were calling paginated endpoints without the
+  required `pageNumber`, `pageSize`, `sortBy`, and `sortOrder` query parameters, causing
+  `400 BadRequest` responses. Tests updated to include the parameters, and
+  `GetInvoices_ReturnsListOrderedByNumberAsync` updated to read from the `items` array of the
+  `PaginatedResponse` wrapper instead of expecting a flat JSON array.
 - **DataSeeder: `.store.lock` file missing after seeding** — `DirectEventWriter` bypasses the
   normal `IEventStore` / `CrossProcessLockManager` path, so the cross-process lock sentinel file
   was never created. The seeded database would work correctly (the first `IEventStore` lock

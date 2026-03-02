@@ -199,7 +199,7 @@ public class CourseBookPurchaseIntegrationTests : IClassFixture<IntegrationTestF
     [Fact]
     public async Task GetCatalog_ReturnsOkAsync()
     {
-        var response = await _client.GetAsync("/course-books");
+        var response = await _client.GetAsync("/course-books?pageNumber=1&pageSize=50&sortBy=Title&sortOrder=Ascending");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -211,7 +211,7 @@ public class CourseBookPurchaseIntegrationTests : IClassFixture<IntegrationTestF
     [Fact]
     public async Task GetOrderHistory_ReturnsOkAsync()
     {
-        var response = await _client.GetAsync("/course-books/orders");
+        var response = await _client.GetAsync("/course-books/orders?pageNumber=1&pageSize=50&sortBy=OrderedAt&sortOrder=Descending");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
@@ -220,7 +220,7 @@ public class CourseBookPurchaseIntegrationTests : IClassFixture<IntegrationTestF
     public async Task GetOrderHistory_FilterByStudentId_ReturnsOkAsync()
     {
         var studentId = Guid.NewGuid();
-        var response = await _client.GetAsync($"/course-books/orders?studentId={studentId}");
+        var response = await _client.GetAsync($"/course-books/orders?studentId={studentId}&pageNumber=1&pageSize=50&sortBy=OrderedAt&sortOrder=Descending");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

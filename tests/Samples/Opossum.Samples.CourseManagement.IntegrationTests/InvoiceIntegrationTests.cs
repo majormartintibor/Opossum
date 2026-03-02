@@ -88,11 +88,11 @@ public class InvoiceIntegrationTests : IClassFixture<IntegrationTestFixture>
         await Task.Delay(TimeSpan.FromSeconds(6));
 
         // Act
-        var response = await _client.GetAsync("/invoices");
+        var response = await _client.GetAsync("/invoices?pageNumber=1&pageSize=50&sortBy=InvoiceNumber&sortOrder=Ascending");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var invoices = await response.Content.ReadFromJsonAsync<List<JsonElement>>(_jsonOptions);
-        Assert.NotNull(invoices);
+        var paginated = await response.Content.ReadFromJsonAsync<JsonElement>(_jsonOptions);
+        var invoices = paginated.GetProperty("items").EnumerateArray().ToList();
 
         // Assert — list contains all three and is ordered ascending
         var numbers = invoices.Select(i => i.GetProperty("invoiceNumber").GetInt32()).ToList();
