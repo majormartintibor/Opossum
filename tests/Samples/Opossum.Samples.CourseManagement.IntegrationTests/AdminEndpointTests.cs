@@ -10,7 +10,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// Uses dedicated collection to avoid sharing state with other test classes.
 /// </summary>
 [Collection("Admin Tests")]
-public class AdminEndpointTests
+public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private readonly IntegrationTestFixture _fixture;

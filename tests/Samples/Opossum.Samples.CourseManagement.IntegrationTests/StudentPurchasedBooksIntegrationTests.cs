@@ -12,7 +12,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// per-student deduplicated book list.
 /// </summary>
 [Collection("Integration Tests")]
-public class StudentPurchasedBooksIntegrationTests
+public class StudentPurchasedBooksIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()

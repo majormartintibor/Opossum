@@ -12,7 +12,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// <c>AppendCondition</c> with automatic retry.
 /// </summary>
 [Collection("Integration Tests")]
-public class InvoiceIntegrationTests
+public class InvoiceIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()

@@ -13,7 +13,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// into a per-course buyer list keyed by <c>courseId</c>.
 /// </summary>
 [Collection("Integration Tests")]
-public class CourseBuyersIntegrationTests
+public class CourseBuyersIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()

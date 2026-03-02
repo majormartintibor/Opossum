@@ -19,7 +19,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// Read: Catalog lists books with current price, order history lists orders.
 /// </summary>
 [Collection("Integration Tests")]
-public class CourseBookPurchaseIntegrationTests
+public class CourseBookPurchaseIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private readonly IntegrationTestFixture _fixture;

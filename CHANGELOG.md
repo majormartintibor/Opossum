@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed three failing `ProjectionManagerTests` caused by two distinct issues with `file`-scoped
+  test types:
+  1. `IProjectionStore<PmTestItemState>` was never registered because `file`-scoped types are
+     invisible to assembly scanning. Fixed by adding a public `AddProjectionStore<TState>`
+     extension method to `ProjectionServiceCollectionExtensions` for manual store registration,
+     and calling it in the test constructor.
+  2. `PmTestItemProjection.EventTypes` used `nameof(PmTestItemCreatedEvent)` which returns the
+     simple source name (`"PmTestItemCreatedEvent"`), while `DomainEvent.EventType` stores the
+     CLR type's `Name` — the compiler-mangled name for `file`-scoped types. The event-type
+     filter never matched the stored events. Fixed by switching to `typeof(...).Name`.
+
+### Added
+- `ProjectionServiceCollectionExtensions.AddProjectionStore<TState>(string projectionName)` —
+  new public extension method that manually registers an `IProjectionStore<TState>` singleton
+  backed by `FileSystemProjectionStore<TState>`. Useful when the projection state type is not
+  discoverable by assembly scanning (e.g., `file`-scoped types in tests).
+
 ### Added
 - **DataSeeder Session 9 — Final Polish**
   Completed the DataSeeder redesign with cleanup and documentation tasks:

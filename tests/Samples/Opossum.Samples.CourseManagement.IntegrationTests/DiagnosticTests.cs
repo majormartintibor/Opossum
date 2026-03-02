@@ -7,7 +7,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// Uses dedicated collection to ensure clean database state.
 /// </summary>
 [Collection("Diagnostic Tests")]
-public class DiagnosticTests
+public class DiagnosticTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private readonly IntegrationTestFixture _fixture;

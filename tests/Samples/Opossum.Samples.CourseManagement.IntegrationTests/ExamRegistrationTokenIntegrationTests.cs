@@ -20,7 +20,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// - Revoke already-redeemed token → 400 error.
 /// </summary>
 [Collection("Integration Tests")]
-public class ExamRegistrationTokenIntegrationTests
+public class ExamRegistrationTokenIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()

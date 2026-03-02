@@ -16,7 +16,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// independently here to keep test isolation clean.
 /// </summary>
 [Collection("Integration Tests")]
-public class CourseAggregateIntegrationTests
+public class CourseAggregateIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()

@@ -18,7 +18,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// - Retracting a non-existent or already-retracted announcement is rejected.
 /// </summary>
 [Collection("Integration Tests")]
-public class CourseAnnouncementIntegrationTests
+public class CourseAnnouncementIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()
