@@ -17,6 +17,7 @@ using Opossum.Samples.CourseManagement.CourseShortInfo;
 using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
 using Opossum.Samples.CourseManagement.InvoiceCreation;
 using Opossum.Samples.CourseManagement.StudentDetails;
+using Opossum.Samples.CourseManagement.CourseBuyers;
 using Opossum.Samples.CourseManagement.StudentPurchasedBooks;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
@@ -265,6 +266,7 @@ app.MapPurchaseCourseBookEndpoint();
 app.MapOrderCourseBooksEndpoint();
 app.MapGetCourseBookCatalogEndpoint();
 app.MapGetCourseBookOrderHistoryEndpoint();
+app.MapGetCourseBuyersEndpoint();
 
 // ============================================================================
 // AGGREGATE ENDPOINTS — Event-Sourced Aggregate pattern (alternative to DCB Decision Model)

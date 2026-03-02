@@ -29,6 +29,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (or `null` when the book does not exist). Used by purchase command handlers to tag purchase events
   with the course the book belongs to.
 
+- **`CourseBuyersProjection` and `GET /courses/{courseId}/book-buyers` endpoint** —
+  new persisted projection (`IProjectionDefinition<CourseBuyersState>`) keyed by `courseId` tag.
+  Folds `CourseCreatedEvent`, `CourseBookDefinedEvent`, `CourseBookPurchasedEvent`, and
+  `CourseBooksOrderedEvent` into a per-course read model containing the course name, the assigned
+  textbook ID, and all students who purchased that textbook. Returns 404 when no data exists for
+  the requested course. Known limitation: a `CourseBooksOrderedEvent` carrying books from multiple
+  courses only updates the buyer list for the first `courseId` tag on the event — documented in
+  both the endpoint description and the design plan. Covered by integration tests
+  (`CourseBuyersIntegrationTests`). _Session 4 of the DataSeeder Redesign plan._
+
 - **`courseId` tag on `CourseBookPurchasedEvent`** — `PurchaseCourseBookCommandHandler` now uses
   the binary `BuildDecisionModelAsync` overload to read both `PriceWithGracePeriod` and
   `CourseIdForBook` in a single store read. The emitted `CourseBookPurchasedEvent` carries a
