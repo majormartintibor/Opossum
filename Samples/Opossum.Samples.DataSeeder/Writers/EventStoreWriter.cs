@@ -43,8 +43,19 @@ public sealed class EventStoreWriter : IEventWriter
     public async Task WriteAsync(
         IReadOnlyList<SequencedSeedEvent> events,
         string contextPath,
+        IProgress<WriterProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
+        var written = 0;
+        progress?.Report(new WriterProgress
+        {
+            PhaseName = "Appending events",
+            PhaseNumber = 1,
+            TotalPhases = 1,
+            Current = 0,
+            Total = events.Count
+        });
+
         for (int i = 0; i < events.Count; i += ChunkSize)
         {
             var chunk = events
@@ -54,6 +65,15 @@ public sealed class EventStoreWriter : IEventWriter
                 .ToArray();
 
             await _eventStore.AppendAsync(chunk, null, cancellationToken).ConfigureAwait(false);
+            written += chunk.Length;
+            progress?.Report(new WriterProgress
+            {
+                PhaseName = "Appending events",
+                PhaseNumber = 1,
+                TotalPhases = 1,
+                Current = written,
+                Total = events.Count
+            });
         }
     }
 }

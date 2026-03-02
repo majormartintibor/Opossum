@@ -17,8 +17,13 @@ public interface IEventWriter
     /// (e.g. <c>D:\Database\OpossumSampleApp</c>).
     /// <see cref="Writers.EventStoreWriter"/> ignores this parameter.
     /// </param>
+    /// <param name="progress">
+    /// Optional progress sink for live reporting. Implementations emit <see cref="WriterProgress"/>
+    /// snapshots as event and index files are written. Pass <see langword="null"/> to disable.
+    /// </param>
     Task WriteAsync(
         IReadOnlyList<SequencedSeedEvent> events,
         string contextPath,
+        IProgress<WriterProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }

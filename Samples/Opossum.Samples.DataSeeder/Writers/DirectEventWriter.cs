@@ -45,6 +45,7 @@ public sealed class DirectEventWriter : IEventWriter
     public async Task WriteAsync(
         IReadOnlyList<SequencedSeedEvent> events,
         string contextPath,
+        IProgress<WriterProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         if (events.Count == 0) return;
@@ -67,7 +68,20 @@ public sealed class DirectEventWriter : IEventWriter
             CancellationToken = cancellationToken
         };
 
-        // Write all event files in parallel.
+        // ── Phase 1: Write event files in parallel ────────────────────────────
+        const long ReportEvery = 5_000;
+        var totalEvents = (long)events.Count;
+        long eventsDone = 0;
+
+        progress?.Report(new WriterProgress
+        {
+            PhaseName = "Writing event files",
+            PhaseNumber = 1,
+            TotalPhases = 2,
+            Current = 0,
+            Total = totalEvents
+        });
+
         await Parallel.ForEachAsync(events, parallelOptions, async (seedEvent, ct) =>
         {
             var absolutePosition = seedEvent.Position + startOffset;
@@ -81,11 +95,47 @@ public sealed class DirectEventWriter : IEventWriter
             var json = serializer.Serialize(sequencedEvent);
             var filePath = Path.Combine(contextPath, "events", $"{absolutePosition:D10}.json");
             await WriteAtomicAsync(filePath, json, ct).ConfigureAwait(false);
+
+            var done = Interlocked.Increment(ref eventsDone);
+            if (done % ReportEvery == 0 || done == totalEvents)
+                progress?.Report(new WriterProgress
+                {
+                    PhaseName = "Writing event files",
+                    PhaseNumber = 1,
+                    TotalPhases = 2,
+                    Current = done,
+                    Total = totalEvents
+                });
         }).ConfigureAwait(false);
 
-        // Write index files sequentially — each file is flushed exactly once.
+        // ── Phase 2: Write index files sequentially ───────────────────────────
+        var totalIndexFiles = (long)indexMap.Count;
+        var indexReportEvery = Math.Max(1L, totalIndexFiles / 200);
+        long indexDone = 0;
+
+        progress?.Report(new WriterProgress
+        {
+            PhaseName = "Writing index files",
+            PhaseNumber = 2,
+            TotalPhases = 2,
+            Current = 0,
+            Total = totalIndexFiles
+        });
+
         foreach (var (indexFilePath, newPositions) in indexMap)
+        {
             await WriteIndexFileAsync(indexFilePath, newPositions).ConfigureAwait(false);
+            indexDone++;
+            if (indexDone % indexReportEvery == 0 || indexDone == totalIndexFiles)
+                progress?.Report(new WriterProgress
+                {
+                    PhaseName = "Writing index files",
+                    PhaseNumber = 2,
+                    TotalPhases = 2,
+                    Current = indexDone,
+                    Total = totalIndexFiles
+                });
+        }
 
         // Write ledger last — it is the commit record.
         var lastAbsolutePosition = events.Max(e => e.Position) + startOffset;

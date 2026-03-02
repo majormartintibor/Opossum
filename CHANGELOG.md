@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **DataSeeder: live two-phase progress bar** — `DirectEventWriter` now emits `WriterProgress`
+  snapshots via a new optional `IProgress<WriterProgress>?` parameter on `IEventWriter.WriteAsync`.
+  The console shows a separate `[1/2] Writing event files` and `[2/2] Writing index files` bar,
+  each with a `████░░░` fill, percentage, and item count updating in place. This makes it
+  immediately obvious that the seeder is still working during the long sequential index-file
+  flush that follows the parallel event-file writes.
+  `EventStoreWriter` and `SeedPlan.RunAsync` also accept the parameter (ignored when `null`)
+  so the interface stays backward-compatible with all existing tests.
+
 ### Changed
 - **Admin rebuild endpoint now defaults to `forceAll=true`** —
   `POST /admin/projections/rebuild` previously defaulted to `forceAll=false`, which only

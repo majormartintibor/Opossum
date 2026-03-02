@@ -113,10 +113,28 @@ else
 }
 
 // ── Run ───────────────────────────────────────────────────────────────────────
-Console.WriteLine("\n⏳ Generating and writing events...");
-var startTime   = DateTime.UtcNow;
-var totalEvents = await new SeedPlan(generators).RunAsync(config, writer, contextPath);
+Console.WriteLine("\n⏳ Generating events...");
+var startTime      = DateTime.UtcNow;
+var consoleLock    = new object();
+var lastPhaseShown = 0;
+
+IProgress<WriterProgress> progressReporter = new SyncProgress<WriterProgress>(p =>
+{
+    lock (consoleLock)
+    {
+        if (p.PhaseNumber != lastPhaseShown)
+        {
+            if (lastPhaseShown != 0) Console.WriteLine(); // finish previous phase line
+            lastPhaseShown = p.PhaseNumber;
+        }
+        RenderProgressLine(p);
+    }
+});
+
+var totalEvents = await new SeedPlan(generators).RunAsync(config, writer, contextPath, progressReporter);
 var elapsed     = DateTime.UtcNow - startTime;
+
+if (lastPhaseShown != 0) Console.WriteLine(); // finish last progress line
 
 Console.WriteLine($"\n✅ Seeding complete in {elapsed.TotalSeconds:F1}s");
 Console.WriteLine($"   Total events written: {totalEvents:N0}");
@@ -230,4 +248,21 @@ static void DisplayHelp()
     Console.WriteLine("  dotnet run");
     Console.WriteLine("  dotnet run -- --size small --reset --no-confirm");
     Console.WriteLine("  dotnet run -- --size large --parallelism 16");
+}
+
+static void RenderProgressLine(WriterProgress p)
+{
+    const int barWidth = 30;
+    var pct    = p.Total > 0 ? (double)p.Current / p.Total : 0.0;
+    var filled = (int)(barWidth * pct);
+    var bar    = new string('█', filled) + new string('░', barWidth - filled);
+    Console.Write(
+        $"\r  [{p.PhaseNumber}/{p.TotalPhases}] {p.PhaseName,-22} [{bar}] {pct * 100,4:F0}%  {p.Current,12:N0} / {p.Total:N0}   ");
+}
+
+// ── File-scoped types ─────────────────────────────────────────────────────────
+
+file sealed class SyncProgress<T>(Action<T> callback) : IProgress<T>
+{
+    public void Report(T value) => callback(value);
 }

@@ -26,6 +26,7 @@ public sealed class SeedPlan
         SeedingConfiguration config,
         IEventWriter writer,
         string contextPath,
+        IProgress<WriterProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         var context = new SeedContext();
@@ -45,7 +46,7 @@ public sealed class SeedPlan
             .Select((e, i) => new SequencedSeedEvent(i + 1, e.Event, e.Metadata))
             .ToList();
 
-        await writer.WriteAsync(sequenced, contextPath, cancellationToken);
+        await writer.WriteAsync(sequenced, contextPath, progress, cancellationToken);
         return sequenced.Count;
     }
 }
