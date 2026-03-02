@@ -21,6 +21,7 @@ public sealed record CourseBookOrderHistoryItem(Guid BookId, decimal PricePaid);
 /// keyed by a synthetic order ID (the event position as string).
 /// </summary>
 [ProjectionDefinition("CourseBookOrderHistory")]
+[ProjectionTags(typeof(CourseBookOrderHistoryTagProvider))]
 public sealed class CourseBookOrderHistoryProjection : IProjectionDefinition<CourseBookOrderHistoryEntry>
 {
     public string ProjectionName => "CourseBookOrderHistory";
@@ -45,9 +46,7 @@ public sealed class CourseBookOrderHistoryProjection : IProjectionDefinition<Cou
             CourseBooksOrderedEvent e => new CourseBookOrderHistoryEntry(
                 OrderId: Guid.NewGuid(),
                 StudentId: e.StudentId,
-                Items: e.Items
-                    .Select(i => new CourseBookOrderHistoryItem(i.BookId, i.PricePaid))
-                    .ToList(),
+                Items: [.. e.Items.Select(i => new CourseBookOrderHistoryItem(i.BookId, i.PricePaid))],
                 OrderedAt: evt.Metadata.Timestamp),
 
             _ => current

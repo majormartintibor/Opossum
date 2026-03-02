@@ -4,7 +4,7 @@ namespace Opossum.DecisionModel;
 
 /// <summary>
 /// The result of building a Decision Model via
-/// <see cref="DecisionModelExtensions.BuildDecisionModelAsync{TState}"/>.
+/// <see cref="DecisionModelExtensions.BuildDecisionModelAsync{TState}(IEventStore, IDecisionProjection{TState}, System.Threading.CancellationToken)"/>.
 /// </summary>
 /// <remarks>
 /// <para>

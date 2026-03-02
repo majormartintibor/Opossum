@@ -24,7 +24,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
     [Fact]
     public async Task POST_RebuildAll_ReturnsOkWithResultAsync()
     {
-        // Act
+        // Act - no query param → defaults to forceAll=true → rebuilds all 9 projections
         var response = await _client.PostAsync("/admin/projections/rebuild", null);
 
         // Assert
@@ -35,6 +35,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.NotNull(result.Details);
+        Assert.Equal(9, result.TotalRebuilt);
     }
 
     [Fact]
@@ -72,7 +73,9 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
         Assert.NotNull(checkpoints);
         Assert.Equal(9, checkpoints.Count);
         // Projections with seeded events must have a checkpoint > 0.
-        // The CourseBook projections have no seeded events so their checkpoint is 0 — that is correct.
+        // CourseBook projections have no seeded book events, but RebuildAsync sets their checkpoint
+        // to the last store position so the daemon does not re-read the whole event log every cycle.
+        // All 9 projections therefore have a non-zero checkpoint after a forceAll rebuild.
         var seededProjections = new[] { "CourseShortInfo", "CourseDetails", "StudentShortInfo", "StudentDetails", "Invoice" };
         foreach (var name in seededProjections)
         {
@@ -83,14 +86,18 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
         // Wait for checkpoint persistence
         await Task.Delay(500);
 
-        // Act - Rebuild with forceAll=false (should only rebuild projections with checkpoint == 0)
+        // Act - Rebuild with forceAll=false (should return immediately — all 9 projections
+        // already have non-zero checkpoints from the forceAll=true setup above)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - Only the CourseBook projections (checkpoint == 0 == "no events seen") are rebuilt
+        // Assert - All checkpoints are non-zero so nothing needs rebuilding; the result is
+        // TotalRebuilt=0 with an empty Details list, which is still considered a success.
         Assert.NotNull(result);
         Assert.True(result.Success);
+        Assert.Equal(0, result.TotalRebuilt);
+        Assert.Empty(result.Details);
     }
 
     [Fact]

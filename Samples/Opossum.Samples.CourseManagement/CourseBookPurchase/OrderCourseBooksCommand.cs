@@ -95,7 +95,7 @@ public sealed class OrderCourseBooksCommandHandler
             .ToList();
 
         var (courseIds, _) = await eventStore.BuildDecisionModelAsync(
-            (IReadOnlyList<IDecisionProjection<Guid?>>)courseIdProjections,
+            courseIdProjections,
             cancellationToken);
 
         var orderItems = command.Items

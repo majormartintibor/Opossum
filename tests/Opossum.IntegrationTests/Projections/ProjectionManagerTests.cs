@@ -74,7 +74,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetCheckpointAsync_ForNewProjection_ReturnsZero()
+    public async Task GetCheckpointAsync_ForNewProjection_ReturnsZeroAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new PmTestItemProjection());
@@ -87,7 +87,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithExistingEvents_BuildsProjection()
+    public async Task RebuildAsync_WithExistingEvents_BuildsProjectionAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new PmTestItemProjection());
@@ -115,7 +115,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithNonExistentProjection_ThrowsInvalidOperationException()
+    public async Task RebuildAsync_WithNonExistentProjection_ThrowsInvalidOperationExceptionAsync()
     {
         // Act & Assert
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -126,7 +126,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithDeleteEvent_RemovesProjection()
+    public async Task RebuildAsync_WithDeleteEvent_RemovesProjectionAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new PmTestItemProjection());
@@ -156,7 +156,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveCheckpointAsync_SavesCheckpoint()
+    public async Task SaveCheckpointAsync_SavesCheckpointAsync()
     {
         // Act
         await _projectionManager.SaveCheckpointAsync("PmTestItems", 42);
@@ -167,7 +167,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveCheckpointAsync_MultipleTimes_UpdatesCheckpoint()
+    public async Task SaveCheckpointAsync_MultipleTimes_UpdatesCheckpointAsync()
     {
         // Act
         await _projectionManager.SaveCheckpointAsync("PmTestItems", 10);
@@ -180,7 +180,7 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_WithNewEvents_UpdatesProjections()
+    public async Task UpdateAsync_WithNewEvents_UpdatesProjectionsAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new PmTestItemProjection());

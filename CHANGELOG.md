@@ -7,6 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Admin rebuild endpoint now defaults to `forceAll=true`** —
+  `POST /admin/projections/rebuild` previously defaulted to `forceAll=false`, which only
+  rebuilds projections whose checkpoint is `0`. Once the daemon or a prior rebuild had set all
+  checkpoints (even for projections with no matching events), every subsequent call returned
+  `TotalRebuilt=0` with an empty `Details` array — making the endpoint appear broken. The
+  default is now `forceAll=true` so an explicit admin rebuild always rebuilds every projection.
+  Use `?forceAll=false` to preserve the old gap-filling-only behaviour.
+
+### Fixed
+- **`EventsProcessed` in projection rebuild result reported checkpoint position instead of actual events** —
+  `ProjectionRebuildDetail.EventsProcessed` was populated from `GetCheckpointAsync` (which returns the
+  last event-store position used as cursor), not from the count of projection-relevant events actually
+  applied. Projections with no matching events (e.g. `CourseBookCatalog` before any book events are
+  seeded) showed a large non-zero `EventsProcessed` value (equal to the total event count in the store),
+  misleading operators into thinking data had been rebuilt when the projection store was actually empty.
+  Fixed by extracting the core rebuild logic into `RebuildProjectionCoreAsync` that returns the actual
+  `events.Length`, and using that count in `ProjectionRebuildDetail.EventsProcessed` and the
+  "rebuilt successfully in Xms (Y events)" log message.
+- **Concurrent admin `RebuildAsync` calls on the same projection incorrectly expected to throw** —
+  the per-projection locking design intentionally uses wait-mode (`failFast: false`) for
+  `RebuildAsync` so admin-triggered rebuilds queue up rather than fail. The test
+  `DuplicateRebuild_SameProjection_ThrowsInvalidOperationExceptionAsync` had the wrong expectation;
+  renamed to `DuplicateRebuild_SameProjection_ExecutesSequentiallyAsync` and updated to assert that
+  the second rebuild completes successfully after the first.
+
+### Fixed
+- **Projection rebuild endless loop and admin endpoint returning 0 projections rebuilt** — four
+  bugs in `ProjectionManager` were identified and fixed:
+  1. `AcquireProjectionLockAsync` used `TimeSpan.Zero` (fail-fast) for **both** `UpdateAsync`
+     and `RebuildAsync`. The daemon's polling loop held per-projection locks; any concurrent
+     admin rebuild call immediately lost the race and returned `TotalRebuilt = 0`. Fixed by
+     adding a `failFast` parameter — `RebuildAsync` now waits for the lock while `UpdateAsync`
+     retains fail-fast behaviour.
+  2. `RebuildAsync` did not save a checkpoint when `events.Length == 0`. Projections whose event
+     types had no matching events in the store (e.g. `CourseBookCatalog` before book events
+     exist) were perpetually included in rebuild-missing lists and anchored the daemon's
+     `minCheckpoint` at 0, forcing a full event-log re-read on every poll cycle. Fixed by
+     calling `ReadLastAsync(Query.All())` and saving the store frontier as the checkpoint even
+     when no events matched.
+  3. `UpdateAsync` did not advance the checkpoint for projections with no relevant events in a
+     batch (`continue` was taken immediately). This also kept `minCheckpoint` at 0. Fixed by
+     advancing the checkpoint to the batch's maximum position whenever no relevant events are
+     found.
+  4. An unhandled exception thrown by `ApplyAsync` (e.g. `KeySelector` failing on an event
+     missing an expected tag) propagated out of the `foreach` loop, aborting checkpoint
+     updates for all subsequent projections. Fixed by adding a broad per-projection `catch`
+     that logs the error and continues with the next projection.
+
+### Fixed
+- Resolved all 28 build warnings (zero warnings policy enforced):
+  - **CS0419**: Disambiguated ambiguous XML `cref` for `BuildDecisionModelAsync` overloads in `DecisionModel.cs`
+  - **IDE0004**: Removed redundant `(Action)` casts in `CourseAggregateTests.cs`, redundant `(decimal)` cast in `CourseBookGenerator.cs`, redundant `(double)` cast in `SeedingConfiguration.cs`, and redundant `IReadOnlyList<...>` cast in `OrderCourseBooksCommand.cs`
+  - **IDE0028/IDE0305**: Replaced `new()` and `.ToList()` with collection expressions (`[]` / `[.. ...]`) in `SeedContext.cs`, `CourseBookGenerator.cs`, `CourseBookOrderHistoryProjection.cs`, and `StudentPurchasedBooksProjection.cs`
+  - **IDE0075**: Simplified conditional boolean expression in `CourseBookPriceProjections.cs`
+  - **IDE1006**: Added missing `Async` suffix to seven async test methods in `ProjectionManagerTests.cs`
+
+### Changed
+- All list GET endpoints in the sample app now support pagination, sorting, and `PaginatedResponse<T>` responses, consistent with the existing `/students` and `/courses` endpoints:
+  - `GET /course-books` — added `pageNumber`, `pageSize`, `sortBy` (`Title`/`Author`/`Price`), `sortOrder`
+  - `GET /course-books/orders` — added `pageNumber`, `pageSize`, `sortBy` (`OrderedAt`/`StudentId`), `sortOrder` (default: `OrderedAt` descending)
+  - `GET /invoices` — added `pageNumber`, `pageSize`, `sortBy` (`InvoiceNumber`/`Amount`/`IssuedAt`), `sortOrder`
+
 ### Fixed
 - Fixed three failing `ProjectionManagerTests` caused by two distinct issues with `file`-scoped
   test types:

@@ -81,16 +81,14 @@ public sealed class StudentPurchasedBooksProjection : IProjectionDefinition<Stud
         }
         else
         {
-            updated = state.Books
-                .Select(b => b.BookId == bookId
-                    ? b with
-                    {
-                        TotalPaid = b.TotalPaid + pricePaid,
-                        PurchaseCount = b.PurchaseCount + 1,
-                        LastPurchasedAt = purchasedAt > b.LastPurchasedAt ? purchasedAt : b.LastPurchasedAt
-                    }
-                    : b)
-                .ToList();
+            updated = [.. state.Books.Select(b => b.BookId == bookId
+                ? b with
+                {
+                    TotalPaid = b.TotalPaid + pricePaid,
+                    PurchaseCount = b.PurchaseCount + 1,
+                    LastPurchasedAt = purchasedAt > b.LastPurchasedAt ? purchasedAt : b.LastPurchasedAt
+                }
+                : b)];
         }
 
         return state with { Books = updated };

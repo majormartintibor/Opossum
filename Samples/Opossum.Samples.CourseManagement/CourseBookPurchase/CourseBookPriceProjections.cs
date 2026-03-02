@@ -76,7 +76,7 @@ public static class CourseBookPriceProjections
                 EventTypes = [nameof(CourseBookDefinedEvent)],
                 Tags = [new Tag("bookId", bookId.ToString())]
             }),
-            apply: (state, evt) => evt.Event.Event is CourseBookDefinedEvent ? true : state);
+            apply: (state, evt) => evt.Event.Event is CourseBookDefinedEvent || state);
 
     /// <summary>
     /// Returns the <see cref="CourseBookDefinedEvent.CourseId"/> for the given book,

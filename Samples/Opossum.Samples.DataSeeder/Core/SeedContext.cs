@@ -20,19 +20,19 @@ public sealed class SeedContext
     /// Tracks the number of students enrolled in each course.
     /// Populated and maintained by <c>EnrollmentGenerator</c>.
     /// </summary>
-    public Dictionary<Guid, int> CourseEnrollmentCounts { get; } = new();
+    public Dictionary<Guid, int> CourseEnrollmentCounts { get; } = [];
 
     /// <summary>
     /// Tracks the number of courses each student is enrolled in.
     /// Populated and maintained by <c>EnrollmentGenerator</c>.
     /// </summary>
-    public Dictionary<Guid, int> StudentEnrollmentCounts { get; } = new();
+    public Dictionary<Guid, int> StudentEnrollmentCounts { get; } = [];
 
     /// <summary>
     /// Prevents duplicate student-course enrollment pairs.
     /// Populated and maintained by <c>EnrollmentGenerator</c>.
     /// </summary>
-    public HashSet<(Guid StudentId, Guid CourseId)> EnrolledPairs { get; } = new();
+    public HashSet<(Guid StudentId, Guid CourseId)> EnrolledPairs { get; } = [];
 
     /// <summary>Populated by <c>CourseBookGenerator</c>.</summary>
     public List<BookInfo> Books { get; } = [];

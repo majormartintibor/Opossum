@@ -1,19 +1,42 @@
 using Opossum.Core;
 using Opossum.Mediator;
 using Opossum.Projections;
+using Opossum.Samples.CourseManagement.Shared;
 
 namespace Opossum.Samples.CourseManagement.InvoiceCreation;
 
-public sealed record GetInvoicesQuery;
+public sealed record GetInvoicesQuery(
+    int PageNumber = 1,
+    int PageSize = 50,
+    InvoiceSortField SortBy = InvoiceSortField.InvoiceNumber,
+    SortOrder SortOrder = SortOrder.Ascending
+) : PaginationQuery
+{
+    public new int PageNumber { get; init; } = PageNumber;
+    public new int PageSize { get; init; } = PageSize;
+}
+
 public sealed record GetInvoiceQuery(int InvoiceNumber);
 
 public static class GetInvoicesEndpoint
 {
     public static void MapGetInvoicesEndpoint(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/invoices", async ([FromServices] IMediator mediator) =>
+        app.MapGet("/invoices", async (
+            int pageNumber,
+            int pageSize,
+            InvoiceSortField sortBy,
+            SortOrder sortOrder,
+            [FromServices] IMediator mediator) =>
         {
-            var result = await mediator.InvokeAsync<CommandResult<IReadOnlyList<InvoiceReadModel>>>(new GetInvoicesQuery());
+            var query = new GetInvoicesQuery(
+                PageNumber: pageNumber > 0 ? pageNumber : 1,
+                PageSize: pageSize > 0 ? pageSize : 50,
+                SortBy: sortBy,
+                SortOrder: sortOrder
+            );
+
+            var result = await mediator.InvokeAsync<CommandResult<PaginatedResponse<InvoiceReadModel>>>(query);
 
             return result.Success
                 ? Results.Ok(result.Value)
@@ -43,13 +66,41 @@ public static class GetInvoicesEndpoint
 
 public sealed class GetInvoicesQueryHandler()
 {
-    public async Task<CommandResult<IReadOnlyList<InvoiceReadModel>>> HandleAsync(
-        GetInvoicesQuery _,
+    public async Task<CommandResult<PaginatedResponse<InvoiceReadModel>>> HandleAsync(
+        GetInvoicesQuery query,
         IProjectionStore<InvoiceReadModel> projectionStore)
     {
         var all = await projectionStore.GetAllAsync();
-        var sorted = all.OrderBy(i => i.InvoiceNumber).ToList();
-        return CommandResult<IReadOnlyList<InvoiceReadModel>>.Ok(sorted);
+
+        var sorted = query.SortBy switch
+        {
+            InvoiceSortField.Amount => query.SortOrder == SortOrder.Ascending
+                ? all.OrderBy(i => i.Amount)
+                : all.OrderByDescending(i => i.Amount),
+
+            InvoiceSortField.IssuedAt => query.SortOrder == SortOrder.Ascending
+                ? all.OrderBy(i => i.IssuedAt)
+                : all.OrderByDescending(i => i.IssuedAt),
+
+            _ => query.SortOrder == SortOrder.Ascending
+                ? all.OrderBy(i => i.InvoiceNumber)
+                : all.OrderByDescending(i => i.InvoiceNumber)
+        };
+
+        var list = sorted.ToList();
+        var totalCount = list.Count;
+        var items = list
+            .Skip((query.PageNumber - 1) * query.PageSize)
+            .Take(query.PageSize)
+            .ToList();
+
+        return CommandResult<PaginatedResponse<InvoiceReadModel>>.Ok(new PaginatedResponse<InvoiceReadModel>
+        {
+            Items = items,
+            TotalCount = totalCount,
+            PageNumber = query.PageNumber,
+            PageSize = query.PageSize
+        });
     }
 }
 

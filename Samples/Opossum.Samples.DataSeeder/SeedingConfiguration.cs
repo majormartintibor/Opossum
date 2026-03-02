@@ -64,7 +64,7 @@ public class SeedingConfiguration
             const double avgCapacity = 26.6;
             var avgEnrollments = Math.Min(
                 avgTierMax * 0.8,
-                (double)CourseCount * avgCapacity / StudentCount);
+                CourseCount * avgCapacity / StudentCount);
 
             var eStudents = (long)(StudentCount * (
                 1.0

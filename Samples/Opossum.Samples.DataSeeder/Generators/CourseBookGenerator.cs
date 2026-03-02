@@ -107,7 +107,7 @@ public sealed class CourseBookGenerator : ISeedGenerator
         foreach (var bookId in allBookIds.OrderBy(_ => random.Next()).Take(priceChangeCount))
         {
             // Vary price by ±20 %.
-            var factor   = 0.80m + (decimal)random.Next(0, 41) / 100m;
+            var factor   = 0.80m + random.Next(0, 41) / 100m;
             var newPrice = Math.Max(1.00m, Math.Round(currentPrices[bookId] * factor, 2));
             currentPrices[bookId] = newPrice;
 
@@ -167,14 +167,14 @@ public sealed class CourseBookGenerator : ISeedGenerator
                     var (_, courseBookList) = coursesWithMultipleBooks[random.Next(coursesWithMultipleBooks.Count)];
                     var orderSize           = Math.Min(random.Next(2, 5), courseBookList.Count);
                     if (orderSize < 2) continue;
-                    selectedBooks = courseBookList.OrderBy(_ => random.Next()).Take(orderSize).ToList();
+                    selectedBooks = [.. courseBookList.OrderBy(_ => random.Next()).Take(orderSize)];
                 }
                 else
                 {
                     // Fallback: cross-course order — projection limitation applies (see §13.2).
                     var orderSize = Math.Min(random.Next(2, 5), allBookIds.Count);
                     if (orderSize < 2) break;
-                    selectedBooks = allBookIds.OrderBy(_ => random.Next()).Take(orderSize).ToList();
+                    selectedBooks = [.. allBookIds.OrderBy(_ => random.Next()).Take(orderSize)];
                 }
 
                 var studentId = context.Students[random.Next(context.Students.Count)].StudentId;

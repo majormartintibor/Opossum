@@ -106,12 +106,24 @@ internal sealed partial class ProjectionManager : IProjectionManager
     public async Task RebuildAsync(string projectionName, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
+        await RebuildProjectionCoreAsync(projectionName, cancellationToken).ConfigureAwait(false);
+    }
 
+    /// <summary>
+    /// Core rebuild implementation that returns the number of projection-relevant events
+    /// actually processed. Callers use this count for accurate <see cref="ProjectionRebuildDetail.EventsProcessed"/>
+    /// reporting instead of the checkpoint position (which equals the last store position even
+    /// when zero relevant events exist).
+    /// </summary>
+    private async Task<int> RebuildProjectionCoreAsync(string projectionName, CancellationToken cancellationToken)
+    {
         using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.ProjectionRebuild);
         activity?.SetTag("opossum.projection", projectionName);
 
-        // Acquire per-projection lock (fail-fast if already locked)
-        using (await AcquireProjectionLockAsync(projectionName, cancellationToken).ConfigureAwait(false))
+        // Wait for any in-progress update to finish before rebuilding.
+        // (UpdateAsync uses fail-fast; RebuildAsync must wait so the admin endpoint does not
+        // immediately lose the race against the daemon's polling loop.)
+        using (await AcquireProjectionLockAsync(projectionName, cancellationToken, failFast: false).ConfigureAwait(false))
         {
             // Thread-safe dictionary lookup (no global lock needed)
             if (!_projections.TryGetValue(projectionName, out var registration))
@@ -140,13 +152,25 @@ internal sealed partial class ProjectionManager : IProjectionManager
             // Flush all buffered state to disk in a single pass
             await registration.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
 
-            // Save checkpoint
+            // Save checkpoint — always record the current store frontier, even when 0 events
+            // matched this projection's types, so the projection is not endlessly included in
+            // rebuild-missing lists and does not anchor the daemon's minCheckpoint at 0.
+            activity?.SetTag("opossum.events_processed", events.Length);
             if (events.Length > 0)
             {
                 var lastPosition = events.Max(e => e.Position);
                 await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
-                activity?.SetTag("opossum.events_processed", events.Length);
             }
+            else
+            {
+                var lastEvent = await _eventStore.ReadLastAsync(Query.All()).ConfigureAwait(false);
+                if (lastEvent is not null)
+                {
+                    await SaveCheckpointAsync(projectionName, lastEvent.Position, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            return events.Length;
         }
         // Lock automatically released here
     }
@@ -169,6 +193,14 @@ internal sealed partial class ProjectionManager : IProjectionManager
 
             if (relevantEvents.Length == 0)
             {
+                // Advance the checkpoint to the batch frontier so that minCheckpoint does not
+                // stall at 0 and force the daemon to re-read the entire event log every cycle.
+                var batchMax = events.Max(e => e.Position);
+                var current = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
+                if (batchMax > current)
+                {
+                    await SaveCheckpointAsync(projectionName, batchMax, cancellationToken).ConfigureAwait(false);
+                }
                 continue;
             }
 
@@ -188,14 +220,23 @@ internal sealed partial class ProjectionManager : IProjectionManager
                     await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
                 }
             }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("already being rebuilt or updated"))
-            {
-                // Projection is being rebuilt - skip this update batch
-                // The rebuild will process these events anyway
-                LogSkippingProjectionUpdate(projectionName);
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (InvalidOperationException ex) when (ex.Message.Contains("already being rebuilt or updated"))
+                    {
+                        // Projection is being rebuilt - skip this update batch
+                        // The rebuild will process these events anyway
+                        LogSkippingProjectionUpdate(projectionName);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log and continue — one failing projection must not abort updates for all others
+                        LogProjectionUpdateFailed(projectionName, ex);
+                    }
+                }
             }
-        }
-    }
 
     public async Task<long> GetCheckpointAsync(string projectionName, CancellationToken cancellationToken = default)
     {
@@ -334,19 +375,19 @@ internal sealed partial class ProjectionManager : IProjectionManager
                     {
                         LogRebuildingProjection(projectionName);
 
-                        // Call existing RebuildAsync(string) method
-                        await RebuildAsync(projectionName, ct).ConfigureAwait(false);
+                        // Use core method to get actual events-processed count for accurate reporting.
+                        // (GetCheckpointAsync returns the last store position, not the number of
+                        // projection-relevant events, which would mislead users for sparse projections.)
+                        var eventsProcessed = await RebuildProjectionCoreAsync(projectionName, ct).ConfigureAwait(false);
 
                         stopwatch.Stop();
-
-                        var eventsProcessed = await GetCheckpointAsync(projectionName, ct).ConfigureAwait(false);
 
                         details.Add(new ProjectionRebuildDetail
                         {
                             ProjectionName = projectionName,
                             Success = true,
                             Duration = stopwatch.Elapsed,
-                            EventsProcessed = (int)eventsProcessed,
+                            EventsProcessed = eventsProcessed,
                             ErrorMessage = null
                         });
 
@@ -488,29 +529,48 @@ internal sealed partial class ProjectionManager : IProjectionManager
     [LoggerMessage(Level = LogLevel.Debug, Message = "Skipping update for projection '{ProjectionName}' - currently being rebuilt")]
     private partial void LogSkippingProjectionUpdate(string projectionName);
 
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to update projection '{ProjectionName}', skipping this batch")]
+    private partial void LogProjectionUpdateFailed(string projectionName, Exception ex);
+
     /// <summary>
     /// Acquires a per-projection lock to prevent concurrent operations on the same projection.
-    /// Uses fail-fast approach: throws if projection is already locked.
     /// </summary>
     /// <param name="projectionName">Name of the projection to lock</param>
     /// <param name="cancellationToken">Cancellation token</param>
+    /// <param name="failFast">
+    /// When <see langword="true"/> (the default, used by <see cref="UpdateAsync"/>), the method
+    /// returns immediately with an exception if the lock is already held — daemon updates yield
+    /// to in-progress rebuilds.
+    /// When <see langword="false"/> (used by <see cref="RebuildAsync(string,CancellationToken)"/>),
+    /// the method waits until the lock is available so the admin-triggered rebuild is not
+    /// immediately lost against the daemon's polling loop.
+    /// </param>
     /// <returns>Disposable that releases the lock when disposed</returns>
-    /// <exception cref="InvalidOperationException">If projection is already being rebuilt or updated</exception>
+    /// <exception cref="InvalidOperationException">If <paramref name="failFast"/> is <see langword="true"/> and the projection is already locked</exception>
     private async Task<IDisposable> AcquireProjectionLockAsync(
         string projectionName,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool failFast = true)
     {
         // Get or create a lock for this specific projection
         var projectionLock = _projectionLocks.GetOrAdd(
             projectionName,
             _ => new SemaphoreSlim(1, 1));
 
-        // Fail-fast: Don't wait if already locked
-        if (!await projectionLock.WaitAsync(TimeSpan.Zero, cancellationToken).ConfigureAwait(false))
+        if (failFast)
         {
-            throw new InvalidOperationException(
-                $"Projection '{projectionName}' is already being rebuilt or updated. " +
-                $"Please wait for the current operation to complete.");
+            // Fail-fast: Don't wait if already locked (daemon updates yield to in-progress rebuilds)
+            if (!await projectionLock.WaitAsync(TimeSpan.Zero, cancellationToken).ConfigureAwait(false))
+            {
+                throw new InvalidOperationException(
+                    $"Projection '{projectionName}' is already being rebuilt or updated. " +
+                    $"Please wait for the current operation to complete.");
+            }
+        }
+        else
+        {
+            // Wait for the lock: admin rebuild waits for any in-progress daemon update to finish
+            await projectionLock.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return new ProjectionLockReleaser(projectionLock);

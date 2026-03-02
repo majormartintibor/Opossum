@@ -158,8 +158,7 @@ public class CourseAggregateTests
             MakeEvent(new StudentEnrolledToCourseEvent(_courseId, _studentId), position: 2)
         ]);
 
-        // Explicit Action cast avoids the xUnit 2.9.x Action/Func<Task> overload ambiguity.
-        var ex = Record.Exception((Action)(() => aggregate.ChangeCapacity(1)));
+        var ex = Record.Exception(() => aggregate.ChangeCapacity(1));
 
         Assert.Null(ex);
     }
@@ -174,7 +173,7 @@ public class CourseAggregateTests
         ]);
 
         var ex = Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.ChangeCapacity(10)));
+            () => aggregate.ChangeCapacity(10));
 
         Assert.Contains("already has a capacity", ex.Message);
     }
@@ -187,7 +186,7 @@ public class CourseAggregateTests
         ]);
 
         Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.ChangeCapacity(10)));
+            () => aggregate.ChangeCapacity(10));
 
         Assert.Empty(aggregate.PullRecordedEvents());
     }
@@ -202,7 +201,7 @@ public class CourseAggregateTests
         ]);
 
         var ex = Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.ChangeCapacity(1)));
+            () => aggregate.ChangeCapacity(1));
 
         Assert.Contains("active subscriptions", ex.Message);
     }
@@ -217,7 +216,7 @@ public class CourseAggregateTests
         ]);
 
         Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.ChangeCapacity(1)));
+            () => aggregate.ChangeCapacity(1));
 
         Assert.Empty(aggregate.PullRecordedEvents());
     }
@@ -275,7 +274,7 @@ public class CourseAggregateTests
         ]);
 
         var ex = Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.SubscribeStudent(_studentId)));
+            () => aggregate.SubscribeStudent(_studentId));
 
         Assert.Contains("fully booked", ex.Message);
     }
@@ -289,7 +288,7 @@ public class CourseAggregateTests
         ]);
 
         Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.SubscribeStudent(_studentId)));
+            () => aggregate.SubscribeStudent(_studentId));
 
         Assert.Empty(aggregate.PullRecordedEvents());
     }
@@ -303,7 +302,7 @@ public class CourseAggregateTests
         ]);
 
         var ex = Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.SubscribeStudent(_studentId)));
+            () => aggregate.SubscribeStudent(_studentId));
 
         Assert.Contains("already subscribed", ex.Message);
     }
@@ -317,7 +316,7 @@ public class CourseAggregateTests
         ]);
 
         Assert.Throws<InvalidOperationException>(
-            (Action)(() => aggregate.SubscribeStudent(_studentId)));
+            () => aggregate.SubscribeStudent(_studentId));
 
         Assert.Empty(aggregate.PullRecordedEvents());
     }
