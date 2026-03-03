@@ -1,4 +1,4 @@
-# ?? Opossum
+# 🦝 Opossum
 
 **A file system-based event store for .NET that implements the DCB (Dynamic Consistency Boundaries) specification.**
 
@@ -10,7 +10,7 @@ Opossum turns your file system into a fully functional event store with projecti
 
 ---
 
-## ?? Table of Contents
+## 📋 Table of Contents
 
 - [What is Opossum?](#-what-is-opossum)
 - [When to Use Opossum](#-when-to-use-opossum)
@@ -32,32 +32,32 @@ Opossum turns your file system into a fully functional event store with projecti
 
 ---
 
-## ?? What is Opossum?
+## 🦝 What is Opossum?
 
 Opossum is an **event sourcing framework** that uses your **file system as the database**. It's designed for applications that need:
 
-- ? **100% offline operation** - No internet required
-- ? **Complete audit trail** - Every state change is an immutable event
-- ? **Local data ownership** - Your data never leaves your server
-- ? **Optimistic concurrency** - Built-in DCB pattern for consistency
-- ? **Simple deployment** - Just files, no database server to manage
-- ? **Projections** - Materialized views that rebuild from events
-- ? **Tag-based indexing** - Fast queries without full scans
+- ✅ **100% offline operation** - No internet required
+- ✅ **Complete audit trail** - Every state change is an immutable event
+- ✅ **Local data ownership** - Your data never leaves your server
+- ✅ **Optimistic concurrency** - Built-in DCB pattern for consistency
+- ✅ **Simple deployment** - Just files, no database server to manage
+- ✅ **Projections** - Materialized views that rebuild from events
+- ✅ **Tag-based indexing** - Fast queries without full scans
 
 ### What Makes Opossum Different?
 
 Unlike cloud-based event stores (EventStoreDB, Azure Event Hubs) or database-backed solutions, Opossum **stores events directly as files** in a structured directory hierarchy. This makes it ideal for:
 
-- ?? **On-premises applications** (POS systems, dealership software)
-- ?? **Offline-first applications** (field service, remote installations)
-- ?? **SMB solutions** (where cloud costs don't make sense)
-- ?? **Data sovereignty requirements** (keep data in-country/on-site)
-- ?? **Development & testing** (no Docker/database setup needed)
-- ? **Multi-workstation deployments** (multiple PCs sharing a store on a network drive — cross-process append safety via OS file locking)
+- 🏢 **On-premises applications** (POS systems, dealership software)
+- 📴 **Offline-first applications** (field service, remote installations)
+- 💼 **SMB solutions** (where cloud costs don't make sense)
+- 🔒 **Data sovereignty requirements** (keep data in-country/on-site)
+- 🧪 **Development & testing** (no Docker/database setup needed)
+- 🖥️ **Multi-workstation deployments** (multiple PCs sharing a store on a network drive — cross-process append safety via OS file locking)
 
 ---
 
-## ? When to Use Opossum
+## ✅ When to Use Opossum
 
 ### Perfect Use Cases
 
@@ -72,33 +72,33 @@ Unlike cloud-based event stores (EventStoreDB, Azure Event Hubs) or database-bac
 
 ### Key Characteristics
 
-? **Single server/small deployment** (< 100k events/day)  
-? **Offline-first requirements**  
-? **Simple IT environment** (IT staff comfortable with files/folders)  
-? **Budget-conscious** (avoid monthly cloud fees)  
-? **Data residency requirements** (legal/compliance)  
-? **Complete audit trail needed**
+✅ **Single server/small deployment** (< 100k events/day)  
+✅ **Offline-first requirements**  
+✅ **Simple IT environment** (IT staff comfortable with files/folders)  
+✅ **Budget-conscious** (avoid monthly cloud fees)  
+✅ **Data residency requirements** (legal/compliance)  
+✅ **Complete audit trail needed**
 
 ---
 
-## ? When NOT to Use Opossum
+## ❌ When NOT to Use Opossum
 
 Opossum is **not designed** for:
 
 | Don't Use If... | Use Instead |
 |----------------|-------------|
-| ? **Distributed systems** across multiple servers | EventStoreDB, Kafka |
-| ? **High throughput** (> 100k events/day per server) | Cloud event stores |
-| ? **Cloud-native microservices** | Azure Event Hubs, AWS Kinesis |
-| ? **Multi-region replication** needed | Distributed event stores |
-| ? **Event streaming** to multiple consumers | Kafka, RabbitMQ |
-| ? **Massive scale** (millions of events) | Purpose-built event stores |
+| ❌ **Distributed systems** across multiple servers | EventStoreDB, Kafka |
+| ❌ **High throughput** (> 100k events/day per server) | Cloud event stores |
+| ❌ **Cloud-native microservices** | Azure Event Hubs, AWS Kinesis |
+| ❌ **Multi-region replication** needed | Distributed event stores |
+| ❌ **Event streaming** to multiple consumers | Kafka, RabbitMQ |
+| ❌ **Massive scale** (millions of events) | Purpose-built event stores |
 
 **Rule of thumb:** If your application runs on a single server (or small cluster) and needs offline capabilities, Opossum is great. If you need cloud-scale distribution, choose a cloud-native solution.
 
 ---
 
-## ?? Quick Start
+## 🚀 Quick Start
 
 ### 1. Install the NuGet Package
 
@@ -276,7 +276,7 @@ public class StudentController
 
 ---
 
-## ?? Core Concepts
+## 🧠 Core Concepts
 
 ### Events
 
@@ -614,7 +614,7 @@ app.MapPost("/students", async ([FromBody] RegisterStudentRequest req, IMediator
 
 ---
 
-## ?? Configuration
+## ⚙️ Configuration
 
 ### OpossumOptions
 
@@ -687,25 +687,25 @@ builder.Services.AddOpossum(options =>
 
 ---
 
-## ?? How Events Are Stored
+## 💾 How Events Are Stored
 
 Opossum creates a **file-based database** with the following structure:
 
 ```
 D:\MyApp\EventStore\                 # RootPath
-??? MyApplicationContext\             # Context name
-    ??? .ledger                       # Ledger file (current sequence position)
-    ??? Events\                       # Event files (one per event)
-    ?   ??? 0000000001.json           # Event at position 1
-    ?   ??? 0000000002.json           # Event at position 2
-    ?   ??? ...
-    ??? Indices\                      # Index directories
-        ??? EventType\                # Index by event type
-        ?   ??? StudentRegisteredEvent.idx
-        ?   ??? StudentEnrolledToCourseEvent.idx
-        ??? Tags\                     # Index by tags
-            ??? studentId_123.idx     # All events with tag studentId=123
-            ??? studentEmail_test@example.com.idx
+└── MyApplicationContext\             # Context name
+    ├── .ledger                       # Ledger file (current sequence position)
+    ├── Events\                       # Event files (one per event)
+    │   ├── 0000000001.json           # Event at position 1
+    │   ├── 0000000002.json           # Event at position 2
+    │   └── ...
+    └── Indices\                      # Index directories
+        ├── EventType\                # Index by event type
+        │   ├── StudentRegisteredEvent.idx
+        │   └── StudentEnrolledToCourseEvent.idx
+        └── Tags\                     # Index by tags
+            ├── studentId_123.idx     # All events with tag studentId=123
+            └── studentEmail_test@example.com.idx
 ```
 
 ### File Formats
@@ -758,7 +758,7 @@ Newline-separated list of sequence positions:
 
 ---
 
-## ?? API Reference
+## 📖 API Reference
 
 ### IEventStore
 
@@ -965,15 +965,15 @@ app.MapPost("/admin/projections/rebuild", async (IProjectionManager manager) =>
 
 ---
 
-## ?? Full Example
+## 💡 Full Example
 
 The following example is taken directly from the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) and shows the full DCB pattern at its most expressive: **three independent business invariants enforced atomically through a single read**.
 
 Enrolling a student in a course requires checking three separate concerns simultaneously:
 
-- ? **Course capacity** — the course must exist and have available seats
-- ? **Student enrollment limit** — the student must be registered and below their tier's course limit  
-- ? **Duplicate prevention** — the student must not already be enrolled in this course
+- ✅ **Course capacity** — the course must exist and have available seats
+- ✅ **Student enrollment limit** — the student must be registered and below their tier's course limit  
+- ✅ **Duplicate prevention** — the student must not already be enrolled in this course
 
 All three are evaluated from **one `ReadAsync` call**. The resulting `AppendCondition` spans all three queries automatically — a concurrent write matching any of them will cause `ExecuteDecisionAsync` to retry from scratch, with no manual retry logic required.
 
@@ -1623,7 +1623,7 @@ the value in `.ledger`. Full analysis and manual recovery steps:
 
 ---
 
-## ?? Documentation
+## 📚 Documentation
 
 - [DCB Specification](https://dcb.events/specification/) - Dynamic Consistency Boundaries pattern
 - [Sample Application](Samples/Opossum.Samples.CourseManagement/) - Complete working example
@@ -1631,23 +1631,23 @@ the value in `.ledger`. Full analysis and manual recovery steps:
 
 ---
 
-## ?? Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ---
 
-## ?? License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## ?? Acknowledgments
+## 🙏 Acknowledgments
 
 - Inspired by the [DCB Specification](https://dcb.events/)
 - Built for real-world use cases in automotive retail and SMB applications
 
 ---
 
-**Made with ?? for developers who value simplicity and local-first data ownership.**
+**Made with ❤️ for developers who value simplicity and local-first data ownership.**
