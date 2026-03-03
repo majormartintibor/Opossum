@@ -179,8 +179,8 @@ public sealed class SeederEndToEndTests : IDisposable
 
         Assert.Equal("Small",  config.PresetName);
         Assert.Equal(40,        config.StudentCount);
-        Assert.Equal(8,         config.CourseCount);
-        Assert.Equal(8,         config.CourseBookCount);
+        Assert.Equal(25,        config.CourseCount);
+        Assert.Equal(25,        config.CourseBookCount);
         Assert.Equal(30,        config.InvoiceCount);
         Assert.Equal(8,         config.MultiBookOrders);
     }
@@ -192,8 +192,8 @@ public sealed class SeederEndToEndTests : IDisposable
 
         Assert.Equal("Medium",  config.PresetName);
         Assert.Equal(7_000,     config.StudentCount);
-        Assert.Equal(1_400,     config.CourseCount);
-        Assert.Equal(1_400,     config.CourseBookCount);
+        Assert.Equal(4_000,     config.CourseCount);
+        Assert.Equal(4_000,     config.CourseBookCount);
         Assert.Equal(2_500,     config.InvoiceCount);
         Assert.Equal(600,       config.MultiBookOrders);
     }
@@ -205,8 +205,8 @@ public sealed class SeederEndToEndTests : IDisposable
 
         Assert.Equal("Large",   config.PresetName);
         Assert.Equal(70_000,    config.StudentCount);
-        Assert.Equal(14_000,    config.CourseCount);
-        Assert.Equal(14_000,    config.CourseBookCount);
+        Assert.Equal(40_000,    config.CourseCount);
+        Assert.Equal(40_000,    config.CourseBookCount);
         Assert.Equal(15_000,    config.InvoiceCount);
         Assert.Equal(7_000,     config.MultiBookOrders);
     }
@@ -218,8 +218,8 @@ public sealed class SeederEndToEndTests : IDisposable
 
         Assert.Equal("Prod",    config.PresetName);
         Assert.Equal(350_000,   config.StudentCount);
-        Assert.Equal(70_000,    config.CourseCount);
-        Assert.Equal(70_000,    config.CourseBookCount);
+        Assert.Equal(200_000,   config.CourseCount);
+        Assert.Equal(200_000,   config.CourseBookCount);
         Assert.Equal(75_000,    config.InvoiceCount);
         Assert.Equal(35_000,    config.MultiBookOrders);
     }

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **DataSeeder: tuned preset student-to-course ratios for healthier fill distribution** — All
+  four presets previously used a 5:1 student-to-course ratio, which caused total enrollment
+  demand to exceed total course capacity by ~46%, leaving no course with available seats.
+  `CourseCount` and `CourseBookCount` have been increased so the ratio drops to **1.6:1** for
+  `Small` and **1.75:1** for `Medium`, `Large`, and `Prod`. Expected outcome is ~55–60% of
+  courses at capacity and ~40–45% with remaining seats — a realistic mix for manual indexing
+  tests. `StudentCount`, `InvoiceCount`, and `MultiBookOrders` are unchanged. Estimated event
+  counts updated in preset summary comments.
+
 ### Added
 - **DataSeeder: live two-phase progress bar** — `DirectEventWriter` now emits `WriterProgress`
   snapshots via a new optional `IProgress<WriterProgress>?` parameter on `IEventWriter.WriteAsync`.
