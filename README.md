@@ -194,7 +194,7 @@ using Opossum.Core;
 // Query all events for a specific student
 var query = Query.FromItems(new QueryItem
 {
-    Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+    Tags = [new Tag("studentId", studentId.ToString())]
 });
 
 var events = await _eventStore.ReadAsync(query);
@@ -337,7 +337,7 @@ Filter events by **EventType** and/or **Tags**:
 // All events for a specific student
 var query = Query.FromItems(new QueryItem
 {
-    Tags = [new Tag { Key = "studentId", Value = "123" }]
+    Tags = [new Tag("studentId", "123")]
 });
 
 // All StudentRegistered events
@@ -350,7 +350,7 @@ var query = Query.FromItems(new QueryItem
 var query = Query.FromItems(new QueryItem
 {
     EventTypes = [nameof(StudentEnrolledToCourseEvent)],
-    Tags = [new Tag { Key = "studentId", Value = "123" }]
+    Tags = [new Tag("studentId", "123")]
 });
 ```
 
@@ -395,7 +395,7 @@ public sealed class CourseDetailsProjection : IProjectionWithRelatedEvents<Cours
         if (evt.Event.Event is StudentEnrolledToCourseEvent enrolled)
             return Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "studentId", Value = enrolled.StudentId.ToString() }],
+                Tags = [new Tag("studentId", enrolled.StudentId.ToString())],
                 EventTypes = [nameof(StudentRegisteredEvent)]
             });
         return null;
@@ -437,7 +437,7 @@ public sealed class CourseShortInfoTagProvider : IProjectionTagProvider<CourseSh
 {
     public IEnumerable<Tag> GetTags(CourseShortInfo state)
     {
-        yield return new Tag { Key = "IsFull", Value = state.IsFull.ToString() };
+        yield return new Tag("IsFull", state.IsFull.ToString());
     }
 }
 
@@ -452,7 +452,7 @@ public sealed class CourseShortInfoProjection : IProjectionDefinition<CourseShor
 // 3. Query by tag — uses the persisted index, no full table scan
 IProjectionStore<CourseShortInfo> courseStore = ...;
 var availableCourses = await courseStore.QueryByTagsAsync(
-    [new Tag { Key = "IsFull", Value = "False" }]);
+    [new Tag("IsFull", "False")]);
 ```
 
 ### Decision Model Projections
@@ -472,7 +472,7 @@ IDecisionProjection<MyState?> MyProjection(Guid id) =>
         query: Query.FromItems(new QueryItem
         {
             EventTypes = [nameof(MyEvent)],
-            Tags = [new Tag { Key = "id", Value = id.ToString() }]
+            Tags = [new Tag("id", id.ToString())]
         }),
         apply: (state, evt) => evt.Event.Event switch
         {
@@ -559,7 +559,7 @@ Enforce **optimistic concurrency** using append conditions. The raw DCB API is i
 // Ensure email is unique across ALL students
 var validateEmailQuery = Query.FromItems(new QueryItem
 {
-    Tags = [new Tag { Key = "studentEmail", Value = email }]
+    Tags = [new Tag("studentEmail", email)]
 });
 
 // This will fail if any event with this email already exists
@@ -920,7 +920,7 @@ public interface IProjectionStore<TState> where TState : class
 public class CourseController(IProjectionStore<CourseShortInfo> courseStore)
 {
     public async Task<IReadOnlyList<CourseShortInfo>> GetAvailableAsync() =>
-        await courseStore.QueryByTagsAsync([new Tag { Key = "IsFull", Value = "False" }]);
+        await courseStore.QueryByTagsAsync([new Tag("IsFull", "False")]);
 
     public async Task<CourseShortInfo?> GetByIdAsync(Guid courseId) =>
         await courseStore.GetAsync(courseId.ToString());
@@ -1027,7 +1027,7 @@ public static class CourseEnrollmentProjections
                     nameof(CourseStudentLimitModifiedEvent),
                     nameof(StudentEnrolledToCourseEvent)
                 ],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event switch
             {
@@ -1052,7 +1052,7 @@ public static class CourseEnrollmentProjections
                     nameof(StudentSubscriptionUpdatedEvent),
                     nameof(StudentEnrolledToCourseEvent)
                 ],
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+                Tags = [new Tag("studentId", studentId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event switch
             {
@@ -1075,8 +1075,8 @@ public static class CourseEnrollmentProjections
                 EventTypes = [nameof(StudentEnrolledToCourseEvent)],
                 Tags =
                 [
-                    new Tag { Key = "courseId", Value = courseId.ToString() },
-                    new Tag { Key = "studentId", Value = studentId.ToString() }
+                    new Tag("courseId", courseId.ToString()),
+                    new Tag("studentId", studentId.ToString())
                 ]
             }),
             apply: (_, _) => true);   // any match means already enrolled
@@ -1501,33 +1501,34 @@ See [`ExamRegistration/`](Samples/Opossum.Samples.CourseManagement/ExamRegistrat
 
 ### Typical Throughput
 
-**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-02-26):**
+**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-03-03):**
 
 | Operation | Throughput | Notes |
 |-----------|-----------|-------|
-| **Append (FlushImmediately = true, single event)** | ~58 events/sec | True durability: event + index files flushed (~17ms/event on SSD) |
-| **Append (FlushImmediately = true, batch 10)** | ~78 events/sec | ~13ms/event when amortised over a batch |
-| **Append (FlushImmediately = false)** | ~218 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
-| **Tag query (high selectivity)** | ~553 μs | Index-based, excellent for targeted queries |
-| **Tag query (1K events)** | ~10 ms | Sub-linear scaling |
-| **Read by EventType (10K events)** | ~201 ms | Index-based |
+| **Append (FlushImmediately = true, single event)** | ~61 events/sec | True durability: event + index files flushed (~16ms/event on SSD) |
+| **Append (FlushImmediately = true, batch 10)** | ~81 events/sec | ~12ms/event when amortised over a batch |
+| **Append (FlushImmediately = false)** | ~213 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
+| **Tag query (high selectivity)** | ~501 μs | Index-based, excellent for targeted queries |
+| **Tag query (1K events)** | ~11 ms | Sub-linear scaling |
+| **ReadLastAsync (100 → 10K events)** | 799–1,105 μs | Near-O(1): one index lookup + one file read |
+| **Read by EventType (10K events)** | ~212 ms | Index-based |
 | **Projection rebuild** | ~15,000 events/sec | Batched I/O (see rebuild note below) |
-| **Incremental projection update** | ~11 μs | ~500x faster than full rebuild; zero allocation |
+| **Incremental projection update** | ~3.7 μs / 0 B | ~1,500x faster than full rebuild; zero allocation |
 
 ### Query Performance by Selectivity
 
 | Selectivity | 10K Events | Performance |
 |------------|-----------|-------------|
-| **High** (few matches) | ~590 μs | ⭐ Excellent - tag index highly effective |
-| **Medium** (moderate matches) | ~5.5 ms | ✅ Good - typical use case |
-| **Low** (many matches) | ~111 ms | ⚠️ Expected - must deserialize many events |
+| **High** (few matches) | ~501 μs | ⭐ Excellent - tag index highly effective |
+| **Medium** (moderate matches) | ~5.3 ms | ✅ Good - typical use case |
+| **Low** (many matches) | ~99 ms | ⚠️ Expected - must deserialize many events |
 
 ### Optimization Tips
 
 ✅ **Use SSDs** - Flush operations are much faster (10ms vs 50ms+ on HDD)  
-✅ **Use tag-based queries** - ~590μs for high selectivity vs ~5.5ms for broader queries  
+✅ **Use tag-based queries** - ~501μs for high selectivity vs ~5.3ms for broader queries  
 ✅ **Enable parallel projection rebuilding** - `MaxConcurrentRebuilds` config; note: after the rebuild I/O optimization, sequential and parallel complete in similar time (~370ms for 4 projections) — the disk bottleneck is gone  
-✅ **Use incremental projection updates** - ~500x faster than full rebuild  
+✅ **Use incremental projection updates** - ~1,500x faster than full rebuild; zero allocation  
 ✅ **Optimize query selectivity** - More specific tags = faster queries  
 ⚠️ **Avoid Query.All() for large datasets** - Use projections for read models instead  
 ⚠️ **Use `FlushEventsImmediately = false`** for testing only (data loss risk on power failure)
@@ -1555,7 +1556,7 @@ Opossum is designed for **single-server deployments**:
 
 **Beyond these limits?** Consider cloud-based event stores (EventStoreDB, Azure Event Hubs).
 
-**Detailed benchmarks:** See `docs/benchmarking/results/20260226/`
+**Detailed benchmarks:** See `docs/benchmarking/results/20260303/`
 
 > **Rebuild performance note:** The projection rebuild I/O optimisation reduced the 4-projection sequential rebuild from **5.5 s → 370 ms (~15×)** and memory from **85.9 MB → 21.5 MB (~4×)**. As a consequence, the parallel-over-sequential speedup collapsed to near-parity — the disk I/O bottleneck that made parallelism valuable was eliminated. See `CHANGELOG.md` for the full benchmark comparison.
 

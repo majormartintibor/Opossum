@@ -186,6 +186,7 @@
     <File Path="docs/performance/PERFORMANCE-BASELINE.md" />
   </Folder>
   <Folder Name="/docs/releases/">
+    <File Path="docs/releases/0.4.0-preview.2-tasks.md" />
     <File Path="docs/releases/automated-release-guide.md" />
   </Folder>
   <Folder Name="/docs/specifications/">
