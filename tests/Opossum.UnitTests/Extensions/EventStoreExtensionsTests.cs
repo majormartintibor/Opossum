@@ -836,6 +836,9 @@ public class EventStoreExtensionsTests
             LastFromPosition = fromPosition;
             return Task.FromResult(EventsToReturn);
         }
+
+        public Task<SequencedEvent?> ReadLastAsync(Query query, CancellationToken cancellationToken = default) =>
+            Task.FromResult<SequencedEvent?>(EventsToReturn.Length > 0 ? EventsToReturn[^1] : null);
     }
 
     private class TestEventData : IEvent
@@ -862,6 +865,9 @@ public class EventStoreExtensionsTests
         {
             return Task.FromResult(Array.Empty<SequencedEvent>());
         }
+
+        public Task<SequencedEvent?> ReadLastAsync(Query query, CancellationToken cancellationToken = default) =>
+            Task.FromResult<SequencedEvent?>(null);
     }
 
     #endregion

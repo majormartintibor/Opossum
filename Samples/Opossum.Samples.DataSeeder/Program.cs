@@ -1,83 +1,194 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+using Opossum;
 using Opossum.DependencyInjection;
-using Opossum.Mediator;
-using Opossum.Samples.CourseManagement.CourseEnrollment; // For command handler discovery
 using Opossum.Samples.DataSeeder;
+using Opossum.Samples.DataSeeder.Core;
+using Opossum.Samples.DataSeeder.Generators;
+using Opossum.Samples.DataSeeder.Writers;
 
-Console.WriteLine("🌱 Opossum Baseline Data Seeder");
-Console.WriteLine("================================\n");
+Console.WriteLine("🌱 Opossum Data Seeder");
+Console.WriteLine("======================\n");
 
-// Load configuration from CourseManagement sample app (single source of truth)
+// Load configuration from CourseManagement sample app (single source of truth for DB path).
 var courseManagementPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "Opossum.Samples.CourseManagement");
 var configuration = new ConfigurationBuilder()
     .SetBasePath(courseManagementPath)
     .AddJsonFile("appsettings.Development.json", optional: false)
     .Build();
 
-// Parse command line arguments
-var config = ParseArguments(args);
+var rootPath    = configuration["Opossum:RootPath"]  ?? throw new InvalidOperationException("Opossum:RootPath not configured.");
+var storeName   = configuration["Opossum:StoreName"] ?? throw new InvalidOperationException("Opossum:StoreName not configured.");
+var contextPath = Path.Combine(rootPath, storeName);
 
-DisplayConfiguration(config, configuration);
+Console.WriteLine($"Database: {contextPath}");
+Console.WriteLine();
 
-if (!ConfirmSeeding(config))
+// ── Argument parsing ──────────────────────────────────────────────────────────
+var (config, presetProvided) = ParseArguments(args);
+
+// ── Interactive menu (skipped when --size was provided) ───────────────────────
+if (!presetProvided)
 {
-    Console.WriteLine("\n❌ Seeding cancelled.");
-    return;
+    config = RunInteractiveMenu();
+    Console.WriteLine();
+    Console.Write("Reset existing database? (y/N): ");
+    var resetResponse = Console.ReadLine()?.Trim().ToLowerInvariant();
+    config.ResetDatabase = resetResponse is "y" or "yes";
 }
 
-// Initialize Opossum Event Store
-var serviceProvider = ConfigureServices(configuration);
+// ── Confirmation summary ──────────────────────────────────────────────────────
+var parallelism       = config.WriteParallelism <= 0 ? Environment.ProcessorCount : config.WriteParallelism;
+var writerDescription = config.UseEventStoreWriter
+    ? "EventStoreWriter"
+    : $"DirectEventWriter (parallel, {parallelism} threads)";
 
-// Get Opossum configuration values
-var rootPath = configuration["Opossum:RootPath"] ?? throw new InvalidOperationException("Opossum:RootPath not found in configuration");
-var contextName = configuration["Opossum:StoreName"] ?? throw new InvalidOperationException("Opossum:StoreName not found in configuration");
+Console.WriteLine();
+Console.WriteLine("Configuration:");
+Console.WriteLine($"  Size:        {config.PresetName}");
+Console.WriteLine($"  Students:    {config.StudentCount:N0}");
+Console.WriteLine($"  Courses:     {config.CourseCount:N0}");
+Console.WriteLine($"  Books:       {config.CourseBookCount:N0}");
+Console.WriteLine($"  Invoices:    {config.InvoiceCount:N0}");
+Console.WriteLine($"  Est. events: ~{config.EstimatedEventCount:N0}");
+Console.WriteLine($"  Reset:       {(config.ResetDatabase ? "YES" : "NO")}");
+Console.WriteLine($"  Writer:      {writerDescription}");
+Console.WriteLine();
 
-// Run seeding
-var seeder = new DataSeeder(serviceProvider, config, rootPath, contextName);
-await seeder.SeedAsync();
+if (config.RequireConfirmation)
+{
+    Console.Write("Proceed? (y/N): ");
+    var proceed = Console.ReadLine()?.Trim().ToLowerInvariant();
+    if (proceed is not ("y" or "yes"))
+    {
+        Console.WriteLine("\n❌ Seeding cancelled.");
+        return;
+    }
+}
 
-Console.WriteLine("\n✅ Seeding complete!");
-Console.WriteLine($"   Total events created: {seeder.TotalEventsCreated}");
-Console.WriteLine($"   Database location: {configuration["Opossum:RootPath"]}");
-Console.WriteLine($"\n💡 You can now run the sample application or integration tests.");
+// ── Reset ─────────────────────────────────────────────────────────────────────
+if (config.ResetDatabase)
+{
+    if (Directory.Exists(contextPath))
+    {
+        Console.WriteLine($"\n🗑️  Deleting: {contextPath}");
+        Directory.Delete(contextPath, recursive: true);
+        Console.WriteLine("✅ Database cleared.");
+    }
+    else
+    {
+        Console.WriteLine("ℹ️  No existing database to clear.");
+    }
+}
+
+// ── Generators (dependency order) ────────────────────────────────────────────
+IReadOnlyList<ISeedGenerator> generators =
+[
+    new StudentGenerator(),
+    new TierUpgradeGenerator(),
+    new CourseGenerator(),
+    new CapacityChangeGenerator(),
+    new EnrollmentGenerator(),
+    new InvoiceGenerator(),
+    new AnnouncementGenerator(),
+    new ExamTokenGenerator(),
+    new CourseBookGenerator()
+];
+
+// ── Writer ────────────────────────────────────────────────────────────────────
+IEventWriter writer;
+if (config.UseEventStoreWriter)
+{
+    var services = new ServiceCollection();
+    services.AddOpossum(options =>
+    {
+        var sn = configuration["Opossum:StoreName"];
+        if (sn is not null) options.UseStore(sn);
+        configuration.GetSection("Opossum").Bind(options);
+    });
+    var sp = services.BuildServiceProvider();
+    writer = new EventStoreWriter(sp.GetRequiredService<IEventStore>());
+}
+else
+{
+    writer = new DirectEventWriter(config.WriteParallelism);
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────────
+Console.WriteLine("\n⏳ Generating events...");
+var startTime      = DateTime.UtcNow;
+var consoleLock    = new object();
+var lastPhaseShown = 0;
+
+IProgress<WriterProgress> progressReporter = new SyncProgress<WriterProgress>(p =>
+{
+    lock (consoleLock)
+    {
+        if (p.PhaseNumber != lastPhaseShown)
+        {
+            if (lastPhaseShown != 0) Console.WriteLine(); // finish previous phase line
+            lastPhaseShown = p.PhaseNumber;
+        }
+        RenderProgressLine(p);
+    }
+});
+
+var totalEvents = await new SeedPlan(generators).RunAsync(config, writer, contextPath, progressReporter);
+var elapsed     = DateTime.UtcNow - startTime;
+
+if (lastPhaseShown != 0) Console.WriteLine(); // finish last progress line
+
+Console.WriteLine($"\n✅ Seeding complete in {elapsed.TotalSeconds:F1}s");
+Console.WriteLine($"   Total events written: {totalEvents:N0}");
+Console.WriteLine($"   Database location:    {contextPath}");
+Console.WriteLine($"\n💡 You can now run the sample application to explore the data.");
 
 return;
 
-// ============================================================================
-// Helper Methods
-// ============================================================================
+// ── Helper methods ────────────────────────────────────────────────────────────
 
-static SeedingConfiguration ParseArguments(string[] args)
+static (SeedingConfiguration Config, bool PresetProvided) ParseArguments(string[] args)
 {
-    var config = new SeedingConfiguration();
+    SeedingConfiguration? preset = null;
+    var reset         = false;
+    var noConfirm     = false;
+    var useEventStore = false;
+    var parallelism   = 0;
 
-    for (int i = 0; i < args.Length; i++)
+    for (var i = 0; i < args.Length; i++)
     {
         switch (args[i].ToLowerInvariant())
         {
-            case "--students":
-                if (i + 1 < args.Length && int.TryParse(args[i + 1], out int students))
+            case "--size":
+                if (i + 1 < args.Length)
                 {
-                    config.StudentCount = students;
-                    i++;
-                }
-                break;
-
-            case "--courses":
-                if (i + 1 < args.Length && int.TryParse(args[i + 1], out int courses))
-                {
-                    config.CourseCount = courses;
-                    i++;
+                    preset = args[++i].ToLowerInvariant() switch
+                    {
+                        "small"  => SeedingPresets.Small(),
+                        "medium" => SeedingPresets.Medium(),
+                        "large"  => SeedingPresets.Large(),
+                        "prod"   => SeedingPresets.Prod(),
+                        var s    => throw new ArgumentException($"Unknown size '{s}'. Valid: small, medium, large, prod")
+                    };
                 }
                 break;
 
             case "--reset":
-                config.ResetDatabase = true;
+                reset = true;
                 break;
 
             case "--no-confirm":
-                config.RequireConfirmation = false;
+                noConfirm = true;
+                break;
+
+            case "--use-event-store":
+                useEventStore = true;
+                break;
+
+            case "--parallelism":
+                if (i + 1 < args.Length && int.TryParse(args[i + 1], out var p))
+                {
+                    parallelism = p;
+                    i++;
+                }
                 break;
 
             case "--help":
@@ -88,84 +199,70 @@ static SeedingConfiguration ParseArguments(string[] args)
         }
     }
 
-    return config;
+    var config = preset ?? new SeedingConfiguration();
+    config.ResetDatabase       = reset;
+    config.RequireConfirmation = !noConfirm;
+    config.UseEventStoreWriter = useEventStore;
+    config.WriteParallelism    = parallelism;
+
+    return (config, preset is not null);
 }
 
-static void DisplayConfiguration(SeedingConfiguration config, IConfiguration configuration)
+static SeedingConfiguration RunInteractiveMenu()
 {
-    var rootPath = configuration["Opossum:RootPath"];
-    var contextName = configuration["Opossum:StoreName"] ?? "N/A";
-
-    Console.WriteLine("Configuration:");
-    Console.WriteLine($"  Database Path: {rootPath}");
-    Console.WriteLine($"  Context:       {contextName}");
-    Console.WriteLine($"  Students:      {config.StudentCount}");
-    Console.WriteLine($"  Courses:       {config.CourseCount}");
-    Console.WriteLine($"  Est. Events:   ~{config.EstimatedEventCount}");
-    Console.WriteLine($"  Reset DB:      {(config.ResetDatabase ? "YES" : "NO")}");
+    Console.WriteLine("Select a dataset size:");
+    Console.WriteLine("  [1] Small   ~620 events       — explore the data model");
+    Console.WriteLine("  [2] Medium  ~104 000 events   — growing business, a few months of data");
+    Console.WriteLine("  [3] Large   ~1 030 000 events — established platform, 1-3 years of data");
+    Console.WriteLine("  [4] Prod    ~5 150 000 events — large-scale performance testing");
     Console.WriteLine();
-}
 
-static bool ConfirmSeeding(SeedingConfiguration config)
-{
-    if (!config.RequireConfirmation)
+    while (true)
     {
-        return true;
+        Console.Write("Your choice (1-4): ");
+        var choice = Console.ReadLine()?.Trim();
+
+        if (choice == "1") return SeedingPresets.Small();
+        if (choice == "2") return SeedingPresets.Medium();
+        if (choice == "3") return SeedingPresets.Large();
+        if (choice == "4") return SeedingPresets.Prod();
+
+        Console.WriteLine("Please enter 1, 2, 3, or 4.");
     }
-
-    if (config.ResetDatabase)
-    {
-        Console.ForegroundColor = ConsoleColor.Yellow;
-        Console.WriteLine("⚠️  WARNING: This will DELETE all existing data!");
-        Console.ResetColor();
-    }
-
-    Console.Write("Proceed with seeding? (y/n): ");
-    var response = Console.ReadLine()?.Trim().ToLowerInvariant();
-    return response == "y" || response == "yes";
-}
-
-static IServiceProvider ConfigureServices(IConfiguration configuration)
-{
-    var services = new ServiceCollection();
-
-    services.AddOpossum(options =>
-    {
-        var storeName = configuration["Opossum:StoreName"];
-        if (storeName is not null)
-        {
-            options.UseStore(storeName);
-        }
-
-        // Bind remaining properties from configuration (RootPath, FlushEventsImmediately, etc.)
-        configuration.GetSection("Opossum").Bind(options);
-    });
-
-    // Add mediator for command handling (DataSeeder now uses commands instead of direct event append)
-    // Scan CourseManagement assembly for command handlers
-    services.AddMediator(options =>
-    {
-        options.Assemblies.Add(typeof(EnrollStudentToCourseCommand).Assembly);
-    });
-
-    return services.BuildServiceProvider();
 }
 
 static void DisplayHelp()
 {
-    Console.WriteLine("Opossum Baseline Data Seeder");
+    Console.WriteLine("Opossum Data Seeder");
     Console.WriteLine();
-    Console.WriteLine("Usage: dotnet run [options]");
+    Console.WriteLine("Usage: dotnet run -- [flags]");
     Console.WriteLine();
-    Console.WriteLine("Options:");
-    Console.WriteLine("  --students <count>   Number of students to create (default: 350)");
-    Console.WriteLine("  --courses <count>    Number of courses to create (default: 75)");
-    Console.WriteLine("  --reset              Delete existing database before seeding");
-    Console.WriteLine("  --no-confirm         Skip confirmation prompt");
-    Console.WriteLine("  --help, -h           Show this help message");
+    Console.WriteLine("  --size <small|medium|large|prod>   Select a preset non-interactively");
+    Console.WriteLine("  --reset                            Delete existing data before seeding");
+    Console.WriteLine("  --no-confirm                       Skip all confirmation prompts");
+    Console.WriteLine("  --use-event-store                  Use IEventStore instead of DirectEventWriter");
+    Console.WriteLine("  --parallelism <n>                  File write threads (default: cpu count)");
+    Console.WriteLine("  --help                             Show this help message");
     Console.WriteLine();
     Console.WriteLine("Examples:");
     Console.WriteLine("  dotnet run");
-    Console.WriteLine("  dotnet run -- --students 500 --courses 100");
-    Console.WriteLine("  dotnet run -- --reset --no-confirm");
+    Console.WriteLine("  dotnet run -- --size small --reset --no-confirm");
+    Console.WriteLine("  dotnet run -- --size large --parallelism 16");
+}
+
+static void RenderProgressLine(WriterProgress p)
+{
+    const int barWidth = 30;
+    var pct    = p.Total > 0 ? (double)p.Current / p.Total : 0.0;
+    var filled = (int)(barWidth * pct);
+    var bar    = new string('█', filled) + new string('░', barWidth - filled);
+    Console.Write(
+        $"\r  [{p.PhaseNumber}/{p.TotalPhases}] {p.PhaseName,-22} [{bar}] {pct * 100,4:F0}%  {p.Current,12:N0} / {p.Total:N0}   ");
+}
+
+// ── File-scoped types ─────────────────────────────────────────────────────────
+
+file sealed class SyncProgress<T>(Action<T> callback) : IProgress<T>
+{
+    public void Report(T value) => callback(value);
 }

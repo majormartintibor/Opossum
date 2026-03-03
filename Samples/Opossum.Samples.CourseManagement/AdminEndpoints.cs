@@ -17,7 +17,7 @@ public static class AdminEndpoints
         // Rebuild all projections
         adminGroup.MapPost("/rebuild", async (
             IProjectionManager projectionManager,
-            [FromQuery] bool forceAll = false) =>
+            [FromQuery] bool forceAll = true) =>
         {
             var result = await projectionManager.RebuildAllAsync(forceAll);
 
@@ -31,18 +31,19 @@ public static class AdminEndpoints
         .WithSummary("Rebuild all projections")
         .WithDescription("""
             Rebuilds all registered projections from the event store.
-            
+
             WARNING: This operation can take several minutes depending on the number of events.
-            
+
             Use Cases:
             - Disaster recovery (lost projection files)
             - Adding new projection types in production
             - Testing/development environment resets
-            
+
             Query Parameters:
-            - forceAll: If true, rebuilds ALL projections (even with valid checkpoints).
-                       If false, only rebuilds projections with missing checkpoints.
-            
+            - forceAll: Defaults to true — always rebuilds ALL projections from scratch.
+                       Set to false to only rebuild projections whose checkpoint is missing (== 0).
+                       Use forceAll=false for lightweight startup-style gap-filling only.
+
             Production Usage:
             1. Monitor application logs during rebuild
             2. Check /admin/projections/status for progress

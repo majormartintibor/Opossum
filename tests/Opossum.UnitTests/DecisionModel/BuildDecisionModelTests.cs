@@ -264,4 +264,165 @@ public class BuildDecisionModelTests
     }
 
     #endregion
+
+    #region N-ary BuildDecisionModelAsync (list overload) — pure fold logic
+
+    // Simulates the fold+condition logic of the N-ary BuildDecisionModelAsync overload.
+    private static (IReadOnlyList<TState> States, AppendCondition Condition) BuildNaryFromEvents<TState>(
+        IReadOnlyList<IDecisionProjection<TState>> projections,
+        SequencedEvent[] allEvents)
+    {
+        var unionItems = projections.SelectMany(p => p.Query.QueryItems).Distinct().ToArray();
+        var unionQuery = unionItems.Length == 0 ? Query.All() : Query.FromItems(unionItems);
+
+        var appendCondition = new AppendCondition
+        {
+            FailIfEventsMatch = unionQuery,
+            AfterSequencePosition = allEvents.Length > 0 ? allEvents.Max(e => e.Position) : null
+        };
+
+        var states = projections
+            .Select(p => allEvents.Where(e => p.Query.Matches(e)).Aggregate(p.InitialState, p.Apply))
+            .ToArray();
+
+        return (states, appendCondition);
+    }
+
+    [Fact]
+    public void NaryBuild_SingleProjection_StateMatchesSingleOverload()
+    {
+        var courseId = Guid.NewGuid();
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            new DecisionProjection<bool>(
+                initialState: false,
+                query: Query.FromItems(new QueryItem
+                {
+                    EventTypes = [nameof(CourseCreatedEvent)],
+                    Tags = [new Tag("courseId", courseId.ToString())]
+                }),
+                apply: (_, evt) => evt.Event.Event is CourseCreatedEvent)
+        ];
+
+        var events = new[]
+        {
+            MakeEvent(new CourseCreatedEvent(courseId, 30), position: 1, ("courseId", courseId.ToString()))
+        };
+
+        var (states, _) = BuildNaryFromEvents(projections, events);
+
+        Assert.Single(states);
+        Assert.True(states[0]);
+    }
+
+    [Fact]
+    public void NaryBuild_MultipleProjections_EachGetsIndependentState()
+    {
+        var courseId1 = Guid.NewGuid();
+        var courseId2 = Guid.NewGuid();
+
+        IReadOnlyList<IDecisionProjection<int>> projections =
+        [
+            new DecisionProjection<int>(
+                initialState: 0,
+                query: Query.FromItems(new QueryItem
+                {
+                    EventTypes = [nameof(StudentEnrolledEvent)],
+                    Tags = [new Tag("courseId", courseId1.ToString())]
+                }),
+                apply: (s, evt) => evt.Event.Event is StudentEnrolledEvent e && e.CourseId == courseId1 ? s + 1 : s),
+
+            new DecisionProjection<int>(
+                initialState: 0,
+                query: Query.FromItems(new QueryItem
+                {
+                    EventTypes = [nameof(StudentEnrolledEvent)],
+                    Tags = [new Tag("courseId", courseId2.ToString())]
+                }),
+                apply: (s, evt) => evt.Event.Event is StudentEnrolledEvent e && e.CourseId == courseId2 ? s + 1 : s)
+        ];
+
+        var events = new[]
+        {
+            MakeEvent(new StudentEnrolledEvent(courseId1, Guid.NewGuid()), position: 1, ("courseId", courseId1.ToString())),
+            MakeEvent(new StudentEnrolledEvent(courseId1, Guid.NewGuid()), position: 2, ("courseId", courseId1.ToString())),
+            MakeEvent(new StudentEnrolledEvent(courseId2, Guid.NewGuid()), position: 3, ("courseId", courseId2.ToString()))
+        };
+
+        var (states, _) = BuildNaryFromEvents(projections, events);
+
+        Assert.Equal(2, states.Count);
+        Assert.Equal(2, states[0]); // two enrollments for course 1
+        Assert.Equal(1, states[1]); // one enrollment for course 2
+    }
+
+    [Fact]
+    public void NaryBuild_EmptyEventSet_AllStatesAreInitialState()
+    {
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            new DecisionProjection<bool>(false, Query.FromEventTypes(nameof(CourseCreatedEvent)), (_, _) => true),
+            new DecisionProjection<bool>(false, Query.FromEventTypes(nameof(CourseCreatedEvent)), (_, _) => true)
+        ];
+
+        var (states, condition) = BuildNaryFromEvents(projections, []);
+
+        Assert.All(states, s => Assert.False(s));
+        Assert.Null(condition.AfterSequencePosition);
+    }
+
+    [Fact]
+    public void NaryBuild_AppendConditionPosition_IsMaxAcrossAllEvents()
+    {
+        var courseId = Guid.NewGuid();
+
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            new DecisionProjection<bool>(false, Query.All(), (_, _) => true),
+            new DecisionProjection<bool>(false, Query.All(), (_, _) => true)
+        ];
+
+        var events = new[]
+        {
+            MakeEvent(new CourseCreatedEvent(courseId, 10), position: 3),
+            MakeEvent(new StudentEnrolledEvent(courseId, Guid.NewGuid()), position: 7),
+            MakeEvent(new UnrelatedEvent(), position: 5)
+        };
+
+        var (_, condition) = BuildNaryFromEvents(projections, events);
+
+        Assert.Equal(7, condition.AfterSequencePosition);
+    }
+
+    [Fact]
+    public void NaryBuild_StatesOrderMatchesProjectionsOrder()
+    {
+        var courseId = Guid.NewGuid();
+
+        IReadOnlyList<IDecisionProjection<string>> projections =
+        [
+            new DecisionProjection<string>(
+                "none",
+                Query.FromEventTypes(nameof(CourseCreatedEvent)),
+                (_, _) => "course-created"),
+
+            new DecisionProjection<string>(
+                "none",
+                Query.FromEventTypes(nameof(StudentEnrolledEvent)),
+                (_, _) => "student-enrolled")
+        ];
+
+        var events = new[]
+        {
+            MakeEvent(new CourseCreatedEvent(courseId, 10), position: 1),
+            MakeEvent(new StudentEnrolledEvent(courseId, Guid.NewGuid()), position: 2)
+        };
+
+        var (states, _) = BuildNaryFromEvents(projections, events);
+
+        Assert.Equal("course-created", states[0]);
+        Assert.Equal("student-enrolled", states[1]);
+    }
+
+    #endregion
 }

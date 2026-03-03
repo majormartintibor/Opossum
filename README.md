@@ -21,7 +21,13 @@ Opossum turns your file system into a fully functional event store with projecti
 - [How Events Are Stored](#-how-events-are-stored)
 - [API Reference](#-api-reference)
 - [Full Example](#-full-example)
+- [Event-Sourced Aggregate — Alternative Write-Side Pattern](#-event-sourced-aggregate--alternative-write-side-pattern)
+- [DCB Examples Coverage](#-dcb-examples-coverage)
+- [Consecutive Sequences — Invoice Numbers](#-consecutive-sequences--invoice-numbers)
+- [Dynamic Product Price — Course Books](#-dynamic-product-price--course-books)
+- [Opt-In Token — Server-Generated Single-Use Tokens](#️-opt-in-token--server-generated-single-use-tokens)
 - [Performance](#-performance)
+- [OpenTelemetry](#-opentelemetry)
 - [Known Limitations](#️-known-limitations)
 
 ---
@@ -188,7 +194,7 @@ using Opossum.Core;
 // Query all events for a specific student
 var query = Query.FromItems(new QueryItem
 {
-    Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+    Tags = [new Tag("studentId", studentId.ToString())]
 });
 
 var events = await _eventStore.ReadAsync(query);
@@ -331,7 +337,7 @@ Filter events by **EventType** and/or **Tags**:
 // All events for a specific student
 var query = Query.FromItems(new QueryItem
 {
-    Tags = [new Tag { Key = "studentId", Value = "123" }]
+    Tags = [new Tag("studentId", "123")]
 });
 
 // All StudentRegistered events
@@ -344,7 +350,7 @@ var query = Query.FromItems(new QueryItem
 var query = Query.FromItems(new QueryItem
 {
     EventTypes = [nameof(StudentEnrolledToCourseEvent)],
-    Tags = [new Tag { Key = "studentId", Value = "123" }]
+    Tags = [new Tag("studentId", "123")]
 });
 ```
 
@@ -389,7 +395,7 @@ public sealed class CourseDetailsProjection : IProjectionWithRelatedEvents<Cours
         if (evt.Event.Event is StudentEnrolledToCourseEvent enrolled)
             return Query.FromItems(new QueryItem
             {
-                Tags = [new Tag { Key = "studentId", Value = enrolled.StudentId.ToString() }],
+                Tags = [new Tag("studentId", enrolled.StudentId.ToString())],
                 EventTypes = [nameof(StudentRegisteredEvent)]
             });
         return null;
@@ -431,7 +437,7 @@ public sealed class CourseShortInfoTagProvider : IProjectionTagProvider<CourseSh
 {
     public IEnumerable<Tag> GetTags(CourseShortInfo state)
     {
-        yield return new Tag { Key = "IsFull", Value = state.IsFull.ToString() };
+        yield return new Tag("IsFull", state.IsFull.ToString());
     }
 }
 
@@ -446,7 +452,7 @@ public sealed class CourseShortInfoProjection : IProjectionDefinition<CourseShor
 // 3. Query by tag — uses the persisted index, no full table scan
 IProjectionStore<CourseShortInfo> courseStore = ...;
 var availableCourses = await courseStore.QueryByTagsAsync(
-    [new Tag { Key = "IsFull", Value = "False" }]);
+    [new Tag("IsFull", "False")]);
 ```
 
 ### Decision Model Projections
@@ -466,7 +472,7 @@ IDecisionProjection<MyState?> MyProjection(Guid id) =>
         query: Query.FromItems(new QueryItem
         {
             EventTypes = [nameof(MyEvent)],
-            Tags = [new Tag { Key = "id", Value = id.ToString() }]
+            Tags = [new Tag("id", id.ToString())]
         }),
         apply: (state, evt) => evt.Event.Event switch
         {
@@ -492,19 +498,68 @@ return await eventStore.ExecuteDecisionAsync(async (store, ct) =>
 // If all retries are exhausted, ExecuteDecisionAsync re-throws AppendConditionFailedException.
 ```
 
-Three `BuildDecisionModelAsync` overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), and three-projection (`(T1, T2, T3, AppendCondition)`). Use `ExecuteDecisionAsync` to wrap the entire cycle with automatic exponential-backoff retry.
+Four `BuildDecisionModelAsync` overloads are available: single-projection (`BuildDecisionModelAsync<T>` → `DecisionModel<T>`), two-projection (`(T1, T2, AppendCondition)`), three-projection (`(T1, T2, T3, AppendCondition)`), and **N-ary** (`IReadOnlyList<IDecisionProjection<TState>>` → `(IReadOnlyList<TState>, AppendCondition)`) for a runtime-variable list of homogeneous projections (e.g. shopping cart). Use `ExecuteDecisionAsync` to wrap the entire cycle with automatic exponential-backoff retry.
 
-See the [Full Example](#-full-example) section for a complete real-world walkthrough enforcing three invariants across two independent tag-based queries in a single read.
+See the [Full Example](#-full-example) section for a complete real-world walkthrough
+
+### Idempotency Tokens — Prevent Record Duplication
+
+Enforce **"process this request exactly once"** using a client-generated idempotency token stored as a tag. This is the DCB pattern for infrastructure constraints — constraints that are **not** directly related to the domain.
+
+> Full specification: <https://dcb.events/examples/prevent-record-duplication/>
+
+The key insight: the domain may allow an operation to happen multiple times (a course can have many announcements), but an accidental HTTP retry should not create duplicates. The idempotency token is the **sole guard** — and unlike a domain uniqueness constraint, it is controlled entirely by the client.
+
+```csharp
+// The projection folds the token's lifecycle: Posted → true, Retracted → false (token freed).
+// The query is scoped exclusively to the idempotency tag, so two concurrent requests with
+// DIFFERENT tokens produce completely independent AppendConditions — they never block each other.
+IDecisionProjection<bool> IdempotencyTokenWasUsed(Guid token) =>
+    new DecisionProjection<bool>(
+        initialState: false,
+        query: Query.FromItems(new QueryItem
+        {
+            EventTypes = [nameof(AnnouncementPostedEvent), nameof(AnnouncementRetractedEvent)],
+            Tags = [new Tag("idempotency", token.ToString())]
+        }),
+        apply: (_, evt) => evt.Event.Event switch
+        {
+            AnnouncementPostedEvent    => true,   // token consumed
+            AnnouncementRetractedEvent => false,  // token freed — may be reused
+            _                          => false
+        });
+
+// In the command handler — compose with a business prerequisite:
+var (courseExists, tokenWasUsed, appendCondition) = await eventStore.BuildDecisionModelAsync(
+    CourseExists(command.CourseId),
+    IdempotencyTokenWasUsed(command.IdempotencyToken));
+
+if (!courseExists)   return Fail("Course does not exist.");
+if (tokenWasUsed)    return Fail("Re-submission detected.");
+
+await eventStore.AppendAsync(
+    new AnnouncementPostedEvent(Guid.NewGuid(), command.CourseId, command.Title, command.IdempotencyToken)
+        .ToDomainEvent()
+        .WithTag("courseId", command.CourseId.ToString())
+        .WithTag("idempotency", command.IdempotencyToken.ToString()),
+    appendCondition);
+```
+
+**Token reuse after retraction:** When an announcement is retracted, the `AnnouncementRetractedEvent` is stored with the **same** `idempotency` tag. On the next post attempt the projection folds both events in sequence order — `Posted → true`, then `Retracted → false` — and the final state is `false`. The token is free with no changes to the post handler.
+
+See `CourseAnnouncementProjections` and `CourseAnnouncementRetractionProjection` in the sample application for the full implementation.
+
+> **Contrast with Opt-In tokens:** Idempotency tokens are *client-generated* and protect against accidental retry duplicates. For *server-generated* single-use tokens that can be issued, redeemed, and revoked, see the [Opt-In Token pattern](#️-opt-in-token--server-generated-single-use-tokens).
 
 ### Dynamic Consistency Boundaries (DCB)
 
-Enforce **optimistic concurrency** using append conditions:
+Enforce **optimistic concurrency** using append conditions. The raw DCB API is ideal for straightforward global-uniqueness rules (e.g. unique email, the [Unique Username example](https://dcb.events/examples/unique-username/)):
 
 ```csharp
 // Ensure email is unique across ALL students
 var validateEmailQuery = Query.FromItems(new QueryItem
 {
-    Tags = [new Tag { Key = "studentEmail", Value = email }]
+    Tags = [new Tag("studentEmail", email)]
 });
 
 // This will fail if any event with this email already exists
@@ -516,7 +571,7 @@ await _eventStore.AppendAsync(
     });
 ```
 
-**Why this matters:** Prevents race conditions without distributed locks.
+**Why this matters:** Prevents race conditions without distributed locks. For more complex decisions that need to examine state before deciding, prefer `BuildDecisionModelAsync` (see [Decision Model Projections](#decision-model-projections)).
 
 ### Mediator
 
@@ -713,13 +768,21 @@ Core event store operations:
 public interface IEventStore
 {
     // Append one or more events (position is assigned by the store)
-    Task AppendAsync(NewEvent @event, AppendCondition? condition = null);
-    Task AppendAsync(NewEvent[] events, AppendCondition? condition = null);
+    Task AppendAsync(NewEvent[] events, AppendCondition? condition = null, CancellationToken ct = default);
 
     // Read events matching a query (returns sequenced events with positions)
     // fromPosition: when provided, only events with Position > fromPosition are returned
     Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null);
+
+    // Read the single highest-position event matching a query — O(1) file reads
+    // Returns null when no matching events exist
+    // Ideal for consecutive-sequence patterns (e.g. invoice numbering)
+    Task<SequencedEvent?> ReadLastAsync(Query query, CancellationToken ct = default);
 }
+
+// Convenience extension for single-event appends:
+await eventStore.AppendAsync(singleEvent);
+await eventStore.AppendAsync(singleEvent, condition);
 ```
 
 ### Extension Methods
@@ -730,7 +793,9 @@ NewEvent evt = new MyEvent(...)
     .ToDomainEvent()                          // IEvent → DomainEventBuilder
     .WithTag("key", "value")                  // add a single tag
     .WithTags(tag1, tag2)                     // add multiple tags
-    .WithTimestamp(DateTimeOffset.UtcNow);    // set timestamp
+    .WithTimestamp(DateTimeOffset.UtcNow)     // set timestamp
+    .WithCorrelationId(correlationId)         // optional: correlation / causation / operation / user IDs
+    .WithCausationId(causationId);
                                               // implicit conversion → NewEvent
 
 // Read all matching events (ascending order):
@@ -747,6 +812,12 @@ DecisionModel<TState> model = await eventStore.BuildDecisionModelAsync(projectio
 
 // Compose up to three projections (single ReadAsync, one AppendCondition spanning all):
 var (t1, t2, t3, condition) = await eventStore.BuildDecisionModelAsync(p1, p2, p3);
+
+// N-ary overload — runtime-variable list of homogeneous projections (e.g. shopping cart):
+var projections = items.Select(item => PriceProjection(item.BookId)).ToList();
+var (states, condition) = await eventStore.BuildDecisionModelAsync(
+    (IReadOnlyList<IDecisionProjection<PriceState>>)projections);
+// states[i] corresponds to projections[i]
 
 // Execute the full read → decide → append cycle with automatic retry on concurrency conflicts:
 TResult result = await eventStore.ExecuteDecisionAsync(async (store, ct) =>
@@ -765,6 +836,12 @@ Query.All()
 
 // Events matching specific criteria
 Query.FromItems(params QueryItem[] items)
+
+// Shorthand: events of the given types
+Query.FromEventTypes(nameof(InvoiceCreatedEvent))
+
+// Shorthand: events carrying all of the given tags
+Query.FromTags(new Tag("studentId", studentId.ToString()))
 
 // Query items support AND/OR logic
 new QueryItem
@@ -785,6 +862,33 @@ new AppendCondition
     // Only check events AFTER this position (optional)
     AfterSequencePosition = 42
 }
+```
+
+### CommandResult and CommandResult\<T\>
+
+Lightweight return types for command handlers. Use `CommandResult` when the handler produces no value, or `CommandResult<T>` when the handler returns a result (e.g. a generated ID or number):
+
+```csharp
+// No return value
+public async Task<CommandResult> HandleAsync(RegisterStudentCommand cmd, IEventStore store)
+{
+    // ...
+    return CommandResult.Ok();
+    return CommandResult.Fail("A student with this email already exists.");
+}
+
+// With a return value
+public async Task<CommandResult<int>> HandleAsync(CreateInvoiceCommand cmd, IEventStore store)
+{
+    // ...
+    return CommandResult<int>.Ok(nextInvoiceNumber);
+    return CommandResult<int>.Fail("Concurrent update — please retry.");
+}
+
+// Consume the result in the API endpoint:
+var result = await mediator.InvokeAsync<CommandResult<int>>(command);
+if (!result.Success) return Results.BadRequest(result.ErrorMessage);
+return Results.Created($"/invoices/{result.Value}", new { invoiceNumber = result.Value });
 ```
 
 ### IProjectionStore\<TState\>
@@ -816,7 +920,7 @@ public interface IProjectionStore<TState> where TState : class
 public class CourseController(IProjectionStore<CourseShortInfo> courseStore)
 {
     public async Task<IReadOnlyList<CourseShortInfo>> GetAvailableAsync() =>
-        await courseStore.QueryByTagsAsync([new Tag { Key = "IsFull", Value = "False" }]);
+        await courseStore.QueryByTagsAsync([new Tag("IsFull", "False")]);
 
     public async Task<CourseShortInfo?> GetByIdAsync(Guid courseId) =>
         await courseStore.GetAsync(courseId.ToString());
@@ -923,7 +1027,7 @@ public static class CourseEnrollmentProjections
                     nameof(CourseStudentLimitModifiedEvent),
                     nameof(StudentEnrolledToCourseEvent)
                 ],
-                Tags = [new Tag { Key = "courseId", Value = courseId.ToString() }]
+                Tags = [new Tag("courseId", courseId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event switch
             {
@@ -948,7 +1052,7 @@ public static class CourseEnrollmentProjections
                     nameof(StudentSubscriptionUpdatedEvent),
                     nameof(StudentEnrolledToCourseEvent)
                 ],
-                Tags = [new Tag { Key = "studentId", Value = studentId.ToString() }]
+                Tags = [new Tag("studentId", studentId.ToString())]
             }),
             apply: (state, evt) => evt.Event.Event switch
             {
@@ -971,8 +1075,8 @@ public static class CourseEnrollmentProjections
                 EventTypes = [nameof(StudentEnrolledToCourseEvent)],
                 Tags =
                 [
-                    new Tag { Key = "courseId", Value = courseId.ToString() },
-                    new Tag { Key = "studentId", Value = studentId.ToString() }
+                    new Tag("courseId", courseId.ToString()),
+                    new Tag("studentId", studentId.ToString())
                 ]
             }),
             apply: (_, _) => true);   // any match means already enrolled
@@ -1046,37 +1150,385 @@ See the [Course Management sample](Samples/Opossum.Samples.CourseManagement/) fo
 
 ---
 
+## 🔄 Event-Sourced Aggregate — Alternative Write-Side Pattern
+
+> **This is an alternative to the Decision Model pattern shown above — not a required addition.**
+> Pick one style and apply it consistently. The sample includes both so you can compare them
+> side by side on the same domain.
+
+Opossum also supports the classic [Event-Sourced Aggregate](https://dcb.events/examples/event-sourced-aggregate/#dcb-approach) pattern. Instead of stateless ephemeral projections, all course state is encapsulated in a reconstituted aggregate object. The DCB insight is that **the repository replaces the traditional named-stream lock with a tag-scoped `AppendCondition`** — no stream concept needed.
+
+### Choosing Between the Two Patterns
+
+| | DCB Decision Model | Event-Sourced Aggregate |
+|---|---|---|
+| **State lives in** | Ephemeral in-memory fold, discarded after each command | Reconstituted aggregate object |
+| **Invariants span** | Multiple entity types in one read (e.g. course capacity AND student tier) | One entity type (course only) |
+| **Retry handled by** | `ExecuteDecisionAsync` (automatic exponential backoff) | Manual retry loop in the caller |
+| **Concurrency boundary** | Union of all projection queries | All events for a single `courseId` tag |
+| **Best for** | Cross-cutting business rules | Rich domain models with many entity-internal invariants |
+
+### How the Aggregate Repository Works
+
+```csharp
+// Load: query by tag — no named stream needed
+public async Task<CourseAggregate?> LoadAsync(Guid courseId)
+{
+    var query = Query.FromTags(new Tag("courseId", courseId.ToString()));
+    var events = await eventStore.ReadAsync(query);
+
+    if (events.Length == 0)
+        return null;                            // course does not exist
+
+    return CourseAggregate.Reconstitute(events); // replay events into state
+}
+
+// Save: append with the DCB tag-scoped optimistic lock
+public async Task SaveAsync(CourseAggregate aggregate, CancellationToken ct = default)
+{
+    var query = Query.FromTags(new Tag("courseId", aggregate.CourseId.ToString()));
+
+    var condition = new AppendCondition
+    {
+        FailIfEventsMatch = query,
+        // null when Version == 0 (new): reject if ANY course event already exists.
+        // Otherwise: reject only if a new event appeared after our last read.
+        AfterSequencePosition = aggregate.Version == 0 ? null : aggregate.Version
+    };
+
+    var newEvents = aggregate.PullRecordedEvents()
+        .Select(e => (NewEvent)(e.ToDomainEvent()
+            .WithTag("courseId", aggregate.CourseId.ToString())
+            .WithTimestamp(DateTimeOffset.UtcNow)))
+        .ToArray();
+
+    // Throws AppendConditionFailedException on conflict — reload and retry.
+    await eventStore.AppendAsync(newEvents, condition, ct);
+}
+```
+
+### The Aggregate Class (pure C#, no Opossum machinery)
+
+```csharp
+public sealed class CourseAggregate
+{
+    private readonly List<IEvent> _recordedEvents = [];
+
+    public Guid CourseId { get; private set; }
+    public int Capacity { get; private set; }
+    public int EnrollmentCount { get; private set; }
+
+    // Global store position of the last event seen — used as AfterSequencePosition.
+    // Note: this is store-wide monotonic, not a per-aggregate counter.
+    public long Version { get; private set; }
+
+    public static CourseAggregate Create(Guid id, string name, string description, int maxStudents)
+    {
+        var instance = new CourseAggregate();
+        instance.RecordEvent(new CourseCreatedEvent(id, name, description, maxStudents));
+        return instance;
+    }
+
+    public static CourseAggregate Reconstitute(SequencedEvent[] events)
+    {
+        var instance = new CourseAggregate();
+        foreach (var e in events)
+        {
+            instance.Apply(e.Event.Event);
+            instance.Version = e.Position;
+        }
+        return instance;
+    }
+
+    public void ChangeCapacity(int newCapacity)
+    {
+        if (newCapacity == Capacity)
+            throw new InvalidOperationException($"Course already has capacity {newCapacity}.");
+        if (newCapacity < EnrollmentCount)
+            throw new InvalidOperationException($"Can't set capacity below current enrollment.");
+
+        RecordEvent(new CourseStudentLimitModifiedEvent(CourseId, newCapacity));
+    }
+
+    public void SubscribeStudent(Guid studentId)
+    {
+        if (EnrollmentCount >= Capacity)
+            throw new InvalidOperationException("Course is already fully booked.");
+
+        RecordEvent(new StudentEnrolledToCourseEvent(CourseId, studentId));
+    }
+
+    public IEvent[] PullRecordedEvents()
+    {
+        var events = _recordedEvents.ToArray();
+        _recordedEvents.Clear();
+        return events;
+    }
+
+    private void RecordEvent(IEvent @event) { _recordedEvents.Add(@event); Apply(@event); }
+
+    private void Apply(IEvent @event)
+    {
+        switch (@event)
+        {
+            case CourseCreatedEvent c:   CourseId = c.CourseId; Capacity = c.MaxStudentCount; break;
+            case CourseStudentLimitModifiedEvent m: Capacity = m.NewMaxStudentCount; break;
+            case StudentEnrolledToCourseEvent:      EnrollmentCount++; break;
+        }
+    }
+}
+```
+
+### Retry Pattern in the Endpoint
+
+```csharp
+// Reload → reapply → retry on concurrent write; last attempt propagates → HTTP 409
+for (var attempt = 0; attempt < MaxRetries; attempt++)
+{
+    var aggregate = await repository.LoadAsync(courseId);
+    if (aggregate is null)
+        return Results.NotFound();
+
+    try
+    {
+        aggregate.ChangeCapacity(request.NewCapacity);
+        await repository.SaveAsync(aggregate);
+        return Results.Ok();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(ex.Message);   // invariant violation — no retry
+    }
+    catch (AppendConditionFailedException) when (attempt < MaxRetries - 1)
+    {
+        // concurrent write — reload fresh state and try again
+    }
+}
+```
+
+The full implementation lives in
+[`Samples/Opossum.Samples.CourseManagement/CourseAggregate/`](Samples/Opossum.Samples.CourseManagement/CourseAggregate/).
+Aggregate endpoints are tagged **"Aggregate (Event-Sourced)"** in the Scalar UI to distinguish
+them from the Decision Model endpoints tagged **"Commands"**.
+
+---
+
+## 🗺️ DCB Examples Coverage
+
+All 7 examples from [dcb.events/examples/](https://dcb.events/examples/) are implemented in the [Course Management sample](Samples/Opossum.Samples.CourseManagement/):
+
+| DCB Example | Domain Adaptation | Key Pattern | Sample Location |
+|---|---|---|---|
+| [Course Subscriptions](https://dcb.events/examples/course-subscriptions/) | Student enrollment (capacity + tier limit + duplicate check) | `BuildDecisionModelAsync` (3-projection) | `CourseEnrollment/` |
+| [Unique Username](https://dcb.events/examples/unique-username/) | Student email uniqueness | Raw `AppendCondition` (direct DCB API) | `StudentRegistration/` |
+| [Invoice Number](https://dcb.events/examples/invoice-number/) | Gap-free invoice numbering | `ReadLastAsync` + `AppendCondition` | `InvoiceCreation/` |
+| [Dynamic Product Price](https://dcb.events/examples/dynamic-product-price/) | Course book prices with grace period & shopping cart | N-ary `BuildDecisionModelAsync` + `TimeProvider` | `CourseBookPurchase/` |
+| [Event-Sourced Aggregate](https://dcb.events/examples/event-sourced-aggregate/) | Course aggregate (capacity + enrollment) | DCB tag-scoped `AppendCondition` in repository | `CourseAggregate/` |
+| [Opt-In Token](https://dcb.events/examples/opt-in-token/) | Exam registration tokens (issue / redeem / revoke) | Enum-state projection; event store as token registry | `ExamRegistration/` |
+| [Prevent Record Duplication](https://dcb.events/examples/prevent-record-duplication/) | Course announcements with client idempotency token | `BuildDecisionModelAsync` (2-projection) + idempotency projection | `CourseAnnouncement/` |
+
+---
+
+## 🔢 Consecutive Sequences — Invoice Numbers
+
+The [Invoice Number example](https://dcb.events/examples/invoice-number/) shows how to generate a gap-free, monotonically increasing sequence without a separate sequence table.
+
+The key primitive is `ReadLastAsync` — it returns the single highest-position event matching a query in **O(1) file reads** (one index lookup, one file read), regardless of how many total events the store contains.
+
+```csharp
+// The query has NO tag filter — it spans ALL InvoiceCreatedEvents globally.
+// Any new invoice created by anyone invalidates the "last number" we just read.
+var query = Query.FromEventTypes(nameof(InvoiceCreatedEvent));
+
+// Step 1 — Read: find the most recent invoice (O(1) file reads)
+var last = await eventStore.ReadLastAsync(query);
+
+// Step 2 — Decide: next consecutive number
+var nextNumber = last is null ? 1 : ((InvoiceCreatedEvent)last.Event.Event).InvoiceNumber + 1;
+
+// Step 3 — Append with a guard that rejects if ANY InvoiceCreatedEvent appeared since our read.
+// AfterSequencePosition = null on the first invoice means "reject if ANY invoice already exists"
+// — closing the bootstrap race condition.
+var condition = new AppendCondition
+{
+    FailIfEventsMatch = query,
+    AfterSequencePosition = last?.Position
+};
+
+NewEvent newEvent = new InvoiceCreatedEvent(nextNumber, customerId, amount)
+    .ToDomainEvent()
+    .WithTag("invoiceNumber", nextNumber.ToString())
+    .WithTag("customerId", customerId.ToString())
+    .WithTimestamp(DateTimeOffset.UtcNow);
+
+// Throws AppendConditionFailedException on conflict — ExecuteDecisionAsync retries automatically.
+await eventStore.AppendAsync(newEvent, condition);
+```
+
+**Why this works:** The consistency boundary is the entire set of invoice creation events — if any new invoice appears between our read and our append, the condition fires and `ExecuteDecisionAsync` retries the full cycle automatically.
+
+See [`InvoiceCreation/CreateInvoice.cs`](Samples/Opossum.Samples.CourseManagement/InvoiceCreation/CreateInvoice.cs) in the sample for the full implementation.
+
+---
+
+## 💰 Dynamic Product Price — Course Books
+
+The [Dynamic Product Price example](https://dcb.events/examples/dynamic-product-price/) shows three progressively complex features, all implemented as the Course Books feature in the sample.
+
+### Feature 1 — Current Price (no grace period)
+
+A single `DecisionProjection` folds the book's defined price. The displayed price must match the stored price exactly at the moment of purchase.
+
+### Feature 2 — Grace Period
+
+After a price change, both the old and the new price remain valid for a configurable window (default: 30 minutes). The fold function needs wall-clock time — use the `TimeProvider` constructor overload so the projection is unit-testable without sleeping:
+
+```csharp
+new DecisionProjection<CourseBookPriceState>(
+    initialState: CourseBookPriceState.Empty,
+    query: Query.FromItems(new QueryItem
+    {
+        EventTypes = [nameof(CourseBookDefinedEvent), nameof(CourseBookPriceChangedEvent)],
+        Tags = [new Tag("bookId", bookId.ToString())]
+    }),
+    apply: (state, evt, timeProvider) =>
+    {
+        var age = timeProvider.GetUtcNow() - evt.Metadata.Timestamp;
+        return evt.Event.Event switch
+        {
+            CourseBookDefinedEvent e     => state.ApplyDefined(e.Price, age, gracePeriod),
+            CourseBookPriceChangedEvent e => state.ApplyPriceChanged(e.NewPrice, age, gracePeriod),
+            _ => state
+        };
+    },
+    timeProvider: timeProvider);  // null → TimeProvider.System in production
+```
+
+**Testing with time control:** Inject `FakeTimeProvider` (from `Microsoft.Extensions.TimeProvider.Testing`) to advance time in unit tests without sleeping:
+
+```csharp
+var fakeTime = new FakeTimeProvider(DateTimeOffset.UtcNow);
+var projection = CourseBookPriceProjections.PriceWithGracePeriod(bookId, timeProvider: fakeTime);
+// ... append a price-changed event, then:
+fakeTime.Advance(TimeSpan.FromMinutes(31));  // grace period expires
+// projection now accepts only the new price
+```
+
+### Feature 3 — Shopping Cart (N-ary overload)
+
+Validate the price of every item in a cart in a **single event store read** with a **single `AppendCondition` spanning all items**:
+
+```csharp
+// Build one projection per cart item
+var projections = command.Items
+    .Select(item => CourseBookPriceProjections.PriceWithGracePeriod(item.BookId))
+    .ToList();
+
+// One ReadAsync call → states[i] corresponds to projections[i]
+var (states, appendCondition) = await eventStore.BuildDecisionModelAsync(
+    (IReadOnlyList<IDecisionProjection<CourseBookPriceState>>)projections);
+
+for (var i = 0; i < command.Items.Count; i++)
+{
+    if (states[i].CurrentPrice is null)
+        return CommandResult.Fail($"Book '{command.Items[i].BookId}' does not exist.");
+    if (!states[i].IsValidPrice(command.Items[i].DisplayedPrice))
+        return CommandResult.Fail($"Price changed for book '{command.Items[i].BookId}'. Please refresh.");
+}
+
+// appendCondition covers all books atomically — a concurrent price change for any book
+// in the cart invalidates the entire order and triggers a retry.
+await eventStore.AppendAsync(orderEvent, appendCondition);
+```
+
+See [`CourseBookPurchase/`](Samples/Opossum.Samples.CourseManagement/CourseBookPurchase/) and [`CourseBookManagement/`](Samples/Opossum.Samples.CourseManagement/CourseBookManagement/) in the sample for the full implementation.
+
+---
+
+## 🎟️ Opt-In Token — Server-Generated Single-Use Tokens
+
+The [Opt-In Token example](https://dcb.events/examples/opt-in-token/) shows how the event store itself can **replace a persistent "valid tokens" table entirely**.
+
+> **Contrast with idempotency tokens:** Idempotency tokens are *client-generated* and protect against retry duplicates. Opt-In tokens are *server-generated* (the instructor creates them), handed out to a specific student, and consumed exactly once.
+
+The key insight: a query scoped to `examToken:{tokenId}` IS the token registry — no `IProjectionDefinition` for token state is needed for correctness. A single enum projection replaces the two-bool pattern (`WasIssued` + `WasRedeemed`) and naturally accommodates revocation as a third state:
+
+```csharp
+public enum ExamTokenStatus { NotIssued, Issued, Revoked, Redeemed }
+
+public sealed record ExamTokenState(ExamTokenStatus Status, Guid ExamId);
+
+IDecisionProjection<ExamTokenState> TokenStatus(Guid tokenId) =>
+    new DecisionProjection<ExamTokenState>(
+        initialState: new ExamTokenState(ExamTokenStatus.NotIssued, Guid.Empty),
+        query: Query.FromItems(new QueryItem
+        {
+            EventTypes =
+            [
+                nameof(ExamRegistrationTokenIssuedEvent),
+                nameof(ExamRegistrationTokenRevokedEvent),
+                nameof(ExamRegistrationTokenRedeemedEvent)
+            ],
+            Tags = [new Tag("examToken", tokenId.ToString())]
+        }),
+        apply: (state, evt) => evt.Event.Event switch
+        {
+            ExamRegistrationTokenIssuedEvent issued => new ExamTokenState(ExamTokenStatus.Issued, issued.ExamId),
+            ExamRegistrationTokenRevokedEvent       => state with { Status = ExamTokenStatus.Revoked },
+            ExamRegistrationTokenRedeemedEvent      => state with { Status = ExamTokenStatus.Redeemed },
+            _                                       => state
+        });
+
+// Redeem — pattern-match the status; no if/else chains needed
+var model = await eventStore.BuildDecisionModelAsync(TokenStatus(command.TokenId));
+
+return model.State.Status switch
+{
+    ExamTokenStatus.NotIssued => CommandResult.Fail("Token not found."),
+    ExamTokenStatus.Revoked   => CommandResult.Fail("Token has been revoked."),
+    ExamTokenStatus.Redeemed  => CommandResult.Fail("Token has already been used."),
+    _                         => await AppendRedemptionAsync(command, eventStore, model.State, model.AppendCondition)
+};
+```
+
+**Concurrency safety:** Two concurrent redemptions of the same token — one succeeds; the other reads `Redeemed` on retry (via `ExecuteDecisionAsync`) and receives the appropriate error. Different tokens never contend because each query is scoped to a unique `examToken` tag value.
+
+See [`ExamRegistration/`](Samples/Opossum.Samples.CourseManagement/ExamRegistration/) in the sample for issue, redeem, and revoke implementations.
+
+---
+
 ## ⚡ Performance
 
 ### Typical Throughput
 
-**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-02-26):**
+**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-03-03):**
 
 | Operation | Throughput | Notes |
 |-----------|-----------|-------|
-| **Append (FlushImmediately = true, single event)** | ~58 events/sec | True durability: event + index files flushed (~17ms/event on SSD) |
-| **Append (FlushImmediately = true, batch 10)** | ~78 events/sec | ~13ms/event when amortised over a batch |
-| **Append (FlushImmediately = false)** | ~218 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
-| **Tag query (high selectivity)** | ~553 μs | Index-based, excellent for targeted queries |
-| **Tag query (1K events)** | ~10 ms | Sub-linear scaling |
-| **Read by EventType (10K events)** | ~201 ms | Index-based |
+| **Append (FlushImmediately = true, single event)** | ~61 events/sec | True durability: event + index files flushed (~16ms/event on SSD) |
+| **Append (FlushImmediately = true, batch 10)** | ~81 events/sec | ~12ms/event when amortised over a batch |
+| **Append (FlushImmediately = false)** | ~213 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
+| **Tag query (high selectivity)** | ~501 μs | Index-based, excellent for targeted queries |
+| **Tag query (1K events)** | ~11 ms | Sub-linear scaling |
+| **ReadLastAsync (100 → 10K events)** | 799–1,105 μs | Near-O(1): one index lookup + one file read |
+| **Read by EventType (10K events)** | ~212 ms | Index-based |
 | **Projection rebuild** | ~15,000 events/sec | Batched I/O (see rebuild note below) |
-| **Incremental projection update** | ~11 μs | ~500x faster than full rebuild; zero allocation |
+| **Incremental projection update** | ~3.7 μs / 0 B | ~1,500x faster than full rebuild; zero allocation |
 
 ### Query Performance by Selectivity
 
 | Selectivity | 10K Events | Performance |
 |------------|-----------|-------------|
-| **High** (few matches) | ~590 μs | ⭐ Excellent - tag index highly effective |
-| **Medium** (moderate matches) | ~5.5 ms | ✅ Good - typical use case |
-| **Low** (many matches) | ~111 ms | ⚠️ Expected - must deserialize many events |
+| **High** (few matches) | ~501 μs | ⭐ Excellent - tag index highly effective |
+| **Medium** (moderate matches) | ~5.3 ms | ✅ Good - typical use case |
+| **Low** (many matches) | ~99 ms | ⚠️ Expected - must deserialize many events |
 
 ### Optimization Tips
 
 ✅ **Use SSDs** - Flush operations are much faster (10ms vs 50ms+ on HDD)  
-✅ **Use tag-based queries** - ~590μs for high selectivity vs ~5.5ms for broader queries  
+✅ **Use tag-based queries** - ~501μs for high selectivity vs ~5.3ms for broader queries  
 ✅ **Enable parallel projection rebuilding** - `MaxConcurrentRebuilds` config; note: after the rebuild I/O optimization, sequential and parallel complete in similar time (~370ms for 4 projections) — the disk bottleneck is gone  
-✅ **Use incremental projection updates** - ~500x faster than full rebuild  
+✅ **Use incremental projection updates** - ~1,500x faster than full rebuild; zero allocation  
 ✅ **Optimize query selectivity** - More specific tags = faster queries  
 ⚠️ **Avoid Query.All() for large datasets** - Use projections for read models instead  
 ⚠️ **Use `FlushEventsImmediately = false`** for testing only (data loss risk on power failure)
@@ -1104,7 +1556,7 @@ Opossum is designed for **single-server deployments**:
 
 **Beyond these limits?** Consider cloud-based event stores (EventStoreDB, Azure Event Hubs).
 
-**Detailed benchmarks:** See `docs/benchmarking/results/20260226/`
+**Detailed benchmarks:** See `docs/benchmarking/results/20260303/`
 
 > **Rebuild performance note:** The projection rebuild I/O optimisation reduced the 4-projection sequential rebuild from **5.5 s → 370 ms (~15×)** and memory from **85.9 MB → 21.5 MB (~4×)**. As a consequence, the parallel-over-sequential speedup collapsed to near-parity — the disk I/O bottleneck that made parallelism valuable was eliminated. See `CHANGELOG.md` for the full benchmark comparison.
 
@@ -1121,6 +1573,29 @@ public interface IEventStoreAdmin
     Task DeleteStoreAsync();
 }
 ```
+
+---
+
+## 📡 OpenTelemetry
+
+Opossum emits distributed traces via `System.Diagnostics.ActivitySource` — no extra packages required. Register the activity source name with your OpenTelemetry pipeline:
+
+```csharp
+using Opossum.Telemetry;
+
+tracerProviderBuilder.AddSource(OpossumTelemetry.ActivitySourceName); // "Opossum"
+```
+
+Traced operations:
+
+| Activity | Operation Name | Description |
+|---|---|---|
+| `AppendAsync` | `EventStore.Append` | Every append, including batch appends |
+| `ReadAsync` | `EventStore.Read` | Every query read |
+| `ReadLastAsync` | `EventStore.ReadLast` | Every last-event read |
+| `RebuildAsync` | `Projection.Rebuild` | Every projection rebuild |
+
+When no listener is attached the overhead is a single null-check per operation.
 
 ---
 

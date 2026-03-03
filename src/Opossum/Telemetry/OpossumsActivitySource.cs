@@ -28,5 +28,6 @@ internal static class OpossumsActivity
     // Activity operation names follow the "Component.Operation" convention.
     internal const string Append = "EventStore.Append";
     internal const string Read = "EventStore.Read";
+    internal const string ReadLast = "EventStore.ReadLast";
     internal const string ProjectionRebuild = "Projection.Rebuild";
 }

@@ -180,6 +180,82 @@ public static class DecisionModelExtensions
     }
 
     /// <summary>
+    /// Builds a Decision Model from a runtime-variable list of homogeneous projections
+    /// using a single event-store read. Returns one state per projection in the same order
+    /// as the input list, plus the <see cref="AppendCondition"/> spanning all queries.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Enables the DCB runtime-variable-N pattern — useful when the number of projections
+    /// is only known at command handling time (e.g. items in a shopping cart):
+    /// </para>
+    /// <code>
+    /// var projections = command.Items
+    ///     .Select(item => CourseBookProjections.PriceWithGracePeriod(item.BookId))
+    ///     .ToList();
+    ///
+    /// var (states, condition) = await eventStore.BuildDecisionModelAsync(projections);
+    ///
+    /// for (var i = 0; i &lt; projections.Count; i++)
+    /// {
+    ///     if (!states[i].IsValidPrice(command.Items[i].DisplayedPrice))
+    ///         return CommandResult.Fail($"Price mismatch for book {command.Items[i].BookId}.");
+    /// }
+    ///
+    /// await eventStore.AppendAsync(newEvent, condition);
+    /// </code>
+    /// <para>
+    /// One <see cref="IEventStore.ReadAsync"/> call is made with the union of all queries.
+    /// Each projection then folds only the subset of events that match its own query.
+    /// The single <see cref="AppendCondition"/> returned spans all projection queries —
+    /// a concurrent write matching any query will invalidate the decision.
+    /// </para>
+    /// </remarks>
+    /// <typeparam name="TState">The shared state type for all projections.</typeparam>
+    /// <param name="eventStore">The event store to read from.</param>
+    /// <param name="projections">
+    /// The list of projections to fold. Must not be empty.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>
+    /// A value tuple of <c>(States, Condition)</c> where <c>States[i]</c> corresponds to
+    /// <c>projections[i]</c> and <c>Condition</c> spans all projection queries.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="eventStore"/> or <paramref name="projections"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="projections"/> is empty.
+    /// </exception>
+    public static async Task<(IReadOnlyList<TState> States, AppendCondition Condition)>
+        BuildDecisionModelAsync<TState>(
+            this IEventStore eventStore,
+            IReadOnlyList<IDecisionProjection<TState>> projections,
+            CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(eventStore);
+        ArgumentNullException.ThrowIfNull(projections);
+
+        if (projections.Count == 0)
+            throw new ArgumentException("At least one projection must be provided.", nameof(projections));
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var unionQuery = BuildUnionQuery(projections.Select(p => p.Query));
+        var events = await eventStore.ReadAsync(unionQuery, null).ConfigureAwait(false);
+
+        var appendCondition = new AppendCondition
+        {
+            FailIfEventsMatch = unionQuery,
+            AfterSequencePosition = events.Length > 0 ? events.Max(e => e.Position) : null
+        };
+
+        var states = projections.Select(p => FoldEvents(p, events)).ToArray();
+
+        return (states, appendCondition);
+    }
+
+    /// <summary>
     /// Executes the complete DCB read → decide → append cycle with automatic retry on
     /// optimistic concurrency failures.
     /// </summary>

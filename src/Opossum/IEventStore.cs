@@ -49,4 +49,49 @@ public interface IEventStore
     /// When <see langword="null"/> (the default) all matching events are returned.
     /// </param>
     Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null);
+
+    /// <summary>
+    /// Returns the event with the highest sequence position that matches <paramref name="query"/>,
+    /// or <see langword="null"/> when the store contains no matching events.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the efficient read step for DCB patterns that require knowledge of only the most
+    /// recent event of a given type — for example, reading the last <c>InvoiceCreatedEvent</c>
+    /// to determine the next invoice number in an unbroken monotonic sequence.
+    /// </para>
+    /// <para>
+    /// <b>Typical DCB pattern for consecutive sequences:</b>
+    /// <code>
+    /// // Step 1 — Read: find the last invoice event
+    /// var query = Query.FromEventTypes(nameof(InvoiceCreatedEvent));
+    /// var last = await eventStore.ReadLastAsync(query);
+    ///
+    /// // Step 2 — Decide: derive the next number
+    /// var nextNumber = last is null ? 1 : ((InvoiceCreatedEvent)last.Event.Event).InvoiceNumber + 1;
+    ///
+    /// // Step 3 — Append with a guard that fails if any new invoice appeared in the meantime
+    /// var condition = new AppendCondition
+    /// {
+    ///     FailIfEventsMatch     = query,
+    ///     AfterSequencePosition = last?.Position   // null → reject if ANY invoice already exists
+    /// };
+    /// await eventStore.AppendAsync([new NewEvent { Event = new InvoiceCreatedEvent(nextNumber) }], condition);
+    /// // Throws AppendConditionFailedException on conflict — retry the full cycle.
+    /// </code>
+    /// </para>
+    /// <para>
+    /// Only one event file is read from storage regardless of how many total events match
+    /// the query, making this significantly more efficient than
+    /// <c>ReadAsync(..., [ReadOption.Descending])[0]</c> for large event streams.
+    /// </para>
+    /// </remarks>
+    /// <param name="query">Filter — use <see cref="Query.All()"/> to find the globally last event.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>
+    /// The matching event with the highest sequence position, or <see langword="null"/> when
+    /// no events in the store match <paramref name="query"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">When <paramref name="query"/> is <see langword="null"/>.</exception>
+    Task<SequencedEvent?> ReadLastAsync(Query query, CancellationToken cancellationToken = default);
 }

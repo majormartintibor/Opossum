@@ -22,3 +22,26 @@ public enum CourseSortField
     EnrollmentCount,
     Capacity
 }
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum CourseBookSortField
+{
+    Title,
+    Author,
+    Price
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum CourseBookOrderSortField
+{
+    OrderedAt,
+    StudentId
+}
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
+public enum InvoiceSortField
+{
+    InvoiceNumber,
+    Amount,
+    IssuedAt
+}

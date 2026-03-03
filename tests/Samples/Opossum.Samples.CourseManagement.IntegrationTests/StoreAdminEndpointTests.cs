@@ -10,7 +10,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// other test collections that share a fixture.
 /// </summary>
 [Collection("Store Admin Tests")]
-public class StoreAdminEndpointTests
+public class StoreAdminEndpointTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private readonly IntegrationTestFixture _fixture;

@@ -10,7 +10,7 @@ namespace Opossum.Samples.CourseManagement.IntegrationTests;
 /// Uses dedicated collection to avoid sharing state with other test classes.
 /// </summary>
 [Collection("Admin Tests")]
-public class AdminEndpointTests
+public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private readonly IntegrationTestFixture _fixture;
@@ -24,7 +24,7 @@ public class AdminEndpointTests
     [Fact]
     public async Task POST_RebuildAll_ReturnsOkWithResultAsync()
     {
-        // Act
+        // Act - no query param → defaults to forceAll=true → rebuilds all 9 projections
         var response = await _client.PostAsync("/admin/projections/rebuild", null);
 
         // Assert
@@ -35,6 +35,7 @@ public class AdminEndpointTests
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.NotNull(result.Details);
+        Assert.Equal(9, result.TotalRebuilt);
     }
 
     [Fact]
@@ -45,10 +46,10 @@ public class AdminEndpointTests
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - All 4 sample app projections should be rebuilt
+        // Assert - All 9 sample app projections should be rebuilt
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(4, result.TotalRebuilt);
+        Assert.Equal(9, result.TotalRebuilt);
         Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
@@ -63,29 +64,40 @@ public class AdminEndpointTests
 
         Assert.NotNull(setupResult);
         Assert.True(setupResult.Success);
-        Assert.Equal(4, setupResult.TotalRebuilt); // All 4 projections rebuilt
+        Assert.Equal(9, setupResult.TotalRebuilt); // All 9 projections rebuilt
 
         // Verify all projections now have non-zero checkpoints (processed seeded events)
         var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
         checkpointsResponse.EnsureSuccessStatusCode();
         var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
-        Assert.Equal(4, checkpoints.Count);
-        Assert.All(checkpoints.Values, checkpoint => Assert.True(checkpoint > 0,
-            $"All checkpoints should be > 0 after processing seeded events"));
+        Assert.Equal(9, checkpoints.Count);
+        // Projections with seeded events must have a checkpoint > 0.
+        // CourseBook projections have no seeded book events, but RebuildAsync sets their checkpoint
+        // to the last store position so the daemon does not re-read the whole event log every cycle.
+        // All 9 projections therefore have a non-zero checkpoint after a forceAll rebuild.
+        var seededProjections = new[] { "CourseShortInfo", "CourseDetails", "StudentShortInfo", "StudentDetails", "Invoice" };
+        foreach (var name in seededProjections)
+        {
+            Assert.True(checkpoints.TryGetValue(name, out var cp) && cp > 0,
+                $"Projection '{name}' should have checkpoint > 0 after processing seeded events");
+        }
 
         // Wait for checkpoint persistence
         await Task.Delay(500);
 
-        // Act - Rebuild with forceAll=false (should not rebuild anything - all have checkpoints > 0)
+        // Act - Rebuild with forceAll=false (should return immediately — all 9 projections
+        // already have non-zero checkpoints from the forceAll=true setup above)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - No projections should be rebuilt (all have checkpoints > 0)
+        // Assert - All checkpoints are non-zero so nothing needs rebuilding; the result is
+        // TotalRebuilt=0 with an empty Details list, which is still considered a success.
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.Equal(0, result.TotalRebuilt);
+        Assert.Empty(result.Details);
     }
 
     [Fact]

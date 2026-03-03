@@ -84,7 +84,7 @@ public class ParallelRebuildLockingTests : IDisposable
     }
 
     [Fact]
-    public async Task DuplicateRebuild_SameProjection_ThrowsInvalidOperationExceptionAsync()
+    public async Task DuplicateRebuild_SameProjection_ExecutesSequentiallyAsync()
     {
         // Arrange
         _projectionManager.RegisterProjection(new LongRunningProjection());
@@ -104,18 +104,16 @@ public class ParallelRebuildLockingTests : IDisposable
         // Wait a bit to ensure first rebuild has acquired the lock
         await Task.Delay(50);
 
-        // Try to start second rebuild while first is still running
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            await _projectionManager.RebuildAsync("LongRunningProjection");
-        });
+        // Start second rebuild while first is still running.
+        // RebuildAsync uses failFast: false so admin-triggered rebuilds WAIT for each other
+        // rather than throwing — this prevents an admin rebuild from immediately losing the
+        // race against the daemon's polling loop.
+        await _projectionManager.RebuildAsync("LongRunningProjection");
 
-        // Assert
-        Assert.Contains("already being rebuilt or updated", exception.Message);
-        Assert.Contains("LongRunningProjection", exception.Message);
-
-        // Wait for first rebuild to complete
+        // Assert - both rebuilds completed without error
         await firstRebuildTask;
+        var checkpoint = await _projectionManager.GetCheckpointAsync("LongRunningProjection");
+        Assert.True(checkpoint > 0);
     }
 
     [Fact]

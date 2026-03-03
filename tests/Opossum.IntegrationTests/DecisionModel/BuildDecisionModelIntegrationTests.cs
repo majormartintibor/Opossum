@@ -481,4 +481,178 @@ public sealed class BuildDecisionModelIntegrationTests : IDisposable
     }
 
     #endregion
+
+    #region N-ary list overload
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_EmptyList_ThrowsArgumentExceptionAsync()
+    {
+        var store = CreateEventStore();
+        IReadOnlyList<IDecisionProjection<bool>> projections = [];
+
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await store.BuildDecisionModelAsync(projections));
+    }
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_NullList_ThrowsArgumentNullExceptionAsync()
+    {
+        var store = CreateEventStore();
+
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await store.BuildDecisionModelAsync((IReadOnlyList<IDecisionProjection<bool>>)null!));
+    }
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_SingleProjection_StateMatchesSingleOverloadAsync()
+    {
+        var store = CreateEventStore();
+        var courseId = Guid.NewGuid();
+
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId, 30)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId.ToString()));
+
+        IReadOnlyList<IDecisionProjection<bool>> projections = [CourseExistsProjection(courseId)];
+        var (states, _) = await store.BuildDecisionModelAsync(projections);
+
+        Assert.Single(states);
+        Assert.True(states[0]);
+    }
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_MultipleProjections_EachHasIndependentStateAsync()
+    {
+        var store = CreateEventStore();
+        var courseId1 = Guid.NewGuid();
+        var courseId2 = Guid.NewGuid();
+
+        // Append events for course 1 only
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId1, 30)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId1.ToString()));
+
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            CourseExistsProjection(courseId1),
+            CourseExistsProjection(courseId2)
+        ];
+
+        var (states, _) = await store.BuildDecisionModelAsync(projections);
+
+        Assert.Equal(2, states.Count);
+        Assert.True(states[0]);   // course 1 exists
+        Assert.False(states[1]);  // course 2 does not exist
+    }
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_ThreeProjections_AllStatesCorrectAsync()
+    {
+        var store = CreateEventStore();
+        var courseId1 = Guid.NewGuid();
+        var courseId2 = Guid.NewGuid();
+        var courseId3 = Guid.NewGuid();
+
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId1, 30)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId1.ToString()));
+
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId2, 10)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId2.ToString()));
+
+        // course 3 not created
+
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            CourseExistsProjection(courseId1),
+            CourseExistsProjection(courseId2),
+            CourseExistsProjection(courseId3)
+        ];
+
+        var (states, condition) = await store.BuildDecisionModelAsync(projections);
+
+        Assert.Equal(3, states.Count);
+        Assert.True(states[0]);
+        Assert.True(states[1]);
+        Assert.False(states[2]);
+        Assert.Equal(2, condition.AfterSequencePosition);
+    }
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_StaleCondition_AppendThrowsAsync()
+    {
+        var store = CreateEventStore();
+        var courseId1 = Guid.NewGuid();
+        var courseId2 = Guid.NewGuid();
+
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId1, 1)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId1.ToString()));
+
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            CourseExistsProjection(courseId1),
+            CourseExistsProjection(courseId2)
+        ];
+
+        var (_, staleCondition) = await store.BuildDecisionModelAsync(projections);
+
+        // Concurrent write matching one of the projection queries
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId2, 20)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId2.ToString()));
+
+        var newEvent = new StudentEnrolledEvent(courseId1, Guid.NewGuid())
+            .ToDomainEvent()
+            .WithTag("courseId", courseId1.ToString());
+
+        await Assert.ThrowsAnyAsync<EventStoreException>(async () =>
+            await store.AppendAsync(newEvent, staleCondition));
+    }
+
+    [Fact]
+    public async Task NaryBuildDecisionModelAsync_UnrelatedConcurrentWrite_DoesNotInvalidateConditionAsync()
+    {
+        var store = CreateEventStore();
+        var courseId1 = Guid.NewGuid();
+        var courseId2 = Guid.NewGuid();
+        var unrelatedCourseId = Guid.NewGuid();
+
+        await store.AppendAsync(
+            new CourseCreatedEvent(courseId1, 30)
+                .ToDomainEvent()
+                .WithTag("courseId", courseId1.ToString()));
+
+        IReadOnlyList<IDecisionProjection<bool>> projections =
+        [
+            CourseExistsProjection(courseId1),
+            CourseExistsProjection(courseId2)
+        ];
+
+        var (_, condition) = await store.BuildDecisionModelAsync(projections);
+
+        // Unrelated write — different courseId, not covered by either projection's query
+        await store.AppendAsync(
+            new CourseCreatedEvent(unrelatedCourseId, 5)
+                .ToDomainEvent()
+                .WithTag("courseId", unrelatedCourseId.ToString()));
+
+        var newEvent = new StudentEnrolledEvent(courseId1, Guid.NewGuid())
+            .ToDomainEvent()
+            .WithTag("courseId", courseId1.ToString());
+
+        var exception = await Record.ExceptionAsync(async () =>
+            await store.AppendAsync(newEvent, condition));
+
+        Assert.Null(exception);
+    }
+
+    #endregion
 }

@@ -58,6 +58,32 @@ public static class ProjectionServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Manually registers a projection store for a specific state type.
+    /// Use this when the projection definition is not discoverable via assembly scanning
+    /// (e.g., file-scoped types in tests).
+    /// </summary>
+    /// <typeparam name="TState">The projection state type</typeparam>
+    /// <param name="services">The service collection</param>
+    /// <param name="projectionName">The name of the projection</param>
+    /// <returns>The service collection for chaining</returns>
+    public static IServiceCollection AddProjectionStore<TState>(
+        this IServiceCollection services,
+        string projectionName)
+        where TState : class
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
+
+        services.AddSingleton<IProjectionStore<TState>>(sp =>
+        {
+            var opts = sp.GetRequiredService<OpossumOptions>();
+            return new FileSystemProjectionStore<TState>(opts, projectionName);
+        });
+
+        return services;
+    }
+
     private static void RegisterProjectionsFromAssemblies(
         IServiceCollection services,
         ProjectionOptions options)

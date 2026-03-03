@@ -2,12 +2,23 @@ using Opossum.DependencyInjection;
 using Opossum.Exceptions;
 using Opossum.Mediator;
 using Opossum.Projections;
+using Opossum.Samples.CourseManagement.CourseAggregate;
+using Opossum.Samples.CourseManagement.CourseAnnouncement;
+using Opossum.Samples.CourseManagement.CourseAnnouncementRetraction;
+using Opossum.Samples.CourseManagement.CourseBookCatalog;
+using Opossum.Samples.CourseManagement.CourseBookManagement;
+using Opossum.Samples.CourseManagement.CourseBookOrderHistory;
+using Opossum.Samples.CourseManagement.CourseBookPurchase;
+using Opossum.Samples.CourseManagement.ExamRegistration;
 using Opossum.Samples.CourseManagement.CourseCreation;
 using Opossum.Samples.CourseManagement.CourseDetails;
 using Opossum.Samples.CourseManagement.CourseEnrollment;
 using Opossum.Samples.CourseManagement.CourseShortInfo;
 using Opossum.Samples.CourseManagement.CourseStudentLimitModification;
+using Opossum.Samples.CourseManagement.InvoiceCreation;
 using Opossum.Samples.CourseManagement.StudentDetails;
+using Opossum.Samples.CourseManagement.CourseBuyers;
+using Opossum.Samples.CourseManagement.StudentPurchasedBooks;
 using Opossum.Samples.CourseManagement.StudentRegistration;
 using Opossum.Samples.CourseManagement.StudentShortInfo;
 using Opossum.Samples.CourseManagement.StudentSubscription;
@@ -77,6 +88,18 @@ builder.Services.AddOpossum(options =>
 
 // Add Problem Details support (RFC 7807)
 builder.Services.AddProblemDetails();
+
+// ============================================================================
+// AGGREGATE PATTERN SUPPORT
+// ============================================================================
+// Each aggregate has its own single-purpose repository (load/save its own type only).
+// Cross-aggregate coordination for enrollment is handled by CourseEnrollmentService,
+// a domain service that owns the compound AppendCondition logic without polluting
+// either repository with knowledge of the other aggregate.
+// All registered as scoped — one instance per HTTP request.
+builder.Services.AddScoped<CourseAggregateRepository>();
+builder.Services.AddScoped<StudentAggregateRepository>();
+builder.Services.AddScoped<CourseEnrollmentService>();
 
 // Add OpenAPI with native .NET support (respects JsonStringEnumConverter)
 builder.Services.AddOpenApi();
@@ -156,6 +179,22 @@ app.UseExceptionHandler(exceptionHandlerApp =>
             return;
         }
 
+        // Map BadHttpRequestException (e.g. malformed/missing JSON body) to its intended status code.
+        // Without this, ASP.NET Core's 400 "Failed to read parameter" errors are swallowed as 500.
+        if (exception is BadHttpRequestException badRequest)
+        {
+            context.Response.StatusCode = badRequest.StatusCode;
+            await context.Response.WriteAsJsonAsync(new ProblemDetails
+            {
+                Status = badRequest.StatusCode,
+                Title = "Bad Request",
+                Detail = badRequest.Message,
+                Instance = context.Request.Path,
+                Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+            });
+            return;
+        }
+
         // Default handler for other exceptions
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await context.Response.WriteAsJsonAsync(new ProblemDetails
@@ -176,11 +215,67 @@ app.MapRegisterStudentEndpoint();
 app.MapGetStudentsShortInfoEndpoint();
 app.MapGetStudentDetailsEndpoint();
 app.MapUpdateStudentSubscriptionEndpoint();
+app.MapGetStudentPurchasedBooksEndpoint();
 app.MapCreateCourseEndpoint();
 app.MapGetCoursesShortInfoEndpoint();
 app.MapGetCourseDetailsEndpoint();
 app.MapModifyCourseStudentLimitEndpoint();
 app.MapEnrollStudentToCourseEndpoint();
+app.MapCreateInvoiceEndpoint();
+app.MapGetInvoicesEndpoint();
+
+// ============================================================================
+// ANNOUNCEMENT ENDPOINTS — DCB "Prevent Record Duplication" / Idempotency Pattern
+// ============================================================================
+// These endpoints showcase idempotency tokens as DCB projections:
+//   https://dcb.events/examples/prevent-record-duplication/
+// The domain has no uniqueness constraint on announcements, so the idempotency
+// token is the SOLE guard against duplicate posts caused by accidental HTTP retries.
+// The retract endpoint demonstrates token reuse: after retraction the original
+// token is freed by the event fold and may be submitted again.
+// ============================================================================
+app.MapPostCourseAnnouncementEndpoint();
+app.MapRetractCourseAnnouncementEndpoint();
+
+// ============================================================================
+// EXAM REGISTRATION ENDPOINTS — DCB "Opt-In Token" Pattern
+// ============================================================================
+// These endpoints showcase the DCB "Opt-In Token" pattern:
+//   https://dcb.events/examples/opt-in-token/
+// An instructor issues a server-generated, single-use token for an exam.
+// A student redeems it to register. The key teaching point: no persistent
+// "valid tokens" table is required — the event store IS the token registry.
+// The ExamTokenState projection validates the token in a single ephemeral read.
+// ============================================================================
+app.MapIssueExamRegistrationTokenEndpoint();
+app.MapRedeemExamRegistrationTokenEndpoint();
+app.MapRevokeExamRegistrationTokenEndpoint();
+
+// ============================================================================
+// COURSE BOOK ENDPOINTS — DCB "Dynamic Product Price" Pattern
+// ============================================================================
+// These endpoints showcase the DCB "Dynamic Product Price" pattern:
+//   https://dcb.events/examples/dynamic-product-price/
+// F1: Buy one book at fixed price (single decision projection).
+// F2: Price changes with grace period (TimeProvider-aware decision projection).
+// F3: Shopping cart — multiple books, N-ary BuildDecisionModelAsync overload.
+// ============================================================================
+app.MapDefineCourseBookEndpoint();
+app.MapChangeCourseBookPriceEndpoint();
+app.MapPurchaseCourseBookEndpoint();
+app.MapOrderCourseBooksEndpoint();
+app.MapGetCourseBookCatalogEndpoint();
+app.MapGetCourseBookOrderHistoryEndpoint();
+app.MapGetCourseBuyersEndpoint();
+
+// ============================================================================
+// AGGREGATE ENDPOINTS — Event-Sourced Aggregate pattern (alternative to DCB Decision Model)
+// ============================================================================
+// These endpoints showcase the same course domain using an Event-Sourced Aggregate
+// instead of Decision Model projections. Both write to the same event log.
+// You do not need both in a real application — see CourseAggregateEndpoints.cs.
+// ============================================================================
+app.MapCourseAggregateEndpoints();
 
 // ============================================================================
 // ADMIN ENDPOINTS - Projection Management

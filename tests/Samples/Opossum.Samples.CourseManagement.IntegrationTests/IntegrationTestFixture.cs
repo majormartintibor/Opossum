@@ -71,7 +71,7 @@ public class IntegrationTestFixture : IDisposable
 
     /// <summary>
     /// Seeds the test database with sample domain events for all projection types.
-    /// Creates students, courses, and enrollments so projections have real data to process.
+    /// Creates students, courses, enrollments, and invoices so projections have real data to process.
     /// </summary>
     private async Task SeedTestDataAsync()
     {
@@ -101,6 +101,13 @@ public class IntegrationTestFixture : IDisposable
                     StudentLimit = 10
                 });
             }
+
+            // Create 1 invoice so InvoiceProjection has events to process
+            await Client.PostAsJsonAsync("/invoices", new
+            {
+                CustomerId = Guid.NewGuid(),
+                Amount = 99.99m
+            });
 
             // Give the system a moment to process events
             await Task.Delay(200);
@@ -211,38 +218,33 @@ public class IntegrationTestFixture : IDisposable
 }
 
 /// <summary>
-/// Collection definition for general integration tests that can share a database.
-/// Tests in this collection run sequentially and share the same fixture instance.
+/// Collection definition for general integration tests.
+/// Tests in this collection run sequentially to avoid overloading the file system.
+/// Each test CLASS gets its own <see cref="IntegrationTestFixture"/> instance via
+/// <see cref="IClassFixture{TFixture}"/>, providing full database isolation between classes.
 /// </summary>
 [CollectionDefinition("Integration Tests")]
-public class IntegrationTestCollection : ICollectionFixture<IntegrationTestFixture>
+public class IntegrationTestCollection
 {
 }
 
-/// <summary>
-/// Collection definition for admin tests that need isolated state.
-/// These tests get their own fixture instance with a separate database.
-/// </summary>
+/// <summary>Collection definition for admin tests — sequential, per-class fixture.</summary>
 [CollectionDefinition("Admin Tests")]
-public class AdminTestCollection : ICollectionFixture<IntegrationTestFixture>
+public class AdminTestCollection
 {
 }
 
-/// <summary>
-/// Collection definition for diagnostic tests.
-/// These tests get their own fixture instance to ensure clean state.
-/// </summary>
+/// <summary>Collection definition for diagnostic tests — sequential, per-class fixture.</summary>
 [CollectionDefinition("Diagnostic Tests")]
-public class DiagnosticTestCollection : ICollectionFixture<IntegrationTestFixture>
+public class DiagnosticTestCollection
 {
 }
 
 /// <summary>
 /// Collection definition for store admin tests that delete the entire store.
-/// Each test in this collection receives its own isolated fixture instance so
-/// store deletions do not affect any other collection's data.
+/// Runs sequentially so store deletions do not race with other test classes.
 /// </summary>
 [CollectionDefinition("Store Admin Tests")]
-public class StoreAdminTestCollection : ICollectionFixture<IntegrationTestFixture>
+public class StoreAdminTestCollection
 {
 }

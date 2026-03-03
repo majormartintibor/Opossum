@@ -24,9 +24,17 @@
       <File Path="docs/ubuntu-test-failures-analysis.md" />
   </Folder>
   <Folder Name="/docs/analysis/">
+    <File Path="docs/analysis/aggregate-vs-dcb-comparison.md" />
+    <File Path="docs/analysis/course-subscriptions-feasibility.md" />
     <File Path="docs/analysis/dcb-compliance-analysis.md" />
     <File Path="docs/analysis/dotnet-eventsourcing-comparison.md" />
+    <File Path="docs/analysis/dynamic-course-book-price-feasibility.md" />
+    <File Path="docs/analysis/event-sourced-aggregate-feasibility.md" />
+    <File Path="docs/analysis/invoice-number-feasibility.md" />
+    <File Path="docs/analysis/opt-in-token-feasibility.md" />
+    <File Path="docs/analysis/prevent-record-duplication-feasibility.md" />
     <File Path="docs/analysis/throughput-research-and-improvement-paths.md" />
+    <File Path="docs/analysis/unique-username-feasibility.md" />
     <File Path="docs/analysis/use-case-fit-post-adr005.md" />
   </Folder>
   <Folder Name="/docs/architecture/" />
@@ -93,6 +101,24 @@
     <File Path="docs/benchmarking/results/20260226/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
     <File Path="docs/benchmarking/results/20260226/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
   </Folder>
+  <Folder Name="/docs/benchmarking/results/20260303/">
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Core.AppendBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Core.DescendingOrderIsolatedBenchmark-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Core.QueryBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Core.ReadBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Core.ReadLastBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
+  </Folder>
+  <Folder Name="/docs/benchmarking/results/20260303/rerun1/">
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Core.AppendBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Core.DescendingOrderIsolatedBenchmark-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Core.QueryBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Core.ReadBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Core.ReadLastBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
+    <File Path="docs/benchmarking/results/20260303/rerun1/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
+  </Folder>
   <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
@@ -100,6 +126,9 @@
     <File Path="docs/decisions/004-single-context-by-design.md" />
     <File Path="docs/decisions/005-cross-process-append-safety.md" />
     <File Path="docs/decisions/configureawait-analysis.md" />
+  </Folder>
+  <Folder Name="/docs/design/">
+    <File Path="docs/design/dataseeder-redesign.md" />
   </Folder>
   <Folder Name="/docs/features/">
     <File Path="docs/features/immutablemetadata.md" />
@@ -112,6 +141,7 @@
     <File Path="docs/future-plans/0.4.0-roadmap.md" />
     <File Path="docs/future-plans/0.5.0-roadmap.md" />
     <File Path="docs/future-plans/batched-flush-redesign-plan.md" />
+    <File Path="docs/future-plans/docfx-documentation-website.md" />
   </Folder>
   <Folder Name="/docs/guides/">
     <File Path="docs/guides/configureawait-guide.md" />
@@ -156,6 +186,7 @@
     <File Path="docs/performance/PERFORMANCE-BASELINE.md" />
   </Folder>
   <Folder Name="/docs/releases/">
+    <File Path="docs/releases/0.4.0-preview.2-tasks.md" />
     <File Path="docs/releases/automated-release-guide.md" />
   </Folder>
   <Folder Name="/docs/specifications/">
@@ -197,5 +228,7 @@
   <Folder Name="/tests/Samples/">
     <Project Path="tests/Samples/Opossum.Samples.CourseManagement.IntegrationTests/Opossum.Samples.CourseManagement.IntegrationTests.csproj" />
     <Project Path="tests/Samples/Opossum.Samples.CourseManagement.UnitTests/Opossum.Samples.CourseManagement.UnitTests.csproj" />
+    <Project Path="tests/Samples/Opossum.Samples.DataSeeder.IntegrationTests/Opossum.Samples.DataSeeder.IntegrationTests.csproj" />
+    <Project Path="tests/Samples/Opossum.Samples.DataSeeder.UnitTests/Opossum.Samples.DataSeeder.UnitTests.csproj" />
   </Folder>
 </Solution>

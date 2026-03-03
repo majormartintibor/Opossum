@@ -208,6 +208,48 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         }
     }
 
+    public async Task<SequencedEvent?> ReadLastAsync(Query query, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (_options.StoreName is null)
+        {
+            throw new InvalidOperationException("No store configured. Call options.UseStore(\"YourStoreName\") in the configuration.");
+        }
+
+        var contextPath = GetContextPath(_options.StoreName);
+
+        using var activity = OpossumsActivity.Source.StartActivity(OpossumsActivity.ReadLast);
+        activity?.SetTag("db.operation", "read_last");
+        activity?.SetTag("opossum.context", _options.StoreName);
+
+        try
+        {
+            // positions is sorted ascending — [^1] is the highest position
+            var positions = await GetPositionsForQueryAsync(contextPath, query).ConfigureAwait(false);
+
+            if (positions.Length == 0)
+            {
+                activity?.SetTag("opossum.event_count", 0);
+                return null;
+            }
+
+            var eventsPath = GetEventsPath(contextPath);
+            var events = await _eventFileManager.ReadEventsAsync(eventsPath, [positions[^1]]).ConfigureAwait(false);
+
+            activity?.SetTag("opossum.event_count", 1);
+            return events.Length > 0 ? events[0] : null;
+        }
+        catch (Exception ex)
+        {
+            LogReadError(ex, _options.StoreName);
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            throw;
+        }
+    }
+
     /// <summary>
     /// Gets all positions for a query.
     /// Implements full query logic with OR between QueryItems and proper AND/OR within items.

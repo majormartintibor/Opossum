@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace Opossum.Samples.CourseManagement.IntegrationTests;
 
 [Collection("Integration Tests")]
-public class StudentSubscriptionIntegrationTests
+public class StudentSubscriptionIntegrationTests : IClassFixture<IntegrationTestFixture>
 {
     private readonly HttpClient _client;
     private static readonly JsonSerializerOptions _jsonOptions = new()

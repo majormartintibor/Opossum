@@ -26,6 +26,11 @@ public class ProjectionRebuildBenchmarks
     private NewEvent[] _events500 = null!;
     private Dictionary<Guid, StudentProjection> _baseProjection250 = null!;
 
+    // Pre-cloned mutable projection used by incremental benchmarks.
+    // Cloned in IterationSetup (not measured) so the benchmark body only
+    // captures the per-event application cost, not the clone overhead.
+    private Dictionary<Guid, StudentProjection> _workProjection250 = null!;
+
     // Pre-created incremental events (for incremental update benchmarks)
     private NewEvent _incrementalEvent1 = null!;
     private NewEvent[] _incrementalEvents10 = null!;
@@ -81,6 +86,10 @@ public class ProjectionRebuildBenchmarks
         // Pre-create incremental events (append to store in setup, not measured in benchmark)
         _incrementalEvent1 = CreateStudentEvents(1, startIndex: 1000, eventType: "Student250")[0];
         _incrementalEvents10 = CreateStudentEvents(10, startIndex: 1000, eventType: "Student250");
+
+        // Pre-clone the base projection so the incremental benchmark bodies only
+        // measure event application, not the dictionary-copy infrastructure cost.
+        _workProjection250 = new Dictionary<Guid, StudentProjection>(_baseProjection250);
     }
 
     [IterationCleanup]
@@ -147,11 +156,8 @@ public class ProjectionRebuildBenchmarks
     [Benchmark(Description = "Incremental update (1 new event)")]
     public void IncrementalUpdate_SingleEvent()
     {
-        // Clone base projection (small cost, ~1ms for 250 items)
-        var projection = new Dictionary<Guid, StudentProjection>(_baseProjection250);
-
-        // ONLY measure applying the event to projection (no disk I/O!)
-        ApplyEventToProjection(projection, _incrementalEvent1);
+        // _workProjection250 is pre-cloned in IterationSetup; only event application is measured.
+        ApplyEventToProjection(_workProjection250, _incrementalEvent1);
     }
 
     /// <summary>
@@ -162,12 +168,10 @@ public class ProjectionRebuildBenchmarks
     [Benchmark(Description = "Incremental update (10 new events)")]
     public void IncrementalUpdate_10Events()
     {
-        var projection = new Dictionary<Guid, StudentProjection>(_baseProjection250);
-
-        // ONLY measure applying events to projection (no disk I/O!)
+        // _workProjection250 is pre-cloned in IterationSetup; only event application is measured.
         foreach (var evt in _incrementalEvents10)
         {
-            ApplyEventToProjection(projection, evt);
+            ApplyEventToProjection(_workProjection250, evt);
         }
     }
 
