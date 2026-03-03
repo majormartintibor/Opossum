@@ -1,8 +1,6 @@
-using Opossum;
 using Opossum.Core;
 using Opossum.DependencyInjection;
 using Opossum.Samples.CourseManagement.Events;
-using Opossum.Samples.DataSeeder;
 using Opossum.Samples.DataSeeder.Core;
 using Opossum.Samples.DataSeeder.Generators;
 using Opossum.Samples.DataSeeder.Writers;
