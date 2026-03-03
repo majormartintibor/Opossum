@@ -29,6 +29,12 @@ internal sealed partial class ProjectionManager : IProjectionManager
     // - Configurable lock retention policy
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _projectionLocks = new();
 
+    // In-memory cache for the last known checkpoint position per projection.
+    // Eliminates the per-poll-tick file read in the hot path of UpdateAsync and
+    // ProcessNewEventsAsync. Populated lazily on first GetCheckpointAsync; updated
+    // atomically in SaveCheckpointAsync after every successful disk write.
+    private readonly ConcurrentDictionary<string, long> _checkpointCache = new();
+
     // Lock for rebuild status tracking
     private readonly object _rebuildLock = new();
     private ProjectionRebuildStatus _currentRebuildStatus = new()
@@ -242,24 +248,28 @@ internal sealed partial class ProjectionManager : IProjectionManager
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
 
+        if (_checkpointCache.TryGetValue(projectionName, out var cached))
+            return cached;
+
+        // Cache miss — read from disk once and populate the cache.
         var filePath = GetCheckpointFilePath(projectionName);
 
         if (!File.Exists(filePath))
         {
+            _checkpointCache[projectionName] = 0;
             return 0;
         }
 
         var json = await File.ReadAllTextAsync(filePath, cancellationToken).ConfigureAwait(false);
         var checkpoint = JsonSerializer.Deserialize<ProjectionCheckpoint>(json, _jsonOptions);
-
-        return checkpoint?.LastProcessedPosition ?? 0;
+        var position = checkpoint?.LastProcessedPosition ?? 0;
+        _checkpointCache[projectionName] = position;
+        return position;
     }
 
     public async Task SaveCheckpointAsync(string projectionName, long position, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(projectionName);
-
-        var currentCheckpoint = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
 
         var checkpoint = new ProjectionCheckpoint
         {
@@ -285,6 +295,10 @@ internal sealed partial class ProjectionManager : IProjectionManager
             { try { File.Delete(tempPath); } catch { /* ignore cleanup errors */ } }
             throw;
         }
+
+        // Update cache after successful disk write so subsequent GetCheckpointAsync
+        // calls return the new position without a disk round-trip.
+        _checkpointCache[projectionName] = position;
     }
 
     public IReadOnlyList<string> GetRegisteredProjections()
