@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.4.0-preview.1</Version>
+    <Version>0.4.0-preview.2</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -20,35 +20,35 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>opossum.png</PackageIcon>
     <PackageReleaseNotes>Added:
-- Cross-process append safety: multiple app instances sharing the same store directory are now safe (ADR-005)
-- CrossProcessLockManager with exponential backoff and OpossumOptions.CrossProcessLockTimeout (default: 5 s)
-- IEventStoreAdmin interface with DeleteStoreAsync — permanently removes all store data (events, indices, projections, ledger)
-- OpossumOptions.WriteProtectProjectionFiles — marks projection files read-only after every write (mirrors WriteProtectEventFiles)
-
-Changed:
-- WriteProtectEventFiles and WriteProtectProjectionFiles now default to false (opt-in for production)
-- Event and projection files now use pretty-printed (indented) JSON for human readability
+- IEventStore.ReadLastAsync — returns the single highest-position matching event in O(1) file reads; 192x faster than full ReadAsync at 10K events.
+- N-ary BuildDecisionModelAsync overload — accepts IReadOnlyList&lt;IDecisionProjection&lt;TState&gt;&gt; for runtime-variable homogeneous projections.
+- TimeProvider constructor overload on DecisionProjection&lt;TState&gt; — fully deterministic unit testing of time-dependent projections.
+- Sample: Opt-In Token pattern (ExamRegistration/) — server-generated single-use exam registration tokens.
+- Sample: Dynamic Product Price, all three features (CourseBookPurchase/) — including N-ary shopping-cart overload.
+- Sample: Prevent Record Duplication (CourseAnnouncement/) — client-generated idempotency token.
+- Sample: Invoice Number / Consecutive Sequence (InvoiceCreation/) — gap-free invoice numbering with ReadLastAsync.
+- Sample: Event-Sourced Aggregate (CourseAggregate/) — DCB tag-scoped AppendCondition in repository.
+- Sample: CourseBuyersProjection — read model tracking every student who purchased each course book.
+- Sample: Paging — PaginatedResponse&lt;T&gt; from list endpoints; SortOrder enum for ascending/descending control.
+- Data Seeder (Opossum.Samples.DataSeeder) — standalone CLI tool that seeds the CourseManagement sample.
 
 Fixed:
-- Index files (event-type, tag) were not flushed to disk when FlushEventsImmediately = true — durability guarantee is now complete
-- DeleteStoreAsync race condition with concurrent AppendAsync — deletion now acquires the append lock
-- Flaky DescendingPerformanceTests integration test — warm-up pass added; ratio threshold widened to 4x
+- Zero-allocation hot path restored in incremental projection updates — 55-65% speedup; 0 B allocated per incremental update (was 11-16 KB).
+- Large no-flush batch regression resolved — batch-50: -13%, batch-100: -12% vs preview.1.
+- Projection rebuild admin endpoint — now correctly targets only the named projections supplied.
+- Test flakiness in concurrent-append integration tests.
 
-Performance:
-- Parallel index file loading in GetPositionsByEventTypesAsync / GetPositionsByTagsAsync (Task.WhenAll)
-- Reduced read-retry overhead: 3 retries / 1 ms back-off (was 5 / 10 ms)
-- Eliminated redundant File.Exists syscall per index file read
-- K-way sorted merge for multi-type/multi-tag position queries
-
-Known Issues:
-- Crash-recovery position collision (pre-existing since v0.1.0) — tracked for 0.5.0
+Performance (2026-03-03):
+- Incremental projection update: 3.68 us / 0 B (zero-allocation hot path verified).
+- ReadLastAsync: 799 us (100 events) to 1,105 us (10,000 events) — near-O(1) confirmed.
+- High-selectivity tag query: 553 us to ~501 us (-9%).
 
 Full changelog: https://github.com/majormartintibor/Opossum/blob/main/CHANGELOG.md</PackageReleaseNotes>
 
     <!-- Assembly Versioning -->
     <AssemblyVersion>0.4.0.0</AssemblyVersion>
     <FileVersion>0.4.0.0</FileVersion>
-    <InformationalVersion>0.4.0-preview.1</InformationalVersion>
+    <InformationalVersion>0.4.0-preview.2</InformationalVersion>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
