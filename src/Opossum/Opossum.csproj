@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.4.0-preview.2</Version>
+    <Version>0.4.0-preview.3</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -19,24 +19,12 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>opossum.png</PackageIcon>
-    <PackageReleaseNotes>Added:
-- IEventStore.ReadLastAsync — returns the single highest-position matching event in O(1) file reads; 192x faster than full ReadAsync at 10K events.
-- N-ary BuildDecisionModelAsync overload — accepts IReadOnlyList&lt;IDecisionProjection&lt;TState&gt;&gt; for runtime-variable homogeneous projections.
-- TimeProvider constructor overload on DecisionProjection&lt;TState&gt; — fully deterministic unit testing of time-dependent projections.
-- Sample: Opt-In Token pattern (ExamRegistration/) — server-generated single-use exam registration tokens.
-- Sample: Dynamic Product Price, all three features (CourseBookPurchase/) — including N-ary shopping-cart overload.
-- Sample: Prevent Record Duplication (CourseAnnouncement/) — client-generated idempotency token.
-- Sample: Invoice Number / Consecutive Sequence (InvoiceCreation/) — gap-free invoice numbering with ReadLastAsync.
-- Sample: Event-Sourced Aggregate (CourseAggregate/) — DCB tag-scoped AppendCondition in repository.
-- Sample: CourseBuyersProjection — read model tracking every student who purchased each course book.
-- Sample: Paging — PaginatedResponse&lt;T&gt; from list endpoints; SortOrder enum for ascending/descending control.
-- Data Seeder (Opossum.Samples.DataSeeder) — standalone CLI tool that seeds the CourseManagement sample.
+    <PackageReleaseNotes>Fixed:
+- ProjectionManager.UpdateAsync correctness bug — duplicate event application and checkpoint regression resolved. Events are now filtered by both event type and position inside the per-projection lock; checkpoint always advances to batchMax.
+- RebuildAsync / RebuildAllAsync — checkpoint file is now always written after a rebuild, even when the event store is empty. Prevents infinite re-queue on daemon restart.
 
-Fixed:
-- Zero-allocation hot path restored in incremental projection updates — 55-65% speedup; 0 B allocated per incremental update (was 11-16 KB).
-- Large no-flush batch regression resolved — batch-50: -13%, batch-100: -12% vs preview.1.
-- Projection rebuild admin endpoint — now correctly targets only the named projections supplied.
-- Test flakiness in concurrent-append integration tests.
+Removed:
+- Sample: CourseBookOrderHistory projection removed. It used evt.Position as key selector (O(Events) cardinality), producing 700,000+ files on a Large-seeded database. Covered by the correctly-designed StudentPurchasedBooks projection (O(Students)).
 
 Performance (2026-03-03):
 - Incremental projection update: 3.68 us / 0 B (zero-allocation hot path verified).
