@@ -141,11 +141,10 @@ internal sealed partial class ProjectionManager : IProjectionManager
             var query = Query.FromEventTypes([.. registration.EventTypes]);
             var events = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
 
-            // Clear existing projection data
-            await registration.ClearAsync(cancellationToken).ConfigureAwait(false);
-
             // Switch store to rebuild mode: state changes are buffered in memory and
             // flushed to disk once at the end, reducing disk I/O from O(events) to O(unique keys).
+            // Old projection files remain accessible to readers until CommitRebuildAsync performs
+            // the atomic directory swap at the end of the rebuild.
             await registration.BeginRebuildAsync().ConfigureAwait(false);
 
             // Rebuild from events (ReadAsync already returns events in ascending position order)

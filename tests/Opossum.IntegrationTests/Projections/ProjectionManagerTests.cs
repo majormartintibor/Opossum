@@ -215,6 +215,65 @@ public class ProjectionManagerTests : IDisposable
         Assert.Equal("Updated Name", item.Name);
     }
 
+    [Fact]
+    public async Task RebuildAsync_OldFilesRemainOnDiskDuringRebuildAsync()
+    {
+        // Arrange: use a slow projection so we can observe file state during rebuild.
+        // Old projection files should stay on disk until CommitRebuildAsync performs the
+        // atomic directory swap at the very end of the rebuild.
+        var startedSignal = new ManualResetEventSlim(initialState: false);
+
+        // For the first rebuild, let Apply pass through immediately (resumeSignal is set).
+        // We reset it before the second rebuild to pause Apply and observe the file state.
+        var resumeSignal = new ManualResetEventSlim(initialState: true);
+
+        var slowProjection = new SlowPmTestItemProjection(startedSignal, resumeSignal);
+        _projectionManager.RegisterProjection(slowProjection);
+
+        var itemId = Guid.NewGuid();
+        await _eventStore.AppendAsync(
+            [new PmTestItemCreatedEvent(itemId, "Version1")
+                .ToDomainEvent()
+                .WithTag("itemId", itemId.ToString())
+                .Build()],
+            null);
+
+        // First rebuild: creates the initial projection files on disk (Apply runs unblocked).
+        await _projectionManager.RebuildAsync("SlowPmTestItems");
+
+        var projectionPath = Path.Combine(
+            _testStoragePath, "ProjectionManagerContext", "Projections", "SlowPmTestItems");
+
+        Assert.True(Directory.GetFiles(projectionPath, "*.json").Length > 0,
+            "Initial projection files should exist after first rebuild");
+
+        // Reset both signals: the second rebuild will pause inside Apply.
+        startedSignal.Reset();
+        resumeSignal.Reset();
+
+        // Act: start a second rebuild in the background; it will pause inside Apply.
+        var rebuildTask = Task.Run(async () =>
+            await _projectionManager.RebuildAsync("SlowPmTestItems"));
+
+        // Wait until the rebuild has started processing (Apply was entered).
+        Assert.True(startedSignal.Wait(TimeSpan.FromSeconds(10)),
+            "Rebuild should have started within 10 seconds");
+
+        // Assert: old projection files must still be on disk while the rebuild is running.
+        Assert.True(Directory.Exists(projectionPath),
+            "Projection directory should exist during rebuild");
+        Assert.True(Directory.GetFiles(projectionPath, "*.json").Length > 0,
+            "Old projection files should remain on disk during rebuild");
+
+        // Release the pause so the rebuild can finish.
+        resumeSignal.Set();
+        await rebuildTask;
+
+        // Projection files should still exist after rebuild completes.
+        Assert.True(Directory.GetFiles(projectionPath, "*.json").Length > 0,
+            "Projection files should exist after rebuild");
+    }
+
     public void Dispose()
     {
         _serviceProvider?.Dispose();
@@ -242,6 +301,48 @@ file record PmTestItemState
 {
     public Guid ItemId { get; init; }
     public string Name { get; init; } = string.Empty;
+}
+
+file record SlowPmTestItemState
+{
+    public Guid ItemId { get; init; }
+    public string Name { get; init; } = string.Empty;
+}
+
+/// <summary>
+/// A projection that pauses inside Apply to allow tests to observe file state during rebuild.
+/// </summary>
+file sealed class SlowPmTestItemProjection(
+    ManualResetEventSlim startedSignal,
+    ManualResetEventSlim resumeSignal) : IProjectionDefinition<SlowPmTestItemState>
+{
+    public string ProjectionName => "SlowPmTestItems";
+
+    public string[] EventTypes =>
+    [
+        typeof(PmTestItemCreatedEvent).Name,
+        typeof(PmTestItemUpdatedEvent).Name,
+    ];
+
+    public string KeySelector(SequencedEvent evt) =>
+        evt.Event.Event switch
+        {
+            PmTestItemCreatedEvent e => e.ItemId.ToString(),
+            PmTestItemUpdatedEvent e => e.ItemId.ToString(),
+            _ => "unknown"
+        };
+
+    public SlowPmTestItemState? Apply(SlowPmTestItemState? current, SequencedEvent evt)
+    {
+        startedSignal.Set();   // Signal the test that Apply has been entered
+        resumeSignal.Wait();   // Wait until the test releases the pause
+        return evt.Event.Event switch
+        {
+            PmTestItemCreatedEvent e => new SlowPmTestItemState { ItemId = e.ItemId, Name = e.Name },
+            PmTestItemUpdatedEvent e => current! with { Name = e.Name },
+            _ => current
+        };
+    }
 }
 
 [ProjectionDefinition("PmTestItems")]

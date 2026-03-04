@@ -22,6 +22,11 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     private bool _rebuildMode;
     private readonly Dictionary<string, TState?> _rebuildStateBuffer = [];
 
+    // Path to the temporary directory used during rebuild.
+    // New projection files are written here and atomically moved to _projectionPath on commit,
+    // so old data remains accessible to readers for the entire duration of the rebuild.
+    private string? _rebuildTempPath;
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true,
@@ -499,73 +504,101 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     /// Switches the store into rebuild mode.
     /// All subsequent <see cref="SaveAsync"/> and <see cref="DeleteAsync"/> calls will update an
     /// in-memory buffer instead of touching the file system.
+    /// Creates a temporary directory to hold the new projection files; the existing files in
+    /// <c>_projectionPath</c> remain accessible to readers until <see cref="CommitRebuildAsync"/>
+    /// performs the atomic swap.
     /// Must be followed by <see cref="CommitRebuildAsync"/> to flush the buffer to disk.
     /// </summary>
     internal void BeginRebuild()
     {
         _rebuildStateBuffer.Clear();
+        _projectionTags.Clear();
         _rebuildMode = true;
+        _rebuildTempPath = _projectionPath + $".tmp.{Guid.NewGuid():N}";
+        Directory.CreateDirectory(_rebuildTempPath);
     }
 
     /// <summary>
-    /// Flushes the in-memory rebuild buffer to disk in a single pass and exits rebuild mode.
+    /// Flushes the in-memory rebuild buffer to a temporary directory in a single pass, then
+    /// atomically replaces the production directory so that old projection files remain
+    /// accessible to readers for the entire duration of the rebuild.
     /// Writes each unique projection key exactly once, and persists the metadata index in one
     /// atomic write — regardless of how many events were applied during the rebuild loop.
     /// </summary>
     internal async Task CommitRebuildAsync(CancellationToken cancellationToken = default)
     {
+        var tempPath = _rebuildTempPath;
         try
         {
-            if (_rebuildStateBuffer.Count == 0)
+            // Clear stale metadata cache entries from before the rebuild.
+            // The old metadata index file on disk is also removed here; it will be replaced
+            // by the new one written to tempPath and then moved in during the atomic swap.
+            await _metadataIndex.ClearAsync(_projectionPath).ConfigureAwait(false);
+
+            if (_rebuildStateBuffer.Count > 0)
             {
-                return;
-            }
+                // tempPath is set by BeginRebuild(), which is always called before CommitRebuildAsync().
+                var now = DateTimeOffset.UtcNow;
+                var metadataEntries = new Dictionary<string, ProjectionMetadata>(_rebuildStateBuffer.Count);
 
-            Directory.CreateDirectory(_projectionPath);
-
-            var now = DateTimeOffset.UtcNow;
-            var metadataEntries = new Dictionary<string, ProjectionMetadata>(_rebuildStateBuffer.Count);
-
-            foreach (var (key, state) in _rebuildStateBuffer)
-            {
-                var metadata = new ProjectionMetadata
+                foreach (var (key, state) in _rebuildStateBuffer)
                 {
-                    CreatedAt = now,
-                    LastUpdatedAt = now,
-                    Version = 1,
-                    SizeInBytes = 0
-                };
-
-                var wrapper = new ProjectionWithMetadata<TState> { Data = state!, Metadata = metadata };
-                var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
-                var filePath = GetFilePath(key);
-
-                await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
-
-                // Mark committed projection file as read-only after writing
-                if (_writeProtect)
-                    File.SetAttributes(filePath, FileAttributes.ReadOnly);
-
-                metadataEntries[key] = metadata with { SizeInBytes = json.Length };
-
-                if (_tagProvider != null)
-                {
-                    var tags = _tagProvider.GetTags(state!).ToList();
-                    foreach (var tag in tags)
+                    var metadata = new ProjectionMetadata
                     {
-                        await _tagIndex.AddProjectionAsync(_projectionPath, tag, key).ConfigureAwait(false);
+                        CreatedAt = now,
+                        LastUpdatedAt = now,
+                        Version = 1,
+                        SizeInBytes = 0
+                    };
+
+                    var wrapper = new ProjectionWithMetadata<TState> { Data = state!, Metadata = metadata };
+                    var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
+                    var filePath = GetFilePath(key);  // Returns path inside tempPath during rebuild
+
+                    await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
+
+                    // Mark committed projection file as read-only after writing
+                    if (_writeProtect)
+                        File.SetAttributes(filePath, FileAttributes.ReadOnly);
+
+                    metadataEntries[key] = metadata with { SizeInBytes = json.Length };
+
+                    if (_tagProvider != null)
+                    {
+                        var tags = _tagProvider.GetTags(state!).ToList();
+                        foreach (var tag in tags)
+                        {
+                            await _tagIndex.AddProjectionAsync(tempPath!, tag, key).ConfigureAwait(false);
+                        }
+                        _projectionTags[key] = tags;
                     }
-                    _projectionTags[key] = tags;
                 }
+
+                // Write all metadata in one atomic pass instead of once per event
+                await _metadataIndex.BatchSaveAsync(tempPath!, metadataEntries).ConfigureAwait(false);
             }
 
-            // Write all metadata in one atomic pass instead of once per event
-            await _metadataIndex.BatchSaveAsync(_projectionPath, metadataEntries).ConfigureAwait(false);
+            // Atomic swap: replace the production directory with the temp directory.
+            // Old projection files remain on disk until this point, keeping them accessible
+            // to readers for the entire duration of the rebuild.
+            DeleteDirectory(_projectionPath);
+            if (tempPath != null && Directory.Exists(tempPath))
+                Directory.Move(tempPath, _projectionPath);
+            else
+                Directory.CreateDirectory(_projectionPath);
+        }
+        catch
+        {
+            // Clean up temp directory on failure so no orphaned directories are left behind.
+            if (tempPath != null)
+                DeleteDirectory(tempPath);
+            throw;
         }
         finally
         {
             _rebuildMode = false;
             _rebuildStateBuffer.Clear();
+            _rebuildTempPath = null;
         }
     }
 
@@ -611,6 +644,29 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         // Sanitize key for file system
         var safeKey = string.Join("_", key.Split(Path.GetInvalidFileNameChars()));
-        return Path.Combine(_projectionPath, $"{safeKey}.json");
+        var dir = _rebuildTempPath ?? _projectionPath;
+        return Path.Combine(dir, $"{safeKey}.json");
+    }
+
+    /// <summary>
+    /// Deletes a directory and all its contents, removing read-only attributes first when
+    /// write protection is enabled. Safe to call when the directory does not exist.
+    /// </summary>
+    private void DeleteDirectory(string path)
+    {
+        if (!Directory.Exists(path))
+            return;
+
+        if (_writeProtect)
+        {
+            foreach (var file in Directory.GetFiles(path, "*", SearchOption.AllDirectories))
+            {
+                var attrs = File.GetAttributes(file);
+                if ((attrs & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
+            }
+        }
+
+        Directory.Delete(path, recursive: true);
     }
 }

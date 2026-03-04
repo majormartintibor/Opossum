@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Projection rebuild now keeps old files accessible during rebuild.**
+  Previously, `ClearAsync` deleted all projection files at the _start_ of a rebuild,
+  leaving the projection directory empty for the entire rebuild duration. With large
+  datasets this could mean hours with no projection data on disk.
+  
+  The rebuild now uses a temporary directory: all new projection files are written there
+  while the old files in the production directory remain untouched. At the very end of
+  `CommitRebuildAsync` an atomic directory swap (delete old, move temp to production)
+  makes the new data visible instantaneously. Each projection in a parallel rebuild
+  therefore becomes available as soon as _its own_ rebuild completes, independently of
+  the other projections.
+
 ---
 
 ## [0.4.0-preview.3] - 2026-03-04
