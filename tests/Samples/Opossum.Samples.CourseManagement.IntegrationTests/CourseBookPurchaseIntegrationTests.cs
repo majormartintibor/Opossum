@@ -205,27 +205,6 @@ public class CourseBookPurchaseIntegrationTests : IClassFixture<IntegrationTestF
     }
 
     // -------------------------------------------------------------------------
-    // Order history read endpoint
-    // -------------------------------------------------------------------------
-
-    [Fact]
-    public async Task GetOrderHistory_ReturnsOkAsync()
-    {
-        var response = await _client.GetAsync("/course-books/orders?pageNumber=1&pageSize=50&sortBy=OrderedAt&sortOrder=Descending");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetOrderHistory_FilterByStudentId_ReturnsOkAsync()
-    {
-        var studentId = Guid.NewGuid();
-        var response = await _client.GetAsync($"/course-books/orders?studentId={studentId}&pageNumber=1&pageSize=50&sortBy=OrderedAt&sortOrder=Descending");
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-    }
-
-    // -------------------------------------------------------------------------
     // courseId tag on stored events (Session 2)
     // -------------------------------------------------------------------------
 

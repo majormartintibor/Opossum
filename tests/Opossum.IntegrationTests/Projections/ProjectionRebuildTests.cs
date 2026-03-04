@@ -252,6 +252,49 @@ public class ProjectionRebuildTests : IDisposable
     }
 
     [Fact]
+    public async Task RebuildProjection_OnEmptyStore_WritesCheckpointFileAsync()
+    {
+        // Arrange
+        var projection = new AccountBalanceProjection();
+        _projectionManager.RegisterProjection(projection);
+
+        var checkpointFile = Path.Combine(
+            _testStoragePath, "RebuildContext", "Projections", "_checkpoints",
+            "AccountBalance.checkpoint");
+
+        Assert.False(File.Exists(checkpointFile));
+
+        // Act - Rebuild against an empty store
+        await _projectionManager.RebuildAsync("AccountBalance");
+
+        // Assert - Checkpoint file must exist so the projection is not treated as
+        // "never rebuilt" on the next startup auto-rebuild pass.
+        Assert.True(File.Exists(checkpointFile));
+
+        var checkpoint = await _projectionManager.GetCheckpointAsync("AccountBalance");
+        Assert.Equal(0, checkpoint);
+    }
+
+    [Fact]
+    public async Task RebuildAllAsync_AfterRebuildOnEmptyStore_DoesNotRebuildAgainAsync()
+    {
+        // Arrange
+        var projection = new AccountBalanceProjection();
+        _projectionManager.RegisterProjection(projection);
+
+        // First rebuild on empty store — should write checkpoint file with position 0
+        await _projectionManager.RebuildAsync("AccountBalance");
+
+        // Act - RebuildAllAsync(forceRebuild: false) must skip the projection because
+        // the checkpoint file now exists (position 0 = rebuilt but store was empty).
+        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+
+        // Assert
+        Assert.Equal(0, result.TotalRebuilt);
+        Assert.Empty(result.Details);
+    }
+
+    [Fact]
     public async Task RebuildProjection_WithPartialBatches_ProcessesAllEventsAsync()
     {
         // Arrange

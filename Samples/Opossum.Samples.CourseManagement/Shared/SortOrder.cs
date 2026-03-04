@@ -32,13 +32,6 @@ public enum CourseBookSortField
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum CourseBookOrderSortField
-{
-    OrderedAt,
-    StudentId
-}
-
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum InvoiceSortField
 {
     InvoiceNumber,

@@ -177,6 +177,7 @@
   </Folder>
   <Folder Name="/docs/lessons-learned/">
     <File Path="docs/lessons-learned/batched-flush-failure.md" />
+    <File Path="docs/lessons-learned/course-book-order-history-projection-mistake.md" />
   </Folder>
   <Folder Name="/docs/limitations/">
     <File Path="docs/limitations/crash-recovery-position-collision.md" />
@@ -187,6 +188,8 @@
   </Folder>
   <Folder Name="/docs/releases/">
     <File Path="docs/releases/0.4.0-preview.2-tasks.md" />
+    <File Path="docs/releases/0.4.0-preview.3-tasks.md" />
+    <File Path="docs/releases/0.4.1-preview.1-tasks.md" />
     <File Path="docs/releases/automated-release-guide.md" />
   </Folder>
   <Folder Name="/docs/specifications/">

@@ -606,7 +606,12 @@ Minimum target: **~12 integration tests**.
 8. **Feature 1 command** — `PurchaseCourseBookCommand` (single book, current price)
 9. **Feature 2 command** — extend `PurchaseCourseBookCommand` with `PriceWithGracePeriod`
 10. **Feature 3 command** — `OrderCourseBooksCommand` using N-ary `BuildDecisionModelAsync`
-11. **Read-side projections** — `CourseBookCatalogProjection`, `CourseBookOrderHistoryProjection`
+11. **Read-side projections** — `CourseBookCatalogProjection`, ~~`CourseBookOrderHistoryProjection`~~
+    > ⚠️ `CourseBookOrderHistoryProjection` was implemented but later **removed**.
+    > It used `evt.Position` as the key selector, creating one projection file per purchase event
+    > (O(Events) cardinality). On a Large-seeded database this produced 700,000+ files and never
+    > completed rebuilding. Only `CourseBookCatalogProjection` (keyed by `bookId`, O(Books)) was
+    > correct. See `docs/lessons-learned/course-book-order-history-projection-mistake.md`.
 12. **API endpoints** — wire everything in `Program.cs`
 13. **Integration tests** — test all endpoints
 14. **CHANGELOG** — update `## [Unreleased]` section
@@ -621,7 +626,7 @@ Minimum target: **~12 integration tests**.
 | 2 | Should `DefineCourseBook` guard against redefining an existing book? | Yes — append a `CourseBookExists` projection guard |
 | 3 | Should students have to be registered to purchase? | Yes — reuse the existing `StudentRegistered` projection |
 | 4 | Should `CourseBooksOrderedEvent` also carry a `studentId` tag for order-history queries? | Yes |
-| 5 | Should the catalog and order-history projections be tag-scoped (per book) or global? | Global (one projection file per store) |
+| 5 | Should the catalog and order-history projections be tag-scoped (per book) or global? | Global (one projection file per store) ⚠️ **This assumption was ambiguous and led to a design mistake.** "Global" was interpreted as one file per event (key = `evt.Position`) instead of one file per entity. The catalog was correctly implemented per-book (key = `bookId`). The order-history was incorrectly implemented and subsequently removed. See `docs/lessons-learned/course-book-order-history-projection-mistake.md`. |
 | 6 | Should Feature 1 and Feature 2 share the same endpoint or be separate? | Same endpoint — the handler always uses `PriceWithGracePeriod`; a fixed price is just one where no price changes have occurred |
 
 ---

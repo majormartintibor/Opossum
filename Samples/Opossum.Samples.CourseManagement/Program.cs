@@ -7,7 +7,6 @@ using Opossum.Samples.CourseManagement.CourseAnnouncement;
 using Opossum.Samples.CourseManagement.CourseAnnouncementRetraction;
 using Opossum.Samples.CourseManagement.CourseBookCatalog;
 using Opossum.Samples.CourseManagement.CourseBookManagement;
-using Opossum.Samples.CourseManagement.CourseBookOrderHistory;
 using Opossum.Samples.CourseManagement.CourseBookPurchase;
 using Opossum.Samples.CourseManagement.ExamRegistration;
 using Opossum.Samples.CourseManagement.CourseCreation;
@@ -265,7 +264,6 @@ app.MapChangeCourseBookPriceEndpoint();
 app.MapPurchaseCourseBookEndpoint();
 app.MapOrderCourseBooksEndpoint();
 app.MapGetCourseBookCatalogEndpoint();
-app.MapGetCourseBookOrderHistoryEndpoint();
 app.MapGetCourseBuyersEndpoint();
 
 // ============================================================================

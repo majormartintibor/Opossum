@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Sample — `CourseBookOrderHistory` projection removed** (`CourseBookOrderHistory/`).
+  The projection used `evt.Position.ToString()` as its key selector, creating one
+  projection file per purchase event (O(Events) cardinality). On a Large-seeded database
+  this produced 700,000+ projection files and never completed rebuilding. The unfiltered
+  query path additionally called `GetAllAsync()`, which would have loaded all of those
+  files into memory at once. The concept is fully covered by the existing
+  `StudentPurchasedBooksProjection` (O(Students)). The `CourseBookOrderSortField` enum
+  in `Shared/SortOrder.cs` was also removed as it was only used by this feature.
+  See `docs/lessons-learned/course-book-order-history-projection-mistake.md` for the
+  full post-mortem and the **projection key cardinality rule** to apply when designing
+  new persisted projections.
+
+### Fixed
+
+- **`UpdateAsync` correctness bug — duplicate event application and checkpoint regression.**
+  `ProjectionManager.UpdateAsync` now reads each projection's checkpoint *inside* the
+  per-projection lock and filters incoming events by **both event type and position**
+  (`e.Position > checkpoint`). Previously, `ProcessNewEventsAsync` read events from the
+  global `minCheckpoint` (the lowest across all projections) and `UpdateAsync` applied
+  them to *every* projection without a position guard. Any projection whose checkpoint
+  was above `minCheckpoint` (e.g. because a peer projection had just been rebuilt with
+  a sparse checkpoint) would silently receive already-processed events, corrupting its
+  state and causing checkpoint regression. The regression then dragged `minCheckpoint`
+  lower on the next tick, feeding a cascade of re-applications. The checkpoint is now
+  always advanced to `batchMax` (not `relevantEvents.Max()`) so sparse projections never
+  stall the global frontier. The lock is acquired for both the apply path and the
+  checkpoint-advance path to prevent races with concurrent rebuilds.
+
+- `RebuildAsync(projectionName)` and `RebuildAllAsync` no longer leave a projection in
+  the "never rebuilt" state when the event store is completely empty. Previously the
+  checkpoint file was not written when `ReadLastAsync(Query.All())` returned `null`,
+  so the projection's checkpoint remained 0 (no file) both before and after the call —
+  making the rebuild invisible and causing the daemon's startup auto-rebuild to re-queue
+  the projection on every restart. Now the checkpoint file is always written after a
+  rebuild (position 0 for an empty store). `RebuildAllAsync(forceRebuild: false)` uses
+  `File.Exists` on the checkpoint file instead of `checkpoint == 0` to distinguish
+  "rebuilt but store was empty" (file present) from "truly never rebuilt" (file absent).
+
 ---
 
 ## [0.4.0-preview.2] - 2026-03-03

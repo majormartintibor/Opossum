@@ -158,23 +158,23 @@ internal sealed partial class ProjectionManager : IProjectionManager
             // Flush all buffered state to disk in a single pass
             await registration.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
 
-            // Save checkpoint — always record the current store frontier, even when 0 events
-            // matched this projection's types, so the projection is not endlessly included in
-            // rebuild-missing lists and does not anchor the daemon's minCheckpoint at 0.
+            // Save checkpoint — always write the checkpoint file so the projection is not
+            // treated as "never rebuilt" by RebuildAllAsync(forceRebuild: false) and the
+            // daemon's startup auto-rebuild. When the store is completely empty the position
+            // is 0; RebuildAllAsync uses File.Exists to distinguish "rebuilt but empty store"
+            // (file present, position 0) from "truly never rebuilt" (file absent).
             activity?.SetTag("opossum.events_processed", events.Length);
+            long checkpointPosition;
             if (events.Length > 0)
             {
-                var lastPosition = events.Max(e => e.Position);
-                await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
+                checkpointPosition = events.Max(e => e.Position);
             }
             else
             {
                 var lastEvent = await _eventStore.ReadLastAsync(Query.All()).ConfigureAwait(false);
-                if (lastEvent is not null)
-                {
-                    await SaveCheckpointAsync(projectionName, lastEvent.Position, cancellationToken).ConfigureAwait(false);
-                }
+                checkpointPosition = lastEvent?.Position ?? 0;
             }
+            await SaveCheckpointAsync(projectionName, checkpointPosition, cancellationToken).ConfigureAwait(false);
 
             return events.Length;
         }
@@ -190,59 +190,73 @@ internal sealed partial class ProjectionManager : IProjectionManager
             return;
         }
 
+        // Compute once — the same frontier applies to every projection in this batch.
+        var batchMax = events.Max(e => e.Position);
+
         foreach (var (projectionName, registration) in _projections)
         {
-            // ReadAsync already returns events in ascending position order
-            var relevantEvents = events
-                .Where(e => registration.EventTypes.Contains(e.Event.EventType))
-                .ToArray();
-
-            if (relevantEvents.Length == 0)
-            {
-                // Advance the checkpoint to the batch frontier so that minCheckpoint does not
-                // stall at 0 and force the daemon to re-read the entire event log every cycle.
-                var batchMax = events.Max(e => e.Position);
-                var current = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
-                if (batchMax > current)
-                {
-                    await SaveCheckpointAsync(projectionName, batchMax, cancellationToken).ConfigureAwait(false);
-                }
-                continue;
-            }
-
-            // Acquire per-projection lock to prevent concurrent updates/rebuilds
-            // Use try-catch to handle fail-fast scenario gracefully
+            // Acquire the per-projection lock for ALL paths (apply and checkpoint-advance alike).
+            // This ensures the checkpoint is always read after the lock is held, so a concurrent
+            // rebuild that completed between the outer check and lock acquisition cannot leave us
+            // with a stale checkpoint value that causes already-processed events to be re-applied.
             try
             {
                 using (await AcquireProjectionLockAsync(projectionName, cancellationToken).ConfigureAwait(false))
                 {
+                    // Read checkpoint inside the lock — always reflects the latest committed value.
+                    var checkpoint = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
+
+                    // Entire batch is already behind this projection's frontier — nothing to do.
+                    if (batchMax <= checkpoint)
+                        continue;
+
+                    // Filter by both event type AND position.
+                    // The position guard is critical: ProcessNewEventsAsync reads from the global
+                    // minCheckpoint, so this batch may contain events that a faster projection has
+                    // already processed. Without the guard those events would be re-applied, causing
+                    // duplicate state mutations and checkpoint regressions.
+                    var relevantEvents = events
+                        .Where(e => registration.EventTypes.Contains(e.Event.EventType) && e.Position > checkpoint)
+                        .ToArray();
+
+                    if (relevantEvents.Length == 0)
+                    {
+                        // No new relevant events in this window; advance the frontier so this
+                        // projection does not drag minCheckpoint down on future ticks.
+                        await SaveCheckpointAsync(projectionName, batchMax, cancellationToken).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    // ReadAsync already returns events in ascending position order.
                     foreach (var evt in relevantEvents)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
                     }
 
-                    var lastPosition = relevantEvents.Max(e => e.Position);
-                    await SaveCheckpointAsync(projectionName, lastPosition, cancellationToken).ConfigureAwait(false);
+                    // Always advance to batchMax, not just relevantEvents.Max().
+                    // Sparse projections (few relevant event types) would otherwise sit below the
+                    // batch head and force the daemon to re-read already-seen events every tick.
+                    await SaveCheckpointAsync(projectionName, batchMax, cancellationToken).ConfigureAwait(false);
                 }
             }
-                    catch (OperationCanceledException)
-                    {
-                        throw;
-                    }
-                    catch (InvalidOperationException ex) when (ex.Message.Contains("already being rebuilt or updated"))
-                    {
-                        // Projection is being rebuilt - skip this update batch
-                        // The rebuild will process these events anyway
-                        LogSkippingProjectionUpdate(projectionName);
-                    }
-                    catch (Exception ex)
-                    {
-                        // Log and continue — one failing projection must not abort updates for all others
-                        LogProjectionUpdateFailed(projectionName, ex);
-                    }
-                }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("already being rebuilt or updated"))
+            {
+                // Projection is being rebuilt — skip this update batch.
+                // The rebuild will process all events up to the store head anyway.
+                LogSkippingProjectionUpdate(projectionName);
+            }
+            catch (Exception ex)
+            {
+                // Log and continue — one failing projection must not abort updates for all others.
+                LogProjectionUpdateFailed(projectionName, ex);
+            }
+        }
+    }
 
     public async Task<long> GetCheckpointAsync(string projectionName, CancellationToken cancellationToken = default)
     {
@@ -313,12 +327,14 @@ internal sealed partial class ProjectionManager : IProjectionManager
         var projections = GetRegisteredProjections();
         var projectionsToRebuild = new List<string>();
 
-        // Determine which projections need rebuilding
+        // Determine which projections need rebuilding.
+        // Use File.Exists instead of checkpoint == 0: a checkpoint file written with
+        // position 0 means the projection was rebuilt against an empty store and should
+        // NOT be rebuilt again. A missing file means it has truly never been rebuilt.
         foreach (var projectionName in projections)
         {
-            var checkpoint = await GetCheckpointAsync(projectionName, cancellationToken).ConfigureAwait(false);
-
-            if (forceRebuild || checkpoint == 0)
+            var checkpointFile = GetCheckpointFilePath(projectionName);
+            if (forceRebuild || !File.Exists(checkpointFile))
             {
                 projectionsToRebuild.Add(projectionName);
             }

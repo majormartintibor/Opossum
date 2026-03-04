@@ -24,7 +24,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
     [Fact]
     public async Task POST_RebuildAll_ReturnsOkWithResultAsync()
     {
-        // Act - no query param → defaults to forceAll=true → rebuilds all 9 projections
+        // Act - no query param → defaults to forceAll=true → rebuilds all 8 projections
         var response = await _client.PostAsync("/admin/projections/rebuild", null);
 
         // Assert
@@ -35,7 +35,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
         Assert.NotNull(result);
         Assert.True(result.Success);
         Assert.NotNull(result.Details);
-        Assert.Equal(9, result.TotalRebuilt);
+        Assert.Equal(8, result.TotalRebuilt);
     }
 
     [Fact]
@@ -46,10 +46,10 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ProjectionRebuildResult>();
 
-        // Assert - All 9 sample app projections should be rebuilt
+        // Assert - All 8 sample app projections should be rebuilt
         Assert.NotNull(result);
         Assert.True(result.Success);
-        Assert.Equal(9, result.TotalRebuilt);
+        Assert.Equal(8, result.TotalRebuilt);
         Assert.All(result.Details, detail => Assert.True(detail.Success));
     }
 
@@ -64,18 +64,18 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
 
         Assert.NotNull(setupResult);
         Assert.True(setupResult.Success);
-        Assert.Equal(9, setupResult.TotalRebuilt); // All 9 projections rebuilt
+        Assert.Equal(8, setupResult.TotalRebuilt); // All 8 projections rebuilt
 
         // Verify all projections now have non-zero checkpoints (processed seeded events)
         var checkpointsResponse = await _client.GetAsync("/admin/projections/checkpoints");
         checkpointsResponse.EnsureSuccessStatusCode();
         var checkpoints = await checkpointsResponse.Content.ReadFromJsonAsync<Dictionary<string, long>>();
         Assert.NotNull(checkpoints);
-        Assert.Equal(9, checkpoints.Count);
+        Assert.Equal(8, checkpoints.Count);
         // Projections with seeded events must have a checkpoint > 0.
         // CourseBook projections have no seeded book events, but RebuildAsync sets their checkpoint
         // to the last store position so the daemon does not re-read the whole event log every cycle.
-        // All 9 projections therefore have a non-zero checkpoint after a forceAll rebuild.
+        // All 8 projections therefore have a non-zero checkpoint after a forceAll rebuild.
         var seededProjections = new[] { "CourseShortInfo", "CourseDetails", "StudentShortInfo", "StudentDetails", "Invoice" };
         foreach (var name in seededProjections)
         {
@@ -86,7 +86,7 @@ public class AdminEndpointTests : IClassFixture<IntegrationTestFixture>
         // Wait for checkpoint persistence
         await Task.Delay(500);
 
-        // Act - Rebuild with forceAll=false (should return immediately — all 9 projections
+        // Act - Rebuild with forceAll=false (should return immediately — all 8 projections
         // already have non-zero checkpoints from the forceAll=true setup above)
         var response = await _client.PostAsync("/admin/projections/rebuild?forceAll=false", null);
         response.EnsureSuccessStatusCode();

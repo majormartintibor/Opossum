@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Folder Include="Configuration\" />
+    <Folder Include="CourseBookOrderHistory\" />
   </ItemGroup>
 
 </Project>
