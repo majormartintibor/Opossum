@@ -155,15 +155,14 @@ internal sealed partial class ProjectionManager : IProjectionManager
 
             // Read and process events in bounded batches so that peak memory is proportional
             // to batchSize × avg-event-size rather than total-events × avg-event-size.
-            while (true)
+            // ReadAsync returns [] when no events with Position > fromPosition remain, which
+            // terminates the loop.  The exclusive fromPosition filter ensures the last event
+            // of each batch is never re-read on the following page request.
+            cancellationToken.ThrowIfCancellationRequested();
+            var batch = await _eventStore.ReadAsync(query, null, fromPosition, maxCount: batchSize).ConfigureAwait(false);
+
+            while (batch.Length > 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var batch = await _eventStore.ReadAsync(query, null, fromPosition, maxCount: batchSize).ConfigureAwait(false);
-
-                if (batch.Length == 0)
-                    break;
-
                 foreach (var evt in batch)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
@@ -179,6 +178,9 @@ internal sealed partial class ProjectionManager : IProjectionManager
                 var elapsedMs = progressStopwatch.ElapsedMilliseconds;
                 var rate = elapsedMs > 0 ? totalEventsProcessed * 1000L / elapsedMs : 0;
                 LogRebuildProgress(projectionName, totalEventsProcessed, rate, progressStopwatch.Elapsed);
+
+                cancellationToken.ThrowIfCancellationRequested();
+                batch = await _eventStore.ReadAsync(query, null, fromPosition, maxCount: batchSize).ConfigureAwait(false);
             }
 
             // Flush all buffered state to disk in a single pass
