@@ -292,6 +292,164 @@ public class ProjectionManagerTests : IDisposable
     }
 }
 
+/// <summary>
+/// Tests that projection rebuilds work correctly when RebuildBatchSize is smaller than the
+/// total number of events, i.e., multiple read batches are needed.
+/// </summary>
+public class BatchedRebuildTests : IDisposable
+{
+    private readonly ServiceProvider _serviceProvider;
+    private readonly string _testStoragePath;
+    private readonly IEventStore _eventStore;
+    private readonly IProjectionManager _projectionManager;
+
+    /// <summary>Small batch size to force multi-batch rebuilds with moderate test data sets.</summary>
+    private const int SmallBatchSize = 100;
+
+    public BatchedRebuildTests()
+    {
+        _testStoragePath = Path.Combine(
+            Path.GetTempPath(),
+            "OpossumBatchedRebuildTests",
+            Guid.NewGuid().ToString());
+
+        var services = new ServiceCollection();
+
+        services.AddOpossum(options =>
+        {
+            options.RootPath = _testStoragePath;
+            options.UseStore("BatchedRebuildContext");
+        });
+
+        services.AddProjections(options =>
+        {
+            options.EnableAutoRebuild = false;
+            options.RebuildBatchSize = SmallBatchSize;
+        });
+
+        services.AddProjectionStore<PmTestItemState>("PmTestItems");
+
+        services.AddLogging();
+
+        _serviceProvider = services.BuildServiceProvider();
+        _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
+        _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+    }
+
+    [Fact]
+    public async Task RebuildAsync_WithMoreEventsThanBatchSize_BuildsAllProjectionsAsync()
+    {
+        // Arrange: seed more events than SmallBatchSize to require multiple read batches.
+        _projectionManager.RegisterProjection(new PmTestItemProjection());
+
+        var ids = Enumerable.Range(0, SmallBatchSize * 3).Select(_ => Guid.NewGuid()).ToArray();
+        foreach (var id in ids)
+        {
+            await _eventStore.AppendAsync(
+                [new PmTestItemCreatedEvent(id, $"Item {id}")
+                    .ToDomainEvent()
+                    .WithTag("itemId", id.ToString())
+                    .Build()],
+                null);
+        }
+
+        // Act
+        await _projectionManager.RebuildAsync("PmTestItems");
+
+        // Assert: every item must appear in the projection store.
+        var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
+        foreach (var id in ids)
+        {
+            var item = await store.GetAsync(id.ToString());
+            Assert.NotNull(item);
+            Assert.Equal(id, item.ItemId);
+        }
+    }
+
+    [Fact]
+    public async Task RebuildAsync_UpdateEventsAcrossBatchBoundary_AppliesAllUpdatesAsync()
+    {
+        // Arrange: create an item then update it — the update event may land in a different
+        // batch than the create event, exercising cross-batch state continuity.
+        _projectionManager.RegisterProjection(new PmTestItemProjection());
+
+        var itemId = Guid.NewGuid();
+
+        // Pad with unrelated events to push the create event near the end of batch 1.
+        for (int i = 0; i < SmallBatchSize - 1; i++)
+        {
+            var otherId = Guid.NewGuid();
+            await _eventStore.AppendAsync(
+                [new PmTestItemCreatedEvent(otherId, $"Filler {i}")
+                    .ToDomainEvent()
+                    .WithTag("itemId", otherId.ToString())
+                    .Build()],
+                null);
+        }
+
+        // The create event is the last one in batch 1; the update event will be in batch 2.
+        await _eventStore.AppendAsync(
+            [new PmTestItemCreatedEvent(itemId, "Original")
+                .ToDomainEvent()
+                .WithTag("itemId", itemId.ToString())
+                .Build()],
+            null);
+
+        await _eventStore.AppendAsync(
+            [new PmTestItemUpdatedEvent(itemId, "Updated")
+                .ToDomainEvent()
+                .WithTag("itemId", itemId.ToString())
+                .Build()],
+            null);
+
+        // Act
+        await _projectionManager.RebuildAsync("PmTestItems");
+
+        // Assert: the item should reflect the update, not the original value.
+        var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
+        var item = await store.GetAsync(itemId.ToString());
+        Assert.NotNull(item);
+        Assert.Equal("Updated", item.Name);
+    }
+
+    [Fact]
+    public async Task RebuildAsync_CheckpointReflectsLastEvent_AfterBatchedRebuildAsync()
+    {
+        // Arrange
+        _projectionManager.RegisterProjection(new PmTestItemProjection());
+
+        var eventCount = SmallBatchSize * 2 + 1;  // Ensure > 1 batch
+        for (int i = 0; i < eventCount; i++)
+        {
+            var id = Guid.NewGuid();
+            await _eventStore.AppendAsync(
+                [new PmTestItemCreatedEvent(id, $"Item {i}")
+                    .ToDomainEvent()
+                    .WithTag("itemId", id.ToString())
+                    .Build()],
+                null);
+        }
+
+        // Act
+        await _projectionManager.RebuildAsync("PmTestItems");
+
+        // Assert: checkpoint must equal the last appended position.
+        var checkpoint = await _projectionManager.GetCheckpointAsync("PmTestItems");
+        Assert.Equal(eventCount, checkpoint);
+    }
+
+    public void Dispose()
+    {
+        _serviceProvider?.Dispose();
+
+        if (Directory.Exists(_testStoragePath))
+        {
+            try { Directory.Delete(_testStoragePath, recursive: true); }
+            catch { /* ignore cleanup errors */ }
+        }
+    }
+}
+
 // file-scoped helpers to avoid conflicts with assembly scanning and other test types
 file record PmTestItemCreatedEvent(Guid ItemId, string Name) : IEvent;
 file record PmTestItemUpdatedEvent(Guid ItemId, string Name) : IEvent;

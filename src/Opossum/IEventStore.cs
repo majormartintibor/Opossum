@@ -48,7 +48,13 @@ public interface IEventStore
     /// Pass the highest position already processed to resume reading from a known checkpoint.
     /// When <see langword="null"/> (the default) all matching events are returned.
     /// </param>
-    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null);
+    /// <param name="maxCount">
+    /// When provided, at most this many events are returned.
+    /// Combine with <paramref name="fromPosition"/> to page through large result sets without
+    /// loading all events into memory at once.
+    /// When <see langword="null"/> (the default) all matching events are returned.
+    /// </param>
+    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null);
 
     /// <summary>
     /// Returns the event with the highest sequence position that matches <paramref name="query"/>,

@@ -7,7 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`RebuildBatchSize` option on `ProjectionOptions`** (default: 5 000).
+  Controls how many events are loaded from disk per round-trip during a projection rebuild.
+  Lower values reduce peak heap usage at the cost of more index reads per rebuild; higher
+  values reduce I/O round-trips at the cost of more memory.
+  Typical guidance: 1 000–5 000 for memory-constrained environments, 10 000–50 000 for
+  high-memory / NVMe setups.
+
+- **`maxCount` parameter on `IEventStore.ReadAsync`** (optional, default `null` = no limit).
+  Limits how many events are returned in a single call. Combined with the existing
+  `fromPosition` parameter this enables page-by-page iteration over large result sets
+  without loading all events into memory at once.
+
+- **Per-batch progress logging during projection rebuild.**
+  After each batch the projection manager logs an `Information`-level message showing the
+  projection name, total events processed so far, current throughput (events/second), and
+  elapsed wall-clock time:
+  ```
+  Rebuilding 'StudentDetails': 5000 events processed (2341 events/s, elapsed 00:00:02.135)
+  Rebuilding 'StudentDetails': 10000 events processed (2498 events/s, elapsed 00:00:04.003)
+  …
+  ```
+  This gives developers a live view of rebuild progress and makes it easy to detect stalls.
+
 ### Fixed
+
+- **Projection rebuild memory usage drastically reduced for large databases.**
+  Previously `RebuildProjectionCoreAsync` loaded _all_ events matching a projection's
+  event types into a single in-memory array before starting to process them. On a "Large"
+  seed (≈ 2.7 M events) this caused out-of-memory failures for even a single projection
+  type. Events are now read in batches of `RebuildBatchSize` using the `fromPosition` /
+  `maxCount` pagination mechanism so that peak memory is bounded by
+  `batchSize × avg-event-size` instead of `total-events × avg-event-size`.
 
 - **Projection rebuild now keeps old files accessible during rebuild.**
   Previously, `ClearAsync` deleted all projection files at the _start_ of a rebuild,

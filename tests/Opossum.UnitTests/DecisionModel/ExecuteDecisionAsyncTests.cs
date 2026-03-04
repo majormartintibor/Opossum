@@ -14,7 +14,7 @@ public class ExecuteDecisionAsyncTests
     private sealed class StubEventStore : IEventStore
     {
         public Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default) => Task.CompletedTask;
-        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null) =>
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null) =>
             Task.FromResult(Array.Empty<SequencedEvent>());
         public Task<SequencedEvent?> ReadLastAsync(Query query, CancellationToken cancellationToken = default) =>
             Task.FromResult<SequencedEvent?>(null);

@@ -159,7 +159,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         }
     }
 
-    public async Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null)
+    public async Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null)
     {
         // 1. Validation
         ArgumentNullException.ThrowIfNull(query);
@@ -193,7 +193,15 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
                 Array.Reverse(positions);
             }
 
-            // 5. Read events from files in the correct order
+            // 5. Apply maxCount limit BEFORE reading events to cap memory usage.
+            // This is the key mechanism for batched reads: slice the positions array
+            // so only maxCount event files are read from disk.
+            if (maxCount.HasValue && positions.Length > maxCount.Value)
+            {
+                positions = positions[..maxCount.Value];
+            }
+
+            // 6. Read events from files in the correct order
             var eventsPath = GetEventsPath(contextPath);
             var events = await _eventFileManager.ReadEventsAsync(eventsPath, positions).ConfigureAwait(false);
 
