@@ -34,7 +34,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Projection rebuild memory usage drastically reduced for large databases.**
+- **Post-rebuild daemon thrashing: `UnauthorizedAccessException` on Windows after sparse-projection rebuild.**
+  After rebuilding a sparse projection (one whose last relevant event sits at a much lower
+  global position than the store head), the checkpoint was saved at the last *relevant* event
+  position rather than the store head. The daemon's next tick called
+  `SaveCheckpointAsync` once per batch of irrelevant events until it caught up — e.g. 82
+  rapid `File.Move` calls in succession for a Medium dataset where CourseBookCatalog's last
+  event was at position 5 600 and the store head was at position 86 648.
+  On Windows, `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING` fails with
+  `UnauthorizedAccessException` when the OS has not yet released the destination handle
+  from the previous atomic rename.
+
+  The fix: `RebuildProjectionCoreAsync` now reads the store head *before* the rebuild loop
+  starts and sets the final checkpoint to `Math.Max(storeHead, lastRelevantEventPosition)`.
+  After rebuild the daemon finds nothing to do for the sparse projection and only resumes
+  when genuinely new events arrive.
+
+- **Rebuild loop never terminates / `CommitRebuildAsync` unreachable.**
+  The batched rebuild used `while (true)` with an inner `if (batch.Length == 0) break`,
+  making the termination guarantee non-obvious and `CommitRebuildAsync` appear unreachable
+  to readers. Refactored to the standard "prime the pump" pattern:
+  ```csharp
+  var batch = await ReadAsync(...);
+  while (batch.Length > 0)
+  {
+      // process batch
+      batch = await ReadAsync(...);  // next page
+  }
+  await CommitRebuildAsync(...);     // always reached
+  ```
+
   Previously `RebuildProjectionCoreAsync` loaded _all_ events matching a projection's
   event types into a single in-memory array before starting to process them. On a "Large"
   seed (≈ 2.7 M events) this caused out-of-memory failures for even a single projection

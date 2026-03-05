@@ -438,6 +438,57 @@ public class BatchedRebuildTests : IDisposable
         Assert.Equal(eventCount, checkpoint);
     }
 
+    [Fact]
+    public async Task RebuildAsync_SparseProjection_CheckpointAdvancedToStoreHeadAsync()
+    {
+        // Regression test for: after rebuild a sparse projection's checkpoint was only advanced
+        // to its last relevant event (e.g. position 3), while the store head was much higher
+        // (e.g. position 10 due to irrelevant events appended after the last relevant one).
+        // The daemon then called SaveCheckpointAsync ~7 times in rapid succession (once per
+        // batch of irrelevant events), triggering UnauthorizedAccessException on Windows.
+        _projectionManager.RegisterProjection(new PmTestItemProjection());
+
+        // Append projection-relevant events first (positions 1-3).
+        for (int i = 0; i < 3; i++)
+        {
+            var id = Guid.NewGuid();
+            await _eventStore.AppendAsync(
+                [new PmTestItemCreatedEvent(id, $"Item {i}")
+                    .ToDomainEvent()
+                    .WithTag("itemId", id.ToString())
+                    .Build()],
+                null);
+        }
+
+        // Append events that are NOT handled by PmTestItemProjection (positions 4-10).
+        // These simulate events for a different projection (e.g. StudentDetails events
+        // in the CourseManagement sample that lives at much higher positions than the
+        // last CourseBookCatalog event).
+        for (int i = 0; i < 7; i++)
+        {
+            await _eventStore.AppendAsync(
+                [new PmIrrelevantEvent(i)
+                    .ToDomainEvent()
+                    .Build()],
+                null);
+        }
+
+        // Act
+        await _projectionManager.RebuildAsync("PmTestItems");
+
+        // Assert: checkpoint must equal the store head (10), NOT just the last relevant
+        // event position (3).  Without the fix the daemon would call SaveCheckpointAsync
+        // 7 more times post-rebuild — once for each irrelevant-event batch — which on
+        // Windows triggers UnauthorizedAccessException during rapid MoveFileEx calls.
+        var checkpoint = await _projectionManager.GetCheckpointAsync("PmTestItems");
+        Assert.Equal(10, checkpoint);
+
+        // Sanity-check: the projection data was still built correctly.
+        var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
+        var all = await store.GetAllAsync();
+        Assert.Equal(3, all.Count);
+    }
+
     public void Dispose()
     {
         _serviceProvider?.Dispose();
@@ -454,6 +505,9 @@ public class BatchedRebuildTests : IDisposable
 file record PmTestItemCreatedEvent(Guid ItemId, string Name) : IEvent;
 file record PmTestItemUpdatedEvent(Guid ItemId, string Name) : IEvent;
 file record PmTestItemDeletedEvent(Guid ItemId) : IEvent;
+
+/// <summary>An event type intentionally NOT handled by <see cref="PmTestItemProjection"/>.</summary>
+file record PmIrrelevantEvent(int Id) : IEvent;
 
 file record PmTestItemState
 {

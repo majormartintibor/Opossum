@@ -151,6 +151,17 @@ internal sealed partial class ProjectionManager : IProjectionManager
             int totalEventsProcessed = 0;
             long lastCheckpointPosition = 0;
 
+            // Capture the store head before reading any events.  After the rebuild we will
+            // advance the checkpoint to at least this position so the daemon does not
+            // needlessly re-read thousands of non-relevant events that already exist between
+            // the last relevant event and the store head (e.g. a sparse projection whose last
+            // event is at position 5 600 in a store with 86 000+ events would otherwise cause
+            // the daemon to call SaveCheckpointAsync ~81 times in rapid succession, triggering
+            // UnauthorizedAccessException on Windows when MoveFileEx is called on a file the
+            // OS has not yet fully released from the previous atomic rename).
+            var storeHeadBeforeRebuild = await _eventStore.ReadLastAsync(Query.All(), cancellationToken).ConfigureAwait(false);
+            var rebuildTargetPosition = storeHeadBeforeRebuild?.Position ?? 0;
+
             var progressStopwatch = Stopwatch.StartNew();
 
             // Read and process events in bounded batches so that peak memory is proportional
@@ -186,17 +197,14 @@ internal sealed partial class ProjectionManager : IProjectionManager
             // Flush all buffered state to disk in a single pass
             await registration.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
 
-            // Save checkpoint — always write the checkpoint file so the projection is not
-            // treated as "never rebuilt" by RebuildAllAsync(forceRebuild: false) and the
-            // daemon's startup auto-rebuild. When the store is completely empty the position
-            // is 0; RebuildAllAsync uses File.Exists to distinguish "rebuilt but empty store"
-            // (file present, position 0) from "truly never rebuilt" (file absent).
+            // Advance checkpoint to at least the pre-rebuild store head.
+            // Using Math.Max handles events appended during the rebuild that the loop may
+            // have processed (lastCheckpointPosition can exceed rebuildTargetPosition).
+            // For an empty store both values are 0, which is still written as a file so
+            // RebuildAllAsync(forceRebuild: false) treats the projection as "already rebuilt"
+            // rather than "never built" on the next startup.
             activity?.SetTag("opossum.events_processed", totalEventsProcessed);
-            if (lastCheckpointPosition == 0 && totalEventsProcessed == 0)
-            {
-                var lastEvent = await _eventStore.ReadLastAsync(Query.All()).ConfigureAwait(false);
-                lastCheckpointPosition = lastEvent?.Position ?? 0;
-            }
+            lastCheckpointPosition = Math.Max(rebuildTargetPosition, lastCheckpointPosition);
             await SaveCheckpointAsync(projectionName, lastCheckpointPosition, cancellationToken).ConfigureAwait(false);
 
             return totalEventsProcessed;
