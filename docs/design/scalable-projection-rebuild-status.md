@@ -20,7 +20,7 @@ sessions. Update the Status and Notes columns as work proceeds.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P0-T1 | Approve breaking API change: removing rebuild methods from `IProjectionManager` | ⬜ Not Started | Requires explicit approval before Phase 1 begins |
+| P0-T1 | Approve breaking API change: removing rebuild methods from `IProjectionManager` | ✅ Done | Approved — Opossum is pre-1.0; breaking changes that improve the library are acceptable |
 
 ---
 
@@ -32,7 +32,7 @@ All tests pass at end of phase.
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P1-T1 | Define `IProjectionRebuilder` interface | ⬜ Not Started | |
-| P1-T2 | Add `GetRegistration(string)` internal accessor to `ProjectionManager` | ⬜ Not Started | |
+| P1-T2 | Add `GetRegistration(string)` internal accessor + `BeginRebuildAsync(tempPath)` to `ProjectionManager` | ⬜ Not Started | |
 | P1-T3 | Create `ProjectionRebuildJournal` model class | ⬜ Not Started | |
 | P1-T4 | Create `ProjectionRebuilder` skeleton — move rebuild code from `ProjectionManager` | ⬜ Not Started | |
 | P1-T5 | Remove rebuild code from `ProjectionManager` | ⬜ Not Started | |
@@ -70,12 +70,12 @@ restart. At most `RebuildFlushInterval` events need re-processing.
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | P3-T1 | Add `RebuildFlushInterval` to `ProjectionOptions` (default 10,000; validator updated) | ⬜ Not Started | |
-| P3-T2 | Implement journal file I/O in `ProjectionRebuilder` (create, flush, read, delete) | ⬜ Not Started | |
-| P3-T3 | Integrate journal flushing into `RebuildCoreAsync` event loop | ⬜ Not Started | |
-| P3-T4 | Implement `ResumeInterruptedRebuildsAsync`: scan journals, resume or discard | ⬜ Not Started | |
+| P3-T2 | Implement journal + tag accumulator file I/O in `ProjectionRebuilder` (create, flush, read, delete) | ⬜ Not Started | |
+| P3-T3 | Integrate journal + tag accumulator flushing into `RebuildCoreAsync` event loop | ⬜ Not Started | |
+| P3-T4 | Implement `ResumeInterruptedRebuildsAsync`: scan journals, load tag accumulator, resume or discard | ⬜ Not Started | |
 | P3-T5 | Implement `CleanOrphanedTempDirectoriesAsync` | ⬜ Not Started | |
 | P3-T6 | Update `ProjectionDaemon`: call `ResumeInterruptedRebuildsAsync` before `RebuildAllAsync` | ⬜ Not Started | |
-| P3-T7 | Write crash recovery integration tests (5 test cases; see tasks document) | ⬜ Not Started | |
+| P3-T7 | Write crash recovery integration tests (6 test cases; see tasks document) | ⬜ Not Started | |
 | P3-T8 | ✔ Verify Phase 3: 0 warnings, all tests green (existing + new crash recovery tests) | ⬜ Not Started | |
 
 ---
@@ -127,7 +127,7 @@ resume in a new conversation without losing context.
 
 | # | Question | Raised | Resolution |
 |---|----------|--------|------------|
-| 1 | Is removing rebuild methods from `IProjectionManager` approved? (P0-T1) | 2026-03 | Pending |
+| 1 | Is removing rebuild methods from `IProjectionManager` approved? (P0-T1) | 2026-03 | ✅ Approved — breaking changes acceptable for pre-1.0 library |
 | 2 | Should `ResumeInterruptedRebuildsAsync` be exposed publicly on `IProjectionRebuilder` for host-side use, or kept internal to the daemon? | 2026-03 | Pending |
 | 3 | Should the tag accumulator also be flushed periodically (every N keys) for extreme tag counts, or is full in-memory accumulation acceptable for now? | 2026-03 | Pending — defer to post-1M-key benchmark |
 

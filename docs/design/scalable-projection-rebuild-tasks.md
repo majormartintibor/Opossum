@@ -23,24 +23,20 @@ means this task cannot start until P1-T3 and P1-T4 are complete.
 
 ## Phase 0 — Approval Gate
 
-These tasks must be completed before any code is written.
+~~These tasks must be completed before any code is written.~~
 
-### P0-T1 — Approve Breaking API Change
+### P0-T1 — ~~Approve Breaking API Change~~ ✅ Approved
 
 **Description:**
 `IProjectionManager` will lose four methods (`RebuildAsync(string)`,
 `RebuildAllAsync(bool)`, `RebuildAsync(string[])`, `GetRebuildStatusAsync`) which are
-moved to the new `IProjectionRebuilder` interface. This is a breaking change for any
-consumer that currently injects `IProjectionManager` to trigger rebuilds.
+moved to the new `IProjectionRebuilder` interface.
 
-Affected within this repository:
-- Admin API endpoints in `Opossum.Samples.CourseManagement` (must inject
-  `IProjectionRebuilder` instead).
-- Integration test classes that call rebuild via `IProjectionManager`.
+Additionally, `RebuildAsync(string, CancellationToken)` changes return type from `Task`
+to `Task<ProjectionRebuildResult>`, giving callers timing and event-count details.
 
-**Acceptance criterion:**
-Explicit written approval recorded in this task's Notes field in the status tracker
-before Phase 1 begins.
+**Status:** Approved. Opossum is pre-1.0 and not yet used in production. Breaking changes
+that improve the library are acceptable.
 
 ---
 
@@ -72,14 +68,23 @@ direct use by application code.
 
 ---
 
-### P1-T2 — Add internal registration accessor to `ProjectionManager`
+### P1-T2 — Add internal registration accessor and `BeginRebuildAsync(tempPath)` to `ProjectionManager`
 
 **File:** `src/Opossum/Projections/ProjectionManager.cs`
 
 **What to add:**
-An `internal` method `GetRegistration(string name) → ProjectionRegistration?`
-that returns the abstract `ProjectionRegistration` base for the named projection
-(from `_projections` dictionary), or `null` if not registered.
+1. An `internal` method `GetRegistration(string name) → ProjectionRegistration?`
+   that returns the abstract `ProjectionRegistration` base for the named projection
+   (from `_projections` dictionary), or `null` if not registered.
+
+2. A new abstract method on `ProjectionRegistration`:
+   ```csharp
+   public abstract Task BeginRebuildAsync(string tempPath);
+   ```
+   `ProjectionRegistration<TState>` implements it by calling
+   `((FileSystemProjectionStore<TState>)_store).BeginRebuild(tempPath)`.
+   This overload is required for `ProjectionRebuilder` to pass an explicit temp path
+   through the abstraction layer during crash recovery resume.
 
 This accessor is required by `ProjectionRebuilder` to call `BeginRebuildAsync`,
 `ApplyAsync`, and `CommitRebuildAsync` without having to own the registration dictionary.
@@ -475,7 +480,7 @@ Add validation in `ProjectionOptionsValidator` for the valid range.
 
 ---
 
-### P3-T2 — Implement journal file I/O in `ProjectionRebuilder`
+### P3-T2 — Implement journal and tag accumulator file I/O in `ProjectionRebuilder`
 
 **File:** `src/Opossum/Projections/ProjectionRebuilder.cs`
 
@@ -483,6 +488,9 @@ Add validation in `ProjectionOptionsValidator` for the valid range.
 
 `GetJournalFilePath(string projectionName) → string`
 Returns `{_checkpointPath}/{projectionName}.rebuild.json`.
+
+`GetTagAccumulatorFilePath(string projectionName) → string`
+Returns `{_checkpointPath}/{projectionName}.rebuild.tags.json`.
 
 `CreateJournalAsync(string name, string tempPath, long storeHead, CancellationToken) → Task`
 Creates and atomically writes a new `ProjectionRebuildJournal` with
@@ -492,11 +500,20 @@ Creates and atomically writes a new `ProjectionRebuildJournal` with
 Reads the existing journal, sets `ResumeFromPosition = position`,
 `LastFlushedAt = now`, writes back atomically (temp file + rename).
 
+`FlushTagAccumulatorAsync(string name, Dictionary<string, HashSet<string>> tagAccumulator, CancellationToken) → Task`
+Serialises the tag accumulator as a companion file `{name}.rebuild.tags.json`.
+Written atomically (temp file + rename) alongside the journal flush.
+
+`LoadTagAccumulatorAsync(string name, CancellationToken) → Task<Dictionary<string, HashSet<string>>?>`
+Returns the deserialised tag accumulator or `null` if the companion file does not exist.
+Used during crash recovery to restore pre-crash tag state.
+
 `ReadJournalAsync(string name, CancellationToken) → Task<ProjectionRebuildJournal?>`
 Returns the deserialised journal or `null` if the file does not exist.
 
 `DeleteJournalAsync(string name, CancellationToken) → Task`
-Deletes `{projectionName}.rebuild.json` if it exists.
+Deletes `{projectionName}.rebuild.json` and `{projectionName}.rebuild.tags.json`
+if they exist.
 
 Use `WriteIndented = true`, `PropertyNameCaseInsensitive = true` JSON options.
 All writes must use the atomic temp-file + rename pattern.
@@ -505,7 +522,7 @@ All writes must use the atomic temp-file + rename pattern.
 
 ---
 
-### P3-T3 — Integrate journal into `RebuildCoreAsync`
+### P3-T3 — Integrate journal and tag accumulator persistence into `RebuildCoreAsync`
 
 **File:** `src/Opossum/Projections/ProjectionRebuilder.cs`
 
@@ -521,17 +538,21 @@ await CreateJournalAsync(name, tempPath, storeHead, ct)
 if (totalEventsProcessed % _projectionOptions.RebuildFlushInterval == 0)
 {
     await FlushJournalAsync(name, lastCheckpointPosition, ct);
+    await FlushTagAccumulatorAsync(name, tagAccumulator, ct);
 }
 ```
 
+Both files are flushed together so that on resume the journal position and tag
+accumulator are consistent.
+
 **At the end (after successful commit and `SaveCheckpointAsync`):**
 ```
-await DeleteJournalAsync(name, ct)
+await DeleteJournalAsync(name, ct)  // also deletes tags companion file
 ```
 
 **On error (in `catch` block of `RebuildAsync(string[])`):**
-Journal is NOT deleted on error. The journal persists so that `ResumeInterruptedRebuildsAsync`
-can find and resume it on next startup.
+Journal and tags file are NOT deleted on error. They persist so that
+`ResumeInterruptedRebuildsAsync` can find and resume on next startup.
 
 **Depends on:** P3-T2
 
@@ -551,18 +572,24 @@ ResumeInterruptedRebuildsAsync(CancellationToken ct):
    a. ReadJournalAsync(name)
    b. IF journal.TempPath does NOT exist as a directory:
       - Log warning: "Rebuild journal for '{name}' references missing temp dir at '{tempPath}'. Journal discarded; projection will be rebuilt from scratch."
-      - DeleteJournalAsync(name)
+      - DeleteJournalAsync(name)  [also deletes tags companion file]
       - Skip (the normal RebuildAllAsync call will pick it up as missing-checkpoint)
    c. IF journal.TempPath EXISTS:
       - Log information: "Resuming interrupted rebuild of '{name}' from event position {resumeFromPosition} (store head was {storeHeadAtStart}, started {startedAt:u})"
       - Get registration via _projectionManager.GetRegistration(name)
-      - IF registration is null: log error, delete journal and temp dir, skip
-      - Call store.BeginRebuild(journal.TempPath)  [reuses existing temp dir]
+      - IF registration is null: log error, delete journal+tags and temp dir, skip
+      - Call registration.BeginRebuildAsync(journal.TempPath)  [reuses existing temp dir]
+      - LoadTagAccumulatorAsync(name) → restore _tagAccumulator into the store
+        (tags for events ≤ resumeFromPosition are already in the persisted file)
       - Call RebuildCoreAsync(name, fromPosition=journal.ResumeFromPosition,
                               tempPath=journal.TempPath,
                               storeHead=journal.StoreHeadAtStart, ct)
 3. CleanOrphanedTempDirectoriesAsync(ct)
 ```
+
+**Critical:** The tag accumulator MUST be loaded from the companion file before the replay
+loop starts. Without it, tag index files at commit would only contain keys from the resumed
+portion, missing all keys processed before the crash.
 
 **Depends on:** P3-T3
 
@@ -613,15 +640,17 @@ the resume).
    - Manually write a `ProjectionRebuildJournal` with `ResumeFromPosition = M` where
      `M < N`.
    - Create a partial temp directory with pre-built state for positions ≤ M.
+   - Write a companion `{name}.rebuild.tags.json` with the tags for those positions.
    - Call `ResumeInterruptedRebuildsAsync`.
    - Assert: final state equals a full rebuild from scratch; journal file deleted;
-     checkpoint saved.
+     tags companion file deleted; checkpoint saved.
+   - Assert: tag index files contain keys from ALL events (not just the resumed portion).
 
 2. **`ResumeInterruptedRebuild_WhenTempDirMissing_DeletesJournalAndRebuildsFromScratch`**
    - Write a journal file referencing a temp path that does not exist on disk.
    - Call `ResumeInterruptedRebuildsAsync`.
-   - Assert: journal file is deleted; projection is subsequently rebuilt fresh by
-     `RebuildAllAsync`.
+   - Assert: journal file is deleted; tags companion file is deleted;
+     projection is subsequently rebuilt fresh by `RebuildAllAsync`.
 
 3. **`CleanOrphanedTempDir_WhenNoJournalExists_DeletesOrphanedDir`**
    - Create an orphaned temp directory with no matching journal.
@@ -632,10 +661,19 @@ the resume).
    - Seed 2 × `RebuildFlushInterval` events.
    - Intercept (or verify via file system) that the journal file exists and has a
      non-zero `ResumeFromPosition` after the first flush interval.
+   - Also verify the tags companion file exists alongside the journal.
 
 5. **`RebuildJournal_IsDeletedOnSuccessfulCompletion`**
    - Run a complete rebuild.
    - Assert: no `*.rebuild.json` file exists in `_checkpointPath` after completion.
+   - Assert: no `*.rebuild.tags.json` file exists in `_checkpointPath` after completion.
+
+6. **`ResumeInterruptedRebuild_TagAccumulatorRestoredCorrectly`**
+   - Seed N events where each projection has tags.
+   - Manually write journal + tags companion file for position M < N.
+   - Create partial temp directory.
+   - Resume and complete the rebuild.
+   - Assert: tag index files match what a full from-scratch rebuild would produce.
 
 **Depends on:** P3-T6
 
@@ -751,6 +789,8 @@ Under `## [Unreleased]`:
   at most `RebuildFlushInterval` events need re-processing — not the entire event log.
 - Crash recovery for interrupted projection rebuilds: orphaned rebuild journals are
   automatically detected on startup and the rebuild is resumed from the last flush point.
+  Tag accumulator state is persisted alongside the journal so that tag indices are correct
+  after a resumed rebuild.
 - Orphaned temp directory cleanup on startup.
 
 **Changed:**
@@ -767,6 +807,8 @@ Under `## [Unreleased]`:
 - `IProjectionManager` no longer exposes rebuild methods. Consumers that call
   `RebuildAsync`, `RebuildAllAsync`, or `GetRebuildStatusAsync` on `IProjectionManager`
   must now inject and use `IProjectionRebuilder`.
+- `RebuildAsync(string, CancellationToken)` return type changed from `Task` to
+  `Task<ProjectionRebuildResult>`, providing timing and event-count details to callers.
 
 **Depends on:** P4-T4, P5-T2
 
@@ -789,9 +831,9 @@ Run the complete test suite across all projects. Verify:
 
 | ID | Description | Phase | Blocking |
 |----|-------------|-------|---------|
-| P0-T1 | Approve breaking API change | 0 | All phases |
+| P0-T1 | ~~Approve breaking API change~~ ✅ Approved | 0 | All phases |
 | P1-T1 | Define `IProjectionRebuilder` interface | 1 | P1-T4, P1-T7 |
-| P1-T2 | Add internal registration accessor to `ProjectionManager` | 1 | P1-T4 |
+| P1-T2 | Add internal registration accessor + `BeginRebuildAsync(tempPath)` to `ProjectionManager` | 1 | P1-T4 |
 | P1-T3 | Create `ProjectionRebuildJournal` model | 1 | P1-T4 |
 | P1-T4 | Create `ProjectionRebuilder` skeleton (move rebuild code) | 1 | P1-T5 |
 | P1-T5 | Remove rebuild code from `ProjectionManager` | 1 | P1-T6 |
@@ -809,12 +851,12 @@ Run the complete test suite across all projects. Verify:
 | P2-T6 | Remove dead code | 2 | P2-T7 |
 | P2-T7 | Verify Phase 2 | 2 | Phase 3 |
 | P3-T1 | Add `RebuildFlushInterval` to `ProjectionOptions` | 3 | P3-T2 |
-| P3-T2 | Implement journal file I/O | 3 | P3-T3 |
-| P3-T3 | Integrate journal into `RebuildCoreAsync` | 3 | P3-T4 |
+| P3-T2 | Implement journal + tag accumulator file I/O | 3 | P3-T3 |
+| P3-T3 | Integrate journal + tag accumulator into `RebuildCoreAsync` | 3 | P3-T4 |
 | P3-T4 | Implement `ResumeInterruptedRebuildsAsync` | 3 | P3-T6 |
 | P3-T5 | Implement orphaned temp dir cleanup | 3 | P3-T6 |
 | P3-T6 | Update `ProjectionDaemon` for resume call | 3 | P3-T7 |
-| P3-T7 | Write crash recovery integration tests | 3 | P3-T8 |
+| P3-T7 | Write crash recovery integration tests (6 test cases) | 3 | P3-T8 |
 | P3-T8 | Verify Phase 3 | 3 | Phase 4 |
 | P4-T1 | Remove metadata index from rebuild path (verify) | 4 | P4-T2 |
 | P4-T2 | Verify lazy metadata post-rebuild | 4 | P4-T3 |

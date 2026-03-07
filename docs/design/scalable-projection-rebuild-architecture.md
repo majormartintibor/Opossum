@@ -1,6 +1,6 @@
 # Scalable Projection Rebuild Architecture
 
-> **Status:** Design Complete — Pending Implementation Approval
+> **Status:** Design Complete — Approved for Implementation
 > **Target version:** 0.6.0
 > **Tasks document:** docs/design/scalable-projection-rebuild-tasks.md
 > **Status tracker:** docs/design/scalable-projection-rebuild-status.md
@@ -80,7 +80,7 @@ With 1M unique projection keys and a 10 KB average state size:
 | 2 (High) | Durability first | Acceptable to trade extra I/O for bounded memory and recoverability |
 | 2 (High) | Clean separation | Rebuild logic fully separated from the live projection daemon logic |
 | 2 (High) | Production readiness | Orphaned temp directories detected and cleaned up; journals are self-describing |
-| 3 (Medium) | Preserve existing public API surface where possible | Minimise breaking changes to library consumers |
+| 3 (Medium) | Preserve existing public API surface where possible | Minimise breaking changes to library consumers; breaking changes are acceptable when they improve the library |
 
 ---
 
@@ -110,6 +110,15 @@ pairs processed, not just the number of unique keys. This is more I/O than the b
 approach but the I/O is distributed over time rather than burst-loading the disk at the end.
 Given that rebuild is rare and the primary concern is bounded memory, this trade-off is
 explicitly accepted.
+
+**I/O cost clarification:**
+The actual per-event I/O is `2 × O(events applied)`, not `O(events applied)`. Each event
+application first calls `GetAsync(key)` to load the current state from the temp directory
+(1 file read) and then calls `SaveAsync(key, state)` to write the updated state back
+(1 file write). For a key touched by 50 events: 50 reads + 50 writes = 100 file operations
+during replay, compared to 0 during replay and 1 write at commit in the old buffer approach.
+This cost is distributed evenly over the replay duration and does not create memory
+pressure.
 
 ---
 
@@ -222,6 +231,22 @@ parallel file writes at commit — orders of magnitude fewer I/O operations.
 `N_tags × unique_keys × avg_key_string_length` ≈ `3 × 1M × 40 bytes` = ~120 MB for the
 extreme 1M-key scenario. This is acceptable for a rare rebuild operation.
 
+**Tag accumulator persistence for crash recovery:**
+The tag accumulator must be persisted alongside the rebuild journal to support correct
+resume after a crash. On resume, events at positions ≤ `resumeFromPosition` are NOT
+re-read, so their tags cannot be re-derived from the event replay loop. Without persisting
+the accumulator, the tag index files written at commit would only contain keys from the
+resumed portion — missing all keys processed before the crash.
+
+The solution is to serialise the tag accumulator as a companion file
+`{projectionName}.rebuild.tags.json` next to the rebuild journal. This file is written
+atomically (temp + rename) every time the journal is flushed. On resume, it is loaded
+before the replay loop starts, restoring the accumulator to its pre-crash state.
+
+Memory cost of the companion file: same as the in-memory accumulator
+(`N_tags × unique_keys × avg_key_string_length`). For the 1M-key × 3-tag scenario this
+is ~120 MB on disk — acceptable for a rare rebuild operation.
+
 **If tag memory becomes a concern (many tags per key):**
 A future optimisation could flush the tag accumulator to disk periodically and merge at
 commit using a sorted merge strategy. This is not implemented in this design.
@@ -258,6 +283,7 @@ commit using a sorted merge strategy. This is not implemented in this design.
                                        │ (internal, via PM access)  │
                                        │                            │
                                        │ BeginRebuildAsync()        │
+                                       │ BeginRebuildAsync(tempPath)│
                                        │ ApplyAsync()               │
                                        │ CommitRebuildAsync()       │
                                        └────────────────────────────┘
@@ -289,10 +315,12 @@ ProjectionRebuilder  (internal sealed, implements IProjectionRebuilder)
     │     Calls BeginRebuildAsync / ApplyAsync / CommitRebuildAsync.
     │
     ├── CreateJournalAsync(name, tempPath, storeHead, ct)
-    ├── FlushJournalAsync(name, position, ct)
+    ├── FlushJournalAsync(name, position, tagAccumulator, ct)
     ├── DeleteJournalAsync(name, ct)
     ├── ReadJournalAsync(name, ct) → ProjectionRebuildJournal?
     ├── GetJournalFilePath(name)
+    ├── FlushTagAccumulatorAsync(name, tagAccumulator, ct)
+    ├── LoadTagAccumulatorAsync(name, ct) → Dictionary<string, HashSet<string>>?
     ├── CleanOrphanedTempDirectoriesAsync(ct)
     └── (rebuild status tracking: same lock-based approach as today)
 ```
@@ -361,6 +389,22 @@ New: write tag index files in parallel from _tagAccumulator → dir swap
 Accepts an explicit temp path (used for resume). The existing no-arg overload generates
 a new GUID-based path (used for fresh rebuilds). Both set `_isInRebuild = true`.
 
+**Note on `_projectionTags` vs `_tagAccumulator`:**
+`_projectionTags` and `_tagAccumulator` serve different purposes and are never used
+simultaneously:
+- `_projectionTags` is used during **live updates** only. It tracks old tags per key so
+  `UpdateProjectionTagsAsync` can compute delta updates (remove old tags, add new tags).
+  It is cleared on `BeginRebuild` and not populated during rebuild.
+- `_tagAccumulator` is used during **rebuild** only. It accumulates all tag→keys mappings
+  for bulk write at commit. It is set to `null` outside of rebuild.
+
+**`BeginRebuildAsync(string tempPath)` on abstract `ProjectionRegistration`:**
+The abstract `ProjectionRegistration` base class gains a new abstract method
+`BeginRebuildAsync(string tempPath)` alongside the existing parameterless overload.
+`ProjectionRegistration<TState>` implements it by casting to `FileSystemProjectionStore<TState>`
+and calling `BeginRebuild(tempPath)`. This is required for `ProjectionRebuilder` to pass
+the journal's temp path through the abstraction layer during crash recovery resume.
+
 ### 4.5 `ProjectionManager` after extraction
 
 Removed from `ProjectionManager`:
@@ -401,7 +445,8 @@ Remains on `IProjectionManager` (unchanged public API):
 
 | Metric | Current | New |
 |--------|---------|-----|
-| File writes during replay | 0 | O(events applied) |
+| File reads during replay | 0 | O(events applied) — `GetAsync` reads current state from temp dir |
+| File writes during replay | 0 | O(events applied) — `SaveAsync` writes updated state to temp dir |
 | File writes at commit | O(unique_keys) sequential | 0 — state already on disk |
 | Tag index writes at commit | O(unique_keys × tags) sequential round-trips | O(tags) parallel writes |
 | Metadata index write | O(1) enormous single file | Not written during rebuild |
@@ -430,17 +475,20 @@ ProjectionRebuilder.RebuildCoreAsync(name, fromPosition=0, tempPath=NEW_GUID):
   Phase 2 — Event Replay (write-through)
   ├── Loop: ReadAsync(eventTypes, fromPosition, batchSize)
   │   ├── For each event in batch:
-  │   │   └── registration.ApplyAsync(evt) → store.SaveAsync → writes to tempPath/{key}.json
+  │   │   └── registration.ApplyAsync(evt) → store.GetAsync + store.SaveAsync
+  │   │                                      → read {tempPath}/{key}.json (or null)
+  │   │                                      → write {tempPath}/{key}.json
   │   ├── After each batch: update fromPosition, totalEventsProcessed
   │   └── Every RebuildFlushInterval events:
-  │       └── FlushJournalAsync(name, currentPosition)   [atomic rename]
+  │       ├── FlushJournalAsync(name, currentPosition)   [atomic rename]
+  │       └── FlushTagAccumulatorAsync(name, accumulator) [atomic rename]
   └── Loop terminates when ReadAsync returns empty
 
   Phase 3 — Commit
   ├── Write tag index files from _tagAccumulator to tempPath (parallel)
   ├── Atomic swap: DeleteDirectory(productionPath) → Directory.Move(tempPath, productionPath)
   ├── SaveCheckpointAsync(name, Math.Max(storeHead, lastEventPosition))
-  └── DeleteJournalAsync(name)
+  └── DeleteJournalAsync(name)  [also deletes {name}.rebuild.tags.json]
 ```
 
 ### 6.2 Crash Recovery Flow
@@ -460,10 +508,12 @@ Application restart → ProjectionDaemon.ExecuteAsync:
   │   └── IF journal.TempPath directory EXISTS:
   │       ├── Log info: "Resuming interrupted rebuild of '{name}' from position {resumeFromPosition}"
   │       ├── store.BeginRebuild(journal.TempPath)   [reuse existing temp dir]
+  │       ├── LoadTagAccumulatorAsync(name) → restore _tagAccumulator from companion file
   │       └── RebuildCoreAsync(name, fromPosition=journal.ResumeFromPosition,
   │                             tempPath=journal.TempPath, storeHead=journal.StoreHeadAtStart)
   │           Note: Events in range (0, resumeFromPosition] are NOT re-read.
   │                 Files in tempPath for those events are already correct.
+  │                 Tags for those events are already in the restored _tagAccumulator.
   │                 Events in range (resumeFromPosition, ...] are re-read and re-applied,
   │                 overwriting any partial files from the crashed run.
   │
@@ -482,8 +532,35 @@ Application restart → ProjectionDaemon.ExecuteAsync:
 | Correctness on resume | Re-applied events overwrite files written during the crashed segment — idempotent |
 | No partial file corruption | Each `SaveAsync` call writes atomically via OS file write (single file, complete content); a partially-written file can only occur if the OS crashes mid-write, in which case the key will be correctly overwritten on resume |
 | No stale production reads | Production directory is never touched during rebuild; readers see consistent (if stale) data until commit |
+| Tag accumulator correctness on resume | Tag accumulator is persisted to `{name}.rebuild.tags.json` on every journal flush; loaded on resume before the replay loop starts. Tags for events at positions ≤ `resumeFromPosition` are restored from the persisted file, not re-derived from replay |
 
-### 6.4 Orphaned Temp Directory Handling
+### 6.4 Directory Swap Atomicity
+
+The commit step performs `DeleteDirectory(productionPath)` followed by
+`Directory.Move(tempPath, productionPath)`. This is **not an atomic operation** — there is
+a brief window between delete and move where no production directory exists:
+
+- On **Windows**, `Directory.Move` cannot overwrite an existing directory, so the
+  delete-first pattern is required.
+- On **Linux**, `rename(2)` can atomically replace a directory, but .NET's
+  `Directory.Move` does not expose this semantic.
+
+If the process crashes between delete and move:
+- The production directory is gone (deleted).
+- The temp directory still exists (move didn't happen).
+- The journal exists with `resumeFromPosition` at the final position.
+
+On restart, `ResumeInterruptedRebuildsAsync` finds the journal and calls
+`RebuildCoreAsync(from=finalPosition)`. Since all events have already been processed,
+the replay loop reads zero new events and proceeds directly to commit — performing the
+directory swap again. This is **self-healing**: the window of unavailability is limited
+to the time between the crash and the next application startup.
+
+During this window, any live query hitting `GetAllAsync`, `QueryAsync`, or
+`QueryByTagAsync` will find the production directory missing and return empty results.
+This is acceptable because rebuild is rare and the window is extremely narrow.
+
+### 6.5 Orphaned Temp Directory Handling
 
 A temp directory can exist without a journal if:
 - The journal was deleted but the directory rename failed (extremely rare, would require OS-level failure).
@@ -520,14 +597,20 @@ is intact).
 └── _checkpoints/
     ├── StudentInfo.checkpoint              ← live checkpoint (unchanged format)
     ├── StudentInfo.rebuild.json            ← rebuild journal (NEW, temporary)
+    ├── StudentInfo.rebuild.tags.json       ← persisted tag accumulator (NEW, temporary)
     ├── CourseDetail.checkpoint
-    └── CourseDetail.rebuild.json           ← if CourseDetail rebuild also in progress
+    ├── CourseDetail.rebuild.json           ← if CourseDetail rebuild also in progress
+    └── CourseDetail.rebuild.tags.json      ← if CourseDetail rebuild also in progress
 ```
+
+During an in-progress rebuild, an additional file exists:
+- `StudentInfo.rebuild.tags.json` — persisted tag accumulator (companion to the journal).
 
 After a successful rebuild:
 - `StudentInfo/` contains the freshly rebuilt state.
 - `StudentInfo.tmp.a1b2c3d4e5f6/` no longer exists (moved to `StudentInfo/`).
 - `StudentInfo.rebuild.json` no longer exists (deleted).
+- `StudentInfo.rebuild.tags.json` no longer exists (deleted).
 - `StudentInfo.checkpoint` has been updated.
 
 ---
@@ -551,17 +634,19 @@ ProjectionDaemon
     │       │       │       │
     │       │       │       ├─► [Replay loop]
     │       │       │       │       ReadAsync(types, from, batchSize)
-    │       │       │       │       ApplyAsync(evt) → SaveAsync(key, state)
-    │       │       │       │                             ↳ write {tempPath}/{key}.json
+    │       │       │       │       ApplyAsync(evt) → GetAsync + SaveAsync
+    │       │       │       │                         ↳ read  {tempPath}/{key}.json
+    │       │       │       │                         ↳ write {tempPath}/{key}.json
     │       │       │       │       [every FlushInterval]
     │       │       │       │           FlushJournalAsync(name, position)
+    │       │       │       │           FlushTagAccumulatorAsync(name, accumulator)
     │       │       │       │
     │       │       │       ├─► [Commit]
     │       │       │       │       write tag indices → tempPath/Indices/ [parallel]
     │       │       │       │       DeleteDirectory(productionPath)
     │       │       │       │       Directory.Move(tempPath, productionPath)
     │       │       │       │       SaveCheckpointAsync(name, finalPosition)
-    │       │       │       │       DeleteJournalAsync(name)
+    │       │       │       │       DeleteJournalAsync(name)  [+ tags companion file]
     │       │       │       │
     │       │       │       └─► return eventsProcessed
     │       │       │
@@ -590,13 +675,15 @@ Application starts
     │       │       ├─► store.BeginRebuild(existingTempPath)
     │       │       │       _isInRebuild = true
     │       │       │       _rebuildTempPath = existing temp dir (NOT re-created)
-    │       │       │       _tagAccumulator = new()  [rebuilt from replayed events]
+    │       │       │       _tagAccumulator = LoadTagAccumulatorAsync(name)
+    │       │       │                          ↳ restored from {name}.rebuild.tags.json
     │       │       │
     │       │       └─► RebuildCoreAsync(name, from=1_250_000, tempPath=existing)
     │       │               ↳ only events with position > 1_250_000 are re-read
     │       │               ↳ files for positions ≤ 1_250_000 already correct in tempPath
+    │       │               ↳ tags for positions ≤ 1_250_000 already in _tagAccumulator
     │       │               ↳ files for positions > 1_250_000 are overwritten cleanly
-    │       │               ↳ commit → directory swap → delete journal
+    │       │               ↳ commit → directory swap → delete journal + tags file
     │       │
     │       ├─► RebuildAllAsync(forceRebuild: false)   [picks up any OTHER missing projections]
     │       │
@@ -634,13 +721,19 @@ to the new `IProjectionRebuilder` interface:
 | `RebuildAsync(string[] projectionNames, CancellationToken)` | `IProjectionRebuilder.RebuildAsync` |
 | `GetRebuildStatusAsync()` | `IProjectionRebuilder.GetRebuildStatusAsync` |
 
+**⚠️ Signature change:** `IProjectionManager.RebuildAsync(string, CancellationToken)`
+currently returns `Task`. The new `IProjectionRebuilder.RebuildAsync(string, CancellationToken)`
+returns `Task<ProjectionRebuildResult>`. This is an improvement: callers now receive a
+result object with timing and event-count details. Existing callers that discarded the
+result continue to compile (fire-and-forget `Task<T>` is assignable to `Task`).
+
 **Migration for library consumers:**
 Code that currently injects `IProjectionManager` and calls rebuild methods must instead
-inject `IProjectionRebuilder` and call the same methods there. The method signatures are
-identical. `IProjectionRebuilder` is registered by `AddProjections()`.
+inject `IProjectionRebuilder` and call the same methods there. `IProjectionRebuilder` is
+registered by `AddProjections()`.
 
-**⚠️ This breaking change requires explicit approval before implementation begins.**
-See task T-BR-01 in the tasks document.
+**Approved:** This breaking change is approved. Opossum is pre-1.0 and not yet used in
+production. Improving the API is more important than backward compatibility.
 
 ### New: `IProjectionRebuilder`
 
@@ -701,6 +794,18 @@ The admin API endpoints in `Opossum.Samples.CourseManagement` that call
 | `src/Opossum/Projections/IProjectionRebuilder.cs` | Public interface |
 | `src/Opossum/Projections/ProjectionRebuilder.cs` | Full rebuild implementation with journal management |
 | `src/Opossum/Projections/ProjectionRebuildJournal.cs` | Journal model and file I/O helpers |
+
+### Read-Query Behaviour During Rebuild
+
+`GetAllAsync`, `QueryAsync`, `QueryByTagAsync`, and `QueryByTagsAsync` do **not** check
+`_isInRebuild`. They always read from `_projectionPath` (the production directory), which
+is untouched during rebuild. This means:
+
+- Live queries continue to serve stale-but-consistent data throughout the rebuild.
+- After `CommitRebuildAsync` completes the atomic directory swap, subsequent queries
+  immediately see the freshly rebuilt state.
+- If the production directory is missing (the narrow atomicity gap described in §6.4),
+  these methods return empty results until the next startup completes the swap.
 
 ### Unchanged
 
