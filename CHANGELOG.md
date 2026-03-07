@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`RebuildBatchSize` option on `ProjectionOptions`** (default: 5 000).
+  Controls how many events are loaded from disk per round-trip during a projection rebuild.
+  Lower values reduce peak heap usage at the cost of more index reads per rebuild; higher
+  values reduce I/O round-trips at the cost of more memory.
+  Typical guidance: 1 000–5 000 for memory-constrained environments, 10 000–50 000 for
+  high-memory / NVMe setups.
+
+- **`maxCount` parameter on `IEventStore.ReadAsync`** (optional, default `null` = no limit).
+  Limits how many events are returned in a single call. Combined with the existing
+  `fromPosition` parameter this enables page-by-page iteration over large result sets
+  without loading all events into memory at once.
+
+- **Per-batch progress logging during projection rebuild.**
+  After each batch the projection manager logs an `Information`-level message showing the
+  projection name, total events processed so far, current throughput (events/second), and
+  elapsed wall-clock time:
+  ```
+  Rebuilding 'StudentDetails': 5000 events processed (2341 events/s, elapsed 00:00:02.135)
+  Rebuilding 'StudentDetails': 10000 events processed (2498 events/s, elapsed 00:00:04.003)
+  …
+  ```
+  This gives developers a live view of rebuild progress and makes it easy to detect stalls.
+
+### Fixed
+
+- **Post-rebuild daemon thrashing: `UnauthorizedAccessException` on Windows after sparse-projection rebuild.**
+  After rebuilding a sparse projection (one whose last relevant event sits at a much lower
+  global position than the store head), the checkpoint was saved at the last *relevant* event
+  position rather than the store head. The daemon's next tick called
+  `SaveCheckpointAsync` once per batch of irrelevant events until it caught up — e.g. 82
+  rapid `File.Move` calls in succession for a Medium dataset where CourseBookCatalog's last
+  event was at position 5 600 and the store head was at position 86 648.
+  On Windows, `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING` fails with
+  `UnauthorizedAccessException` when the OS has not yet released the destination handle
+  from the previous atomic rename.
+
+  The fix: `RebuildProjectionCoreAsync` now reads the store head *before* the rebuild loop
+  starts and sets the final checkpoint to `Math.Max(storeHead, lastRelevantEventPosition)`.
+  After rebuild the daemon finds nothing to do for the sparse projection and only resumes
+  when genuinely new events arrive.
+
+- **Rebuild loop never terminates / `CommitRebuildAsync` unreachable.**
+  The batched rebuild used `while (true)` with an inner `if (batch.Length == 0) break`,
+  making the termination guarantee non-obvious and `CommitRebuildAsync` appear unreachable
+  to readers. Refactored to the standard "prime the pump" pattern:
+  ```csharp
+  var batch = await ReadAsync(...);
+  while (batch.Length > 0)
+  {
+      // process batch
+      batch = await ReadAsync(...);  // next page
+  }
+  await CommitRebuildAsync(...);     // always reached
+  ```
+
+  Previously `RebuildProjectionCoreAsync` loaded _all_ events matching a projection's
+  event types into a single in-memory array before starting to process them. On a "Large"
+  seed (≈ 2.7 M events) this caused out-of-memory failures for even a single projection
+  type. Events are now read in batches of `RebuildBatchSize` using the `fromPosition` /
+  `maxCount` pagination mechanism so that peak memory is bounded by
+  `batchSize × avg-event-size` instead of `total-events × avg-event-size`.
+
+- **Projection rebuild now keeps old files accessible during rebuild.**
+  Previously, `ClearAsync` deleted all projection files at the _start_ of a rebuild,
+  leaving the projection directory empty for the entire rebuild duration. With large
+  datasets this could mean hours with no projection data on disk.
+  
+  The rebuild now uses a temporary directory: all new projection files are written there
+  while the old files in the production directory remain untouched. At the very end of
+  `CommitRebuildAsync` an atomic directory swap (delete old, move temp to production)
+  makes the new data visible instantaneously. Each projection in a parallel rebuild
+  therefore becomes available as soon as _its own_ rebuild completes, independently of
+  the other projections.
+
 ---
 
 ## [0.4.0-preview.3] - 2026-03-04

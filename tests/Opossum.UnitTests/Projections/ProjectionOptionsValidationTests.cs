@@ -280,4 +280,77 @@ public sealed class ProjectionOptionsValidationTests
         // Assert
         Assert.True(result.Succeeded);
     }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(99)]
+    [InlineData(-1)]
+    public void Validate_RebuildBatchSizeTooLow_ReturnsFail(int rebuildBatchSize)
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            PollingInterval = TimeSpan.FromSeconds(5),
+            BatchSize = 1000,
+            MaxConcurrentRebuilds = 4,
+            RebuildBatchSize = rebuildBatchSize
+        };
+
+        var validator = new ProjectionOptionsValidator();
+
+        // Act
+        var result = validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Failed);
+        Assert.Contains("at least 100", string.Join(", ", result.Failures));
+    }
+
+    [Fact]
+    public void Validate_RebuildBatchSizeTooHigh_ReturnsFail()
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            PollingInterval = TimeSpan.FromSeconds(5),
+            BatchSize = 1000,
+            MaxConcurrentRebuilds = 4,
+            RebuildBatchSize = 1_000_001  // Above maximum
+        };
+
+        var validator = new ProjectionOptionsValidator();
+
+        // Act
+        var result = validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Failed);
+        Assert.Contains("at most 1,000,000", string.Join(", ", result.Failures));
+    }
+
+    [Theory]
+    [InlineData(100)]        // Minimum
+    [InlineData(1_000)]
+    [InlineData(5_000)]      // Default
+    [InlineData(50_000)]
+    [InlineData(1_000_000)]  // Maximum
+    public void Validate_RebuildBatchSizeValidRange_ReturnsSuccess(int rebuildBatchSize)
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            PollingInterval = TimeSpan.FromSeconds(5),
+            BatchSize = 1000,
+            MaxConcurrentRebuilds = 4,
+            RebuildBatchSize = rebuildBatchSize
+        };
+
+        var validator = new ProjectionOptionsValidator();
+
+        // Act
+        var result = validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
 }

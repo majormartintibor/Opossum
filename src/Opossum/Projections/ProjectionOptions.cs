@@ -23,6 +23,23 @@ public sealed class ProjectionOptions
     public int BatchSize { get; set; } = 1000;
 
     /// <summary>
+    /// Maximum number of events to load per batch during a projection rebuild.
+    ///
+    /// Lower values reduce peak memory usage but increase the number of index reads
+    /// (each batch re-reads the event-type position index).
+    /// Higher values reduce I/O round-trips but use more memory.
+    ///
+    /// GUIDANCE:
+    /// - Constrained memory (&lt;512 MB heap): 1 000 – 5 000
+    /// - Normal workloads:                   5 000 (default)
+    /// - High-memory / fast NVMe:            10 000 – 50 000
+    ///
+    /// Default: 5 000
+    /// </summary>
+    [Range(100, 1000000, ErrorMessage = "RebuildBatchSize must be between 100 and 1,000,000")]
+    public int RebuildBatchSize { get; set; } = 5_000;
+
+    /// <summary>
     /// Enable automatic projection rebuilding on startup if checkpoint is missing
     /// Default: true
     /// </summary>
@@ -30,18 +47,18 @@ public sealed class ProjectionOptions
 
     /// <summary>
     /// Maximum number of projections to rebuild concurrently.
-    /// 
+    ///
     /// DISK TYPE RECOMMENDATIONS:
     /// - HDD (single disk): 2-4
     /// - SSD: 4-8
     /// - NVMe SSD: 8-16
     /// - RAID array: 16-32
-    /// 
+    ///
     /// IMPORTANT: Higher values improve rebuild speed but increase:
     /// - CPU usage (may slow HTTP requests)
     /// - Memory usage (all events loaded in parallel)
     /// - Disk I/O contention
-    /// 
+    ///
     /// Default: 4 (balanced for most scenarios)
     /// </summary>
     [Range(1, 64, ErrorMessage = "MaxConcurrentRebuilds must be between 1 and 64")]

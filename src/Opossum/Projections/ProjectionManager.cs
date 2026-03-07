@@ -120,6 +120,8 @@ internal sealed partial class ProjectionManager : IProjectionManager
     /// actually processed. Callers use this count for accurate <see cref="ProjectionRebuildDetail.EventsProcessed"/>
     /// reporting instead of the checkpoint position (which equals the last store position even
     /// when zero relevant events exist).
+    /// Events are read in batches of <see cref="ProjectionOptions.RebuildBatchSize"/> to bound
+    /// peak memory usage regardless of how many total events match the projection.
     /// </summary>
     private async Task<int> RebuildProjectionCoreAsync(string projectionName, CancellationToken cancellationToken)
     {
@@ -137,46 +139,75 @@ internal sealed partial class ProjectionManager : IProjectionManager
                 throw new InvalidOperationException($"Projection '{projectionName}' is not registered");
             }
 
-            // Read all events for this projection's event types
-            var query = Query.FromEventTypes([.. registration.EventTypes]);
-            var events = await _eventStore.ReadAsync(query, null).ConfigureAwait(false);
-
-            // Clear existing projection data
-            await registration.ClearAsync(cancellationToken).ConfigureAwait(false);
-
             // Switch store to rebuild mode: state changes are buffered in memory and
             // flushed to disk once at the end, reducing disk I/O from O(events) to O(unique keys).
+            // Old projection files remain accessible to readers until CommitRebuildAsync performs
+            // the atomic directory swap at the end of the rebuild.
             await registration.BeginRebuildAsync().ConfigureAwait(false);
 
-            // Rebuild from events (ReadAsync already returns events in ascending position order)
-            foreach (var evt in events)
+            var query = Query.FromEventTypes([.. registration.EventTypes]);
+            var batchSize = _projectionOptions.RebuildBatchSize;
+            long fromPosition = 0;
+            int totalEventsProcessed = 0;
+            long lastCheckpointPosition = 0;
+
+            // Capture the store head before reading any events.  After the rebuild we will
+            // advance the checkpoint to at least this position so the daemon does not
+            // needlessly re-read thousands of non-relevant events that already exist between
+            // the last relevant event and the store head (e.g. a sparse projection whose last
+            // event is at position 5 600 in a store with 86 000+ events would otherwise cause
+            // the daemon to call SaveCheckpointAsync ~81 times in rapid succession, triggering
+            // UnauthorizedAccessException on Windows when MoveFileEx is called on a file the
+            // OS has not yet fully released from the previous atomic rename).
+            var storeHeadBeforeRebuild = await _eventStore.ReadLastAsync(Query.All(), cancellationToken).ConfigureAwait(false);
+            var rebuildTargetPosition = storeHeadBeforeRebuild?.Position ?? 0;
+
+            var progressStopwatch = Stopwatch.StartNew();
+
+            // Read and process events in bounded batches so that peak memory is proportional
+            // to batchSize × avg-event-size rather than total-events × avg-event-size.
+            // ReadAsync returns [] when no events with Position > fromPosition remain, which
+            // terminates the loop.  The exclusive fromPosition filter ensures the last event
+            // of each batch is never re-read on the following page request.
+            cancellationToken.ThrowIfCancellationRequested();
+            var batch = await _eventStore.ReadAsync(query, null, fromPosition, maxCount: batchSize).ConfigureAwait(false);
+
+            while (batch.Length > 0)
             {
+                foreach (var evt in batch)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
+                }
+
+                totalEventsProcessed += batch.Length;
+                lastCheckpointPosition = batch[^1].Position;
+                fromPosition = lastCheckpointPosition;
+
+                // Log progress after each batch so developers can see the rebuild is still running.
+                // The rate is derived from wall-clock time to give a meaningful events/second figure.
+                var elapsedMs = progressStopwatch.ElapsedMilliseconds;
+                var rate = elapsedMs > 0 ? totalEventsProcessed * 1000L / elapsedMs : 0;
+                LogRebuildProgress(projectionName, totalEventsProcessed, rate, progressStopwatch.Elapsed);
+
                 cancellationToken.ThrowIfCancellationRequested();
-                await registration.ApplyAsync(evt, cancellationToken).ConfigureAwait(false);
+                batch = await _eventStore.ReadAsync(query, null, fromPosition, maxCount: batchSize).ConfigureAwait(false);
             }
 
             // Flush all buffered state to disk in a single pass
             await registration.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
 
-            // Save checkpoint — always write the checkpoint file so the projection is not
-            // treated as "never rebuilt" by RebuildAllAsync(forceRebuild: false) and the
-            // daemon's startup auto-rebuild. When the store is completely empty the position
-            // is 0; RebuildAllAsync uses File.Exists to distinguish "rebuilt but empty store"
-            // (file present, position 0) from "truly never rebuilt" (file absent).
-            activity?.SetTag("opossum.events_processed", events.Length);
-            long checkpointPosition;
-            if (events.Length > 0)
-            {
-                checkpointPosition = events.Max(e => e.Position);
-            }
-            else
-            {
-                var lastEvent = await _eventStore.ReadLastAsync(Query.All()).ConfigureAwait(false);
-                checkpointPosition = lastEvent?.Position ?? 0;
-            }
-            await SaveCheckpointAsync(projectionName, checkpointPosition, cancellationToken).ConfigureAwait(false);
+            // Advance checkpoint to at least the pre-rebuild store head.
+            // Using Math.Max handles events appended during the rebuild that the loop may
+            // have processed (lastCheckpointPosition can exceed rebuildTargetPosition).
+            // For an empty store both values are 0, which is still written as a file so
+            // RebuildAllAsync(forceRebuild: false) treats the projection as "already rebuilt"
+            // rather than "never built" on the next startup.
+            activity?.SetTag("opossum.events_processed", totalEventsProcessed);
+            lastCheckpointPosition = Math.Max(rebuildTargetPosition, lastCheckpointPosition);
+            await SaveCheckpointAsync(projectionName, lastCheckpointPosition, cancellationToken).ConfigureAwait(false);
 
-            return events.Length;
+            return totalEventsProcessed;
         }
         // Lock automatically released here
     }
@@ -543,6 +574,9 @@ internal sealed partial class ProjectionManager : IProjectionManager
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Rebuilding projection '{ProjectionName}'...")]
     private partial void LogRebuildingProjection(string projectionName);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Rebuilding '{ProjectionName}': {EventsProcessed} events processed ({Rate} events/s, elapsed {Elapsed})")]
+    private partial void LogRebuildProgress(string projectionName, int eventsProcessed, long rate, TimeSpan elapsed);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Projection '{ProjectionName}' rebuilt successfully in {ElapsedMs}ms ({EventCount} events)")]
     private partial void LogProjectionRebuiltSuccessfully(string projectionName, long elapsedMs, long eventCount);
