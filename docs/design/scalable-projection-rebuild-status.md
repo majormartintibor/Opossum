@@ -98,8 +98,8 @@ from per-file embedded metadata.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P5-T1 | Add `RebuildFlushInterval` to sample app `appsettings.json` / `.Development.json` | ⬜ Not Started | |
-| P5-T2 | Update `docs/configuration-guide.md` with `RebuildFlushInterval` documentation | ⬜ Not Started | |
+| P5-T1 | Add `RebuildFlushInterval` to sample app `appsettings.json` / `.Development.json` | ✅ Done | Added with default 10,000 to both files |
+| P5-T2 | Update `docs/configuration-guide.md` with `RebuildFlushInterval` documentation | ✅ Done | Added `RebuildFlushInterval` and `RebuildBatchSize` to Projections table; updated example JSON |
 
 ---
 
@@ -107,8 +107,8 @@ from per-file embedded metadata.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P6-T1 | Update `CHANGELOG.md` under `[Unreleased]` | ⬜ Not Started | |
-| P6-T2 | Final full test suite run across all projects — 0 warnings, all green | ⬜ Not Started | |
+| P6-T1 | Update `CHANGELOG.md` under `[Unreleased]` | ✅ Done | Added Phase 1 (architectural separation, breaking API change), Phase 3 (crash recovery journal, resume, orphaned cleanup, `RebuildFlushInterval`), Phase 4 (metadata decoupling, stale cache fix) |
+| P6-T2 | Final full test suite run across all projects — 0 warnings, all green | ✅ Done | Clean build: 0 errors, 0 warnings. 736 unit + 182 integration + 117 sample unit + 107 sample integration + 102 seeder unit + 22 seeder integration = 1,266 tests — all green |
 
 ---
 

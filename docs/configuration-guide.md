@@ -30,7 +30,8 @@ Used for normal development and production:
     "EnableAutoRebuild": true,
     "MaxConcurrentRebuilds": 4,
     "PollingInterval": "00:00:01",
-    "BatchSize": 50
+    "BatchSize": 50,
+    "RebuildFlushInterval": 10000
   }
 }
 ```
@@ -72,6 +73,8 @@ Automatically loaded when `ASPNETCORE_ENVIRONMENT=Testing`:
 | `MaxConcurrentRebuilds` | int | `4` | Max projections to rebuild in parallel |
 | `PollingInterval` | TimeSpan | `"00:00:05"` | How often to poll for new events |
 | `BatchSize` | int | `1000` | Events to process per batch |
+| `RebuildBatchSize` | int | `5000` | Events to load per batch during a projection rebuild. Lower values reduce peak memory; higher values reduce I/O round-trips |
+| `RebuildFlushInterval` | int | `10000` | Events processed between rebuild journal flushes. Controls the maximum re-work on crash recovery. Lower = more durable but more I/O; higher = less overhead but more re-work on recovery. Range: 100–1,000,000 |
 
 ---
 

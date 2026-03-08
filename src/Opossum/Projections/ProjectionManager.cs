@@ -267,7 +267,7 @@ internal sealed partial class ProjectionManager : IProjectionManager
     /// <summary>
     /// Acquires a per-projection lock to prevent concurrent operations on the same projection.
     /// Shared between <see cref="UpdateAsync"/> (fail-fast) and
-    /// <see cref="ProjectionRebuilder.RebuildCoreAsync"/> (wait) to serialise live updates
+    /// <see cref="ProjectionRebuilder.RebuildCoreAsync(string, CancellationToken)"/> (wait) to serialise live updates
     /// and rebuilds on the same projection.
     /// </summary>
     /// <param name="projectionName">Name of the projection to lock</param>

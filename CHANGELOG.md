@@ -32,6 +32,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the previous approach of calling `AddProjectionAsync` per key per tag, which caused
   O(keys × tags) sequential file round-trips.
 
+- **Rebuild orchestration extracted from `ProjectionManager` into dedicated `ProjectionRebuilder` (Phase 1 — Architectural Separation).**
+  All rebuild logic (event replay loop, checkpoint management, parallel coordination) now
+  lives in a new `ProjectionRebuilder` class behind the `IProjectionRebuilder` interface.
+  `ProjectionManager` is now solely responsible for live event processing and projection
+  registration. `ProjectionDaemon` injects `IProjectionRebuilder` for rebuild operations.
+  This separation makes each concern independently testable and easier to reason about.
+
+- **No aggregated metadata index written during rebuild (Phase 4 — Metadata Index Decoupling).**
+  `CommitRebuildAsync` no longer calls `_metadataIndex` at all. Post-rebuild reads are
+  served from per-file embedded metadata, eliminating the O(unique_keys) JSON blob that
+  was written to `Metadata/index.json` at commit time. The lazy metadata index handles
+  missing `index.json` gracefully on first read after rebuild.
+
 ### Removed
 
 - **`_rebuildStateBuffer` eliminated from `FileSystemProjectionStore`.**
@@ -45,6 +58,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`ClearAsync` removed from `ProjectionRegistration` abstract class.**
   Dead code — was not called from any rebuild path after Phase 1 separation.
 
+- **Rebuild methods removed from `IProjectionManager` — ⚠️ breaking change (Phase 1).**
+  `RebuildProjectionAsync`, `RebuildAllAsync`, `RebuildMissingProjectionsAsync`, and
+  `ForceRebuildAllAsync` are no longer part of the `IProjectionManager` contract. Callers
+  must now inject `IProjectionRebuilder` instead. This is acceptable because Opossum is
+  pre-1.0; the change produces a cleaner API surface and enables independent evolution of
+  the rebuild subsystem.
+
 ### Fixed
 
 - **Admin endpoint returns 404 (not 500) for non-existent projection rebuild.**
@@ -52,6 +72,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the projection name is not registered, instead of returning `InternalServerError`.
 
 ### Added
+
+- **`IProjectionRebuilder` interface and `ProjectionRebuilder` implementation (Phase 1 — Architectural Separation).**
+  Dedicated rebuild orchestrator registered in DI via `AddProjectionRebuilder()`. Exposes
+  `RebuildProjectionAsync`, `RebuildAllAsync`, `RebuildMissingProjectionsAsync`, and
+  `ForceRebuildAllAsync`. Injected by `ProjectionDaemon` and available to application code
+  (e.g. admin endpoints) for on-demand rebuilds.
+
+- **`RebuildFlushInterval` option on `ProjectionOptions`** (default: 10 000; range: 100–1 000 000).
+  Controls how many events are processed between rebuild journal flushes. After every
+  `RebuildFlushInterval` events the rebuilder persists a journal checkpoint and the current
+  tag accumulator to disk. If the process crashes, at most this many events need
+  re-processing. Lower values increase durability at the cost of more journal I/O.
+
+- **Crash-recovery rebuild journal (Phase 3 — Rebuild Journal and Crash Recovery).**
+  During rebuild, a `*.rebuild.json` journal file is persisted to the checkpoint directory
+  every `RebuildFlushInterval` events. The journal records the projection name, temp
+  directory path, last-processed event position, and total events processed. On crash, the
+  journal allows the rebuild to resume from the last flush point instead of starting over.
+  The journal is deleted on successful rebuild completion.
+
+- **`ResumeInterruptedRebuildsAsync` — automatic resume of interrupted rebuilds on startup (Phase 3).**
+  On daemon startup, the rebuilder scans for `*.rebuild.json` journal files. If the matching
+  temp directory still exists and the projection is registered, the rebuild resumes from the
+  journal's last-flushed position. If the temp directory is missing or the projection is
+  unregistered, the journal is discarded. This runs before `RebuildMissingProjectionsAsync`.
+
+- **Orphaned temp directory cleanup on startup (Phase 3).**
+  `CleanOrphanedTempDirectoriesAsync` scans the projections path for `*.tmp.*` directories
+  with no matching journal file and deletes them, preventing disk space leaks from
+  interrupted rebuilds where the journal was cleaned up but the temp directory was not.
 
 - **`RebuildBatchSize` option on `ProjectionOptions`** (default: 5 000).
   Controls how many events are loaded from disk per round-trip during a projection rebuild.
@@ -119,13 +169,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Previously, `ClearAsync` deleted all projection files at the _start_ of a rebuild,
   leaving the projection directory empty for the entire rebuild duration. With large
   datasets this could mean hours with no projection data on disk.
-  
+
   The rebuild now uses a temporary directory: all new projection files are written there
   while the old files in the production directory remain untouched. At the very end of
   `CommitRebuildAsync` an atomic directory swap (delete old, move temp to production)
   makes the new data visible instantaneously. Each projection in a parallel rebuild
   therefore becomes available as soon as _its own_ rebuild completes, independently of
   the other projections.
+
+- **Stale metadata cache after rebuild (Phase 4 — Metadata Index Decoupling).**
+  Added `ClearCache()` to `ProjectionMetadataIndex`, called from `CommitRebuildAsync`'s
+  `finally` block. Without this, `GetAsync` could return pre-rebuild version/timestamp
+  data from the in-memory cache after the production directory had been swapped to the
+  freshly rebuilt files. The cache is now invalidated so the next read loads metadata
+  from the new per-file data on disk.
 
 ---
 

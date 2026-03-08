@@ -23,12 +23,10 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
     // During rebuild, accumulates tag-to-key mappings in memory. Written to disk at commit.
     // Initialised in BeginRebuild; nulled in CommitRebuildAsync.
-    private Dictionary<string, HashSet<string>>? _tagAccumulator;
 
     // Path to the temporary directory used during rebuild.
     // New projection files are written here and atomically moved to _projectionPath on commit,
     // so old data remains accessible to readers for the entire duration of the rebuild.
-    private string? _rebuildTempPath;
 
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
@@ -339,15 +337,15 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
                 File.SetAttributes(rebuildFilePath, FileAttributes.ReadOnly);
 
             // Accumulate tags for bulk write at commit
-            if (_tagProvider is not null && _tagAccumulator is not null)
+            if (_tagProvider is not null && TagAccumulator is not null)
             {
                 foreach (var tag in _tagProvider.GetTags(state))
                 {
                     var tagKey = GetTagAccumulatorKey(tag);
-                    if (!_tagAccumulator.TryGetValue(tagKey, out var keys))
+                    if (!TagAccumulator.TryGetValue(tagKey, out var keys))
                     {
                         keys = [];
-                        _tagAccumulator[tagKey] = keys;
+                        TagAccumulator[tagKey] = keys;
                     }
                     keys.Add(key);
                 }
@@ -512,9 +510,9 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             }
 
             // Remove key from every tag set in the accumulator
-            if (_tagAccumulator is not null)
+            if (TagAccumulator is not null)
             {
-                foreach (var keySet in _tagAccumulator.Values)
+                foreach (var keySet in TagAccumulator.Values)
                     keySet.Remove(key);
             }
 
@@ -581,9 +579,9 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         _projectionTags.Clear();
         _isInRebuild = true;
-        _tagAccumulator = [];
-        _rebuildTempPath = _projectionPath + $".tmp.{Guid.NewGuid():N}";
-        Directory.CreateDirectory(_rebuildTempPath);
+        TagAccumulator = [];
+        RebuildTempPath = _projectionPath + $".tmp.{Guid.NewGuid():N}";
+        Directory.CreateDirectory(RebuildTempPath);
     }
 
     /// <summary>
@@ -602,23 +600,23 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
 
         _projectionTags.Clear();
         _isInRebuild = true;
-        _tagAccumulator = [];
-        _rebuildTempPath = tempPath;
-        Directory.CreateDirectory(_rebuildTempPath);
+        TagAccumulator = [];
+        RebuildTempPath = tempPath;
+        Directory.CreateDirectory(RebuildTempPath);
     }
 
     /// <summary>
     /// Returns the current rebuild temp directory path, or <c>null</c> if not in rebuild mode.
     /// Used by <see cref="ProjectionRebuilder"/> to persist the journal with the correct temp path.
     /// </summary>
-    internal string? RebuildTempPath => _rebuildTempPath;
+    internal string? RebuildTempPath { get; private set; }
 
     /// <summary>
     /// Returns the current in-memory tag accumulator, or <c>null</c> if not in rebuild mode.
     /// Used by <see cref="ProjectionRebuilder"/> to periodically flush the tag accumulator
     /// alongside the rebuild journal for crash recovery.
     /// </summary>
-    internal Dictionary<string, HashSet<string>>? TagAccumulator => _tagAccumulator;
+    internal Dictionary<string, HashSet<string>>? TagAccumulator { get; private set; }
 
     /// <summary>
     /// Replaces the current (empty) tag accumulator with a previously persisted snapshot.
@@ -633,28 +631,28 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         if (!_isInRebuild)
             throw new InvalidOperationException("Cannot restore tag accumulator outside of rebuild mode");
 
-        _tagAccumulator = tagAccumulator;
+        TagAccumulator = tagAccumulator;
     }
 
     /// <summary>
-    /// Writes tag index files from the in-memory <c>_tagAccumulator</c> to the temp directory,
+    /// Writes tag index files from the in-memory <see cref="TagAccumulator"/> to the temp directory,
     /// then atomically swaps the temp directory into the production path.
     /// Projection state files have already been written during event replay (write-through),
     /// so no state buffer flush is required.
     /// </summary>
     internal async Task CommitRebuildAsync(CancellationToken cancellationToken = default)
     {
-        var tempPath = _rebuildTempPath;
+        var tempPath = RebuildTempPath;
         try
         {
             // Write tag index files from the accumulator in parallel
-            if (_tagAccumulator is { Count: > 0 } && tempPath is not null)
+            if (TagAccumulator is { Count: > 0 } && tempPath is not null)
             {
                 var indicesPath = Path.Combine(tempPath, "Indices");
                 Directory.CreateDirectory(indicesPath);
 
                 await Parallel.ForEachAsync(
-                    _tagAccumulator,
+                    TagAccumulator,
                     new ParallelOptions
                     {
                         MaxDegreeOfParallelism = Environment.ProcessorCount,
@@ -700,8 +698,8 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         finally
         {
             _isInRebuild = false;
-            _rebuildTempPath = null;
-            _tagAccumulator = null;
+            RebuildTempPath = null;
+            TagAccumulator = null;
 
             // Discard stale metadata cache — the aggregated Metadata/index.json was in the
             // old directory and does not exist in the rebuilt directory.  Without this,
@@ -714,7 +712,7 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         // Sanitize key for file system
         var safeKey = string.Join("_", key.Split(Path.GetInvalidFileNameChars()));
-        var dir = _rebuildTempPath ?? _projectionPath;
+        var dir = RebuildTempPath ?? _projectionPath;
         return Path.Combine(dir, $"{safeKey}.json");
     }
 
