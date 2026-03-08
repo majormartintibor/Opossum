@@ -7,6 +7,204 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Write-through projection rebuild (Phase 2 — Scalable Projection Rebuild).**
+  During a projection rebuild, each `SaveAsync` call now writes the projection state
+  directly to the temporary directory on disk instead of accumulating all states in an
+  in-memory buffer (`_rebuildStateBuffer`). This bounds peak memory during rebuild to
+  `O(batch_size × state_size)` regardless of how many unique projection keys exist,
+  eliminating the previous `O(unique_keys × state_size)` memory requirement that caused
+  out-of-memory failures at scale (e.g. 10 GB heap for 1M keys × 10 KB state).
+
+  `GetAsync` and `DeleteAsync` now read from / delete in the temp directory during rebuild.
+  `CommitRebuildAsync` only writes tag index files (in parallel) and performs the atomic
+  directory swap — no state buffer flush is needed.
+
+  Trade-off: a key updated by N events is now written N times during rebuild (instead of
+  once at commit). This increases total I/O but distributes it over time and eliminates
+  memory pressure. Rebuild is a rare operation where durability and bounded memory outweigh
+  I/O minimisation.
+
+- **Tag accumulator replaces per-key tag index writes at commit.**
+  During rebuild, tag-to-key mappings are accumulated in a lightweight in-memory dictionary
+  (`_tagAccumulator`) and written in a single parallel pass at commit time. This replaces
+  the previous approach of calling `AddProjectionAsync` per key per tag, which caused
+  O(keys × tags) sequential file round-trips.
+
+- **Rebuild orchestration extracted from `ProjectionManager` into dedicated `ProjectionRebuilder` (Phase 1 — Architectural Separation).**
+  All rebuild logic (event replay loop, checkpoint management, parallel coordination) now
+  lives in a new `ProjectionRebuilder` class behind the `IProjectionRebuilder` interface.
+  `ProjectionManager` is now solely responsible for live event processing and projection
+  registration. `ProjectionDaemon` injects `IProjectionRebuilder` for rebuild operations.
+  This separation makes each concern independently testable and easier to reason about.
+
+- **No aggregated metadata index written during rebuild (Phase 4 — Metadata Index Decoupling).**
+  `CommitRebuildAsync` no longer calls `_metadataIndex` at all. Post-rebuild reads are
+  served from per-file embedded metadata, eliminating the O(unique_keys) JSON blob that
+  was written to `Metadata/index.json` at commit time. The lazy metadata index handles
+  missing `index.json` gracefully on first read after rebuild.
+
+- **`ProjectionOptions.EnableAutoRebuild` (bool) replaced by `AutoRebuild` (`AutoRebuildMode` enum) — ⚠️ breaking change.**
+  The boolean only supported two states (on/off). The new enum adds a third mode:
+  - `None` — daemon starts without triggering any rebuild (was `false`)
+  - `MissingCheckpointsOnly` — only projections with absent checkpoint files are rebuilt
+    on startup (was `true`; this remains the default)
+  - `ForceFullRebuild` — all projections are rebuilt from scratch on every startup
+    (new; useful for development iteration and post-migration scenarios)
+
+  Crash recovery (`ResumeInterruptedRebuildsAsync`) now runs unconditionally on daemon
+  startup, regardless of the `AutoRebuild` mode. Previously it was gated behind
+  `EnableAutoRebuild = true`, which meant manually-triggered rebuilds interrupted by a
+  crash were not resumed when auto-rebuild was disabled.
+
+  **Migration:** replace `"EnableAutoRebuild": true/false` in `appsettings.json` with
+  `"AutoRebuild": "MissingCheckpointsOnly"` / `"AutoRebuild": "None"`.
+  In code: `options.EnableAutoRebuild = true` → `options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly`.
+
+### Removed
+
+- **`_rebuildStateBuffer` eliminated from `FileSystemProjectionStore`.**
+  The in-memory `Dictionary<string, TState?>` that held all projection states during rebuild
+  has been removed. This was the primary source of unbounded memory growth.
+
+- **`DeleteAllIndicesAsync()` and `ClearProjectionFiles()` removed from `FileSystemProjectionStore`.**
+  These methods were only used by the now-removed `ClearAsync` on `ProjectionRegistration`
+  and are no longer needed with the write-through rebuild approach.
+
+- **`ClearAsync` removed from `ProjectionRegistration` abstract class.**
+  Dead code — was not called from any rebuild path after Phase 1 separation.
+
+- **Rebuild methods removed from `IProjectionManager` — ⚠️ breaking change (Phase 1).**
+  `RebuildProjectionAsync`, `RebuildAllAsync`, `RebuildMissingProjectionsAsync`, and
+  `ForceRebuildAllAsync` are no longer part of the `IProjectionManager` contract. Callers
+  must now inject `IProjectionRebuilder` instead. This is acceptable because Opossum is
+  pre-1.0; the change produces a cleaner API surface and enables independent evolution of
+  the rebuild subsystem.
+
+### Fixed
+
+- **Admin endpoint returns 404 (not 500) for non-existent projection rebuild.**
+  The `/admin/projections/{name}/rebuild` endpoint now correctly returns `NotFound` when
+  the projection name is not registered, instead of returning `InternalServerError`.
+
+### Added
+
+- **`IProjectionRebuilder` interface and `ProjectionRebuilder` implementation (Phase 1 — Architectural Separation).**
+  Dedicated rebuild orchestrator registered in DI via `AddProjectionRebuilder()`. Exposes
+  `RebuildProjectionAsync`, `RebuildAllAsync`, `RebuildMissingProjectionsAsync`, and
+  `ForceRebuildAllAsync`. Injected by `ProjectionDaemon` and available to application code
+  (e.g. admin endpoints) for on-demand rebuilds.
+
+- **`AutoRebuildMode` enum** (`None`, `MissingCheckpointsOnly`, `ForceFullRebuild`).
+  Replaces the boolean `EnableAutoRebuild` property on `ProjectionOptions` with a
+  three-valued enum that unlocks force-rebuild-on-every-startup for development workflows.
+
+- **`RebuildFlushInterval` option on `ProjectionOptions`** (default: 10 000; range: 100–1 000 000).
+  Controls how many events are processed between rebuild journal flushes. After every
+  `RebuildFlushInterval` events the rebuilder persists a journal checkpoint and the current
+  tag accumulator to disk. If the process crashes, at most this many events need
+  re-processing. Lower values increase durability at the cost of more journal I/O.
+
+- **Crash-recovery rebuild journal (Phase 3 — Rebuild Journal and Crash Recovery).**
+  During rebuild, a `*.rebuild.json` journal file is persisted to the checkpoint directory
+  every `RebuildFlushInterval` events. The journal records the projection name, temp
+  directory path, last-processed event position, and total events processed. On crash, the
+  journal allows the rebuild to resume from the last flush point instead of starting over.
+  The journal is deleted on successful rebuild completion.
+
+- **`ResumeInterruptedRebuildsAsync` — automatic resume of interrupted rebuilds on startup (Phase 3).**
+  On daemon startup, the rebuilder scans for `*.rebuild.json` journal files. If the matching
+  temp directory still exists and the projection is registered, the rebuild resumes from the
+  journal's last-flushed position. If the temp directory is missing or the projection is
+  unregistered, the journal is discarded. This runs before `RebuildMissingProjectionsAsync`.
+
+- **Orphaned temp directory cleanup on startup (Phase 3).**
+  `CleanOrphanedTempDirectoriesAsync` scans the projections path for `*.tmp.*` directories
+  with no matching journal file and deletes them, preventing disk space leaks from
+  interrupted rebuilds where the journal was cleaned up but the temp directory was not.
+
+- **`RebuildBatchSize` option on `ProjectionOptions`** (default: 5 000).
+  Controls how many events are loaded from disk per round-trip during a projection rebuild.
+  Lower values reduce peak heap usage at the cost of more index reads per rebuild; higher
+  values reduce I/O round-trips at the cost of more memory.
+  Typical guidance: 1 000–5 000 for memory-constrained environments, 10 000–50 000 for
+  high-memory / NVMe setups.
+
+- **`maxCount` parameter on `IEventStore.ReadAsync`** (optional, default `null` = no limit).
+  Limits how many events are returned in a single call. Combined with the existing
+  `fromPosition` parameter this enables page-by-page iteration over large result sets
+  without loading all events into memory at once.
+
+- **Per-batch progress logging during projection rebuild.**
+  After each batch the projection manager logs an `Information`-level message showing the
+  projection name, total events processed so far, current throughput (events/second), and
+  elapsed wall-clock time:
+  ```
+  Rebuilding 'StudentDetails': 5000 events processed (2341 events/s, elapsed 00:00:02.135)
+  Rebuilding 'StudentDetails': 10000 events processed (2498 events/s, elapsed 00:00:04.003)
+  …
+  ```
+  This gives developers a live view of rebuild progress and makes it easy to detect stalls.
+
+### Fixed
+
+- **Post-rebuild daemon thrashing: `UnauthorizedAccessException` on Windows after sparse-projection rebuild.**
+  After rebuilding a sparse projection (one whose last relevant event sits at a much lower
+  global position than the store head), the checkpoint was saved at the last *relevant* event
+  position rather than the store head. The daemon's next tick called
+  `SaveCheckpointAsync` once per batch of irrelevant events until it caught up — e.g. 82
+  rapid `File.Move` calls in succession for a Medium dataset where CourseBookCatalog's last
+  event was at position 5 600 and the store head was at position 86 648.
+  On Windows, `MoveFileEx` with `MOVEFILE_REPLACE_EXISTING` fails with
+  `UnauthorizedAccessException` when the OS has not yet released the destination handle
+  from the previous atomic rename.
+
+  The fix: `RebuildProjectionCoreAsync` now reads the store head *before* the rebuild loop
+  starts and sets the final checkpoint to `Math.Max(storeHead, lastRelevantEventPosition)`.
+  After rebuild the daemon finds nothing to do for the sparse projection and only resumes
+  when genuinely new events arrive.
+
+- **Rebuild loop never terminates / `CommitRebuildAsync` unreachable.**
+  The batched rebuild used `while (true)` with an inner `if (batch.Length == 0) break`,
+  making the termination guarantee non-obvious and `CommitRebuildAsync` appear unreachable
+  to readers. Refactored to the standard "prime the pump" pattern:
+  ```csharp
+  var batch = await ReadAsync(...);
+  while (batch.Length > 0)
+  {
+      // process batch
+      batch = await ReadAsync(...);  // next page
+  }
+  await CommitRebuildAsync(...);     // always reached
+  ```
+
+  Previously `RebuildProjectionCoreAsync` loaded _all_ events matching a projection's
+  event types into a single in-memory array before starting to process them. On a "Large"
+  seed (≈ 2.7 M events) this caused out-of-memory failures for even a single projection
+  type. Events are now read in batches of `RebuildBatchSize` using the `fromPosition` /
+  `maxCount` pagination mechanism so that peak memory is bounded by
+  `batchSize × avg-event-size` instead of `total-events × avg-event-size`.
+
+- **Projection rebuild now keeps old files accessible during rebuild.**
+  Previously, `ClearAsync` deleted all projection files at the _start_ of a rebuild,
+  leaving the projection directory empty for the entire rebuild duration. With large
+  datasets this could mean hours with no projection data on disk.
+
+  The rebuild now uses a temporary directory: all new projection files are written there
+  while the old files in the production directory remain untouched. At the very end of
+  `CommitRebuildAsync` an atomic directory swap (delete old, move temp to production)
+  makes the new data visible instantaneously. Each projection in a parallel rebuild
+  therefore becomes available as soon as _its own_ rebuild completes, independently of
+  the other projections.
+
+- **Stale metadata cache after rebuild (Phase 4 — Metadata Index Decoupling).**
+  Added `ClearCache()` to `ProjectionMetadataIndex`, called from `CommitRebuildAsync`'s
+  `finally` block. Without this, `GetAsync` could return pre-rebuild version/timestamp
+  data from the in-memory cache after the production directory had been swapped to the
+  freshly rebuilt files. The cache is now invalidated so the next read loads metadata
+  from the new per-file data on disk.
+
 ---
 
 ## [0.4.0-preview.3] - 2026-03-04

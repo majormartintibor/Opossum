@@ -32,6 +32,28 @@ public sealed class ProjectionOptionsValidator : IValidateOptions<ProjectionOpti
             failures.Add($"BatchSize must be at most 100,000, got {options.BatchSize}");
         }
 
+        // Validate RebuildBatchSize
+        if (options.RebuildBatchSize < 100)
+        {
+            failures.Add($"RebuildBatchSize must be at least 100, got {options.RebuildBatchSize}");
+        }
+
+        if (options.RebuildBatchSize > 1_000_000)
+        {
+            failures.Add($"RebuildBatchSize must be at most 1,000,000, got {options.RebuildBatchSize}");
+        }
+
+        // Validate RebuildFlushInterval
+        if (options.RebuildFlushInterval < 100)
+        {
+            failures.Add($"RebuildFlushInterval must be at least 100, got {options.RebuildFlushInterval}");
+        }
+
+        if (options.RebuildFlushInterval > 1_000_000)
+        {
+            failures.Add($"RebuildFlushInterval must be at most 1,000,000, got {options.RebuildFlushInterval}");
+        }
+
         // Validate MaxConcurrentRebuilds
         if (options.MaxConcurrentRebuilds < 1)
         {

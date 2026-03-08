@@ -16,10 +16,10 @@ public static class AdminEndpoints
 
         // Rebuild all projections
         adminGroup.MapPost("/rebuild", async (
-            IProjectionManager projectionManager,
+            IProjectionRebuilder projectionRebuilder,
             [FromQuery] bool forceAll = true) =>
         {
-            var result = await projectionManager.RebuildAllAsync(forceAll);
+            var result = await projectionRebuilder.RebuildAllAsync(forceAll);
 
             return result.Success
                 ? Results.Ok(result)
@@ -53,27 +53,34 @@ public static class AdminEndpoints
         // Rebuild specific projection
         adminGroup.MapPost("/{projectionName}/rebuild", async (
             string projectionName,
-            IProjectionManager projectionManager,
+            IProjectionRebuilder projectionRebuilder,
             ILogger<Program> logger) =>
         {
-            try
-            {
-                var stopwatch = Stopwatch.StartNew();
-                await projectionManager.RebuildAsync(projectionName);
-                stopwatch.Stop();
+            var result = await projectionRebuilder.RebuildAsync(projectionName);
 
+            if (result.Success)
+            {
                 return Results.Ok(new
                 {
                     ProjectionName = projectionName,
                     Status = "Rebuilt",
-                    Duration = stopwatch.Elapsed
+                    Duration = result.Duration
                 });
             }
-            catch (InvalidOperationException ex)
+
+            var errorMessage = result.Details[0].ErrorMessage;
+
+            // A "not registered" error means the projection name is unknown → 404
+            if (errorMessage?.Contains("is not registered", StringComparison.Ordinal) is true)
             {
-                logger.LogWarning(ex, "Failed to rebuild projection '{ProjectionName}': {Error}", projectionName, ex.Message);
-                return Results.NotFound(new { Error = ex.Message });
+                logger.LogWarning("Projection '{ProjectionName}' not found: {Error}", projectionName, errorMessage);
+                return Results.NotFound(new { Error = errorMessage });
             }
+
+            return Results.Problem(
+                title: "Rebuild Failed",
+                detail: errorMessage,
+                statusCode: 500);
         })
         .WithSummary("Rebuild a specific projection")
         .WithDescription("""
@@ -96,9 +103,9 @@ public static class AdminEndpoints
             """);
 
         // Get rebuild status
-        adminGroup.MapGet("/status", async (IProjectionManager projectionManager) =>
+        adminGroup.MapGet("/status", async (IProjectionRebuilder projectionRebuilder) =>
         {
-            var status = await projectionManager.GetRebuildStatusAsync();
+            var status = await projectionRebuilder.GetRebuildStatusAsync();
             return Results.Ok(status);
         })
         .WithSummary("Get projection rebuild status")

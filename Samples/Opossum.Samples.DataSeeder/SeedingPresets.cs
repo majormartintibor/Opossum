@@ -6,7 +6,7 @@ namespace Opossum.Samples.DataSeeder;
 /// </summary>
 public static class SeedingPresets
 {
-    /// <summary>~1 700 events — explore the data model.</summary>
+    /// <summary>~1 450 events — explore the data model.</summary>
     public static SeedingConfiguration Small() => new()
     {
         PresetName      = "Small",
@@ -17,7 +17,7 @@ public static class SeedingPresets
         MultiBookOrders = 8
     };
 
-    /// <summary>~270 000 events — growing business, a few months of data.</summary>
+    /// <summary>~233 000 events — growing business, a few months of data.</summary>
     public static SeedingConfiguration Medium() => new()
     {
         PresetName      = "Medium",
@@ -28,7 +28,16 @@ public static class SeedingPresets
         MultiBookOrders = 600
     };
 
-    /// <summary>~2 700 000 events — established platform, 1-3 years of data.</summary>
+    /// <summary>
+    /// ~2 320 000 events — established platform, 1-3 years of data.
+    /// <para>
+    /// Projection rebuild estimates for this preset:
+    /// <list type="bullet">
+    ///   <item><description>StudentDetails: ~533 000 events (StudentRegistered + SubscriptionUpdated + Enrolled)</description></item>
+    ///   <item><description>CourseDetails:  ~490 000 events (CourseCreated + LimitModified + Enrolled)</description></item>
+    /// </list>
+    /// </para>
+    /// </summary>
     public static SeedingConfiguration Large() => new()
     {
         PresetName      = "Large",
@@ -39,7 +48,7 @@ public static class SeedingPresets
         MultiBookOrders = 7_000
     };
 
-    /// <summary>~13 000 000 events — large-scale performance testing.</summary>
+    /// <summary>~11 600 000 events — large-scale performance testing.</summary>
     public static SeedingConfiguration Prod() => new()
     {
         PresetName      = "Prod",

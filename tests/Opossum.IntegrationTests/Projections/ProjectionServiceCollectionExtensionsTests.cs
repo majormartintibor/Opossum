@@ -36,6 +36,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         // Assert
         Assert.NotNull(serviceProvider.GetService<ProjectionOptions>());
         Assert.NotNull(serviceProvider.GetService<IProjectionManager>());
+        Assert.NotNull(serviceProvider.GetService<IProjectionRebuilder>());
     }
 
     [Fact]
@@ -55,7 +56,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         {
             options.PollingInterval = TimeSpan.FromSeconds(10);
             options.BatchSize = 500;
-            options.EnableAutoRebuild = false;
+            options.AutoRebuild = AutoRebuildMode.None;
         });
 
         var serviceProvider = services.BuildServiceProvider();
@@ -64,7 +65,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         // Assert
         Assert.Equal(TimeSpan.FromSeconds(10), projectionOptions.PollingInterval);
         Assert.Equal(500, projectionOptions.BatchSize);
-        Assert.False(projectionOptions.EnableAutoRebuild);
+        Assert.Equal(AutoRebuildMode.None, projectionOptions.AutoRebuild);
     }
 
     [Fact]

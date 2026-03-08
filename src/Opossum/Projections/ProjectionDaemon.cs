@@ -8,22 +8,26 @@ namespace Opossum.Projections;
 internal sealed partial class ProjectionDaemon : BackgroundService
 {
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
     private readonly IEventStore _eventStore;
     private readonly ProjectionOptions _options;
     private readonly ILogger<ProjectionDaemon> _logger;
 
     public ProjectionDaemon(
         IProjectionManager projectionManager,
+        IProjectionRebuilder projectionRebuilder,
         IEventStore eventStore,
         ProjectionOptions options,
         ILogger<ProjectionDaemon> logger)
     {
         ArgumentNullException.ThrowIfNull(projectionManager);
+        ArgumentNullException.ThrowIfNull(projectionRebuilder);
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(logger);
 
         _projectionManager = projectionManager;
+        _projectionRebuilder = projectionRebuilder;
         _eventStore = eventStore;
         _options = options;
         _logger = logger;
@@ -36,10 +40,22 @@ internal sealed partial class ProjectionDaemon : BackgroundService
         // Wait a bit for application startup to complete
         await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken).ConfigureAwait(false);
 
-        // Auto-rebuild projections if enabled and checkpoints are missing
-        if (_options.EnableAutoRebuild)
+        // Always resume interrupted rebuilds (crash recovery) — regardless of AutoRebuild mode.
+        // A manually-triggered rebuild that was interrupted by a crash must be recovered even
+        // when auto-rebuild is off.
+        await _projectionRebuilder.ResumeInterruptedRebuildsAsync(stoppingToken).ConfigureAwait(false);
+
+        switch (_options.AutoRebuild)
         {
-            await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
+            case AutoRebuildMode.MissingCheckpointsOnly:
+                await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
+                break;
+            case AutoRebuildMode.ForceFullRebuild:
+                await RebuildAllProjectionsAsync(stoppingToken).ConfigureAwait(false);
+                break;
+            case AutoRebuildMode.None:
+            default:
+                break;
         }
 
         LogPollingStarted(_options.PollingInterval);
@@ -71,8 +87,35 @@ internal sealed partial class ProjectionDaemon : BackgroundService
         LogCheckingForRebuilds();
 
         // Use the new RebuildAllAsync method (only rebuilds missing projections)
-        var result = await _projectionManager.RebuildAllAsync(
+        var result = await _projectionRebuilder.RebuildAllAsync(
             forceRebuild: false,
+            cancellationToken).ConfigureAwait(false);
+
+        if (result.TotalRebuilt == 0)
+        {
+            LogAllProjectionsUpToDate();
+            return;
+        }
+
+        if (result.Success)
+        {
+            LogRebuildSucceeded(result.TotalRebuilt, result.Duration);
+        }
+        else
+        {
+            LogRebuildWithFailures(
+                result.TotalRebuilt,
+                result.Details.Count - result.TotalRebuilt,
+                string.Join(", ", result.FailedProjections));
+        }
+    }
+
+    private async Task RebuildAllProjectionsAsync(CancellationToken cancellationToken)
+    {
+        LogCheckingForRebuilds();
+
+        var result = await _projectionRebuilder.RebuildAllAsync(
+            forceRebuild: true,
             cancellationToken).ConfigureAwait(false);
 
         if (result.TotalRebuilt == 0)

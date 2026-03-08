@@ -49,6 +49,8 @@ Console.WriteLine($"  Courses:     {config.CourseCount:N0}");
 Console.WriteLine($"  Books:       {config.CourseBookCount:N0}");
 Console.WriteLine($"  Invoices:    {config.InvoiceCount:N0}");
 Console.WriteLine($"  Est. events: ~{config.EstimatedEventCount:N0}");
+Console.WriteLine($"    └ StudentDetails projection:  ~{config.EstimatedStudentDetailsEventCount:N0} events to rebuild");
+Console.WriteLine($"    └ CourseDetails projection:   ~{config.EstimatedCourseDetailsEventCount:N0} events to rebuild");
 Console.WriteLine($"  Reset:       {(config.ResetDatabase ? "YES" : "NO")}");
 Console.WriteLine($"  Writer:      {writerDescription}");
 Console.WriteLine();
@@ -210,11 +212,20 @@ static (SeedingConfiguration Config, bool PresetProvided) ParseArguments(string[
 
 static SeedingConfiguration RunInteractiveMenu()
 {
+    var presets = new[]
+    {
+        SeedingPresets.Small(),
+        SeedingPresets.Medium(),
+        SeedingPresets.Large(),
+        SeedingPresets.Prod()
+    };
+
     Console.WriteLine("Select a dataset size:");
-    Console.WriteLine("  [1] Small   ~620 events       — explore the data model");
-    Console.WriteLine("  [2] Medium  ~104 000 events   — growing business, a few months of data");
-    Console.WriteLine("  [3] Large   ~1 030 000 events — established platform, 1-3 years of data");
-    Console.WriteLine("  [4] Prod    ~5 150 000 events — large-scale performance testing");
+    for (var i = 0; i < presets.Length; i++)
+    {
+        var p = presets[i];
+        Console.WriteLine($"  [{i + 1}] {p.PresetName,-8} ~{p.EstimatedEventCount,14:N0} events  — {GetPresetDescription(p.PresetName)}");
+    }
     Console.WriteLine();
 
     while (true)
@@ -222,14 +233,23 @@ static SeedingConfiguration RunInteractiveMenu()
         Console.Write("Your choice (1-4): ");
         var choice = Console.ReadLine()?.Trim();
 
-        if (choice == "1") return SeedingPresets.Small();
-        if (choice == "2") return SeedingPresets.Medium();
-        if (choice == "3") return SeedingPresets.Large();
-        if (choice == "4") return SeedingPresets.Prod();
+        if (choice == "1") return presets[0];
+        if (choice == "2") return presets[1];
+        if (choice == "3") return presets[2];
+        if (choice == "4") return presets[3];
 
         Console.WriteLine("Please enter 1, 2, 3, or 4.");
     }
 }
+
+static string GetPresetDescription(string presetName) => presetName switch
+{
+    "Small"  => "explore the data model",
+    "Medium" => "growing business, a few months of data",
+    "Large"  => "established platform, 1-3 years of data",
+    "Prod"   => "large-scale performance testing",
+    _        => string.Empty
+};
 
 static void DisplayHelp()
 {

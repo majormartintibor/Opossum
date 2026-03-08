@@ -15,6 +15,7 @@ public class ParallelRebuildTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     public ParallelRebuildTests()
     {
@@ -42,13 +43,14 @@ public class ParallelRebuildTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
     public async Task RebuildAllAsync_WithNoProjections_ReturnsEmptyResultAsync()
     {
         // Act
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: false);
 
         // Assert
         Assert.Equal(0, result.TotalRebuilt);
@@ -71,7 +73,7 @@ public class ParallelRebuildTests : IDisposable
         await _projectionManager.SaveCheckpointAsync("TestProjection1", 100);
 
         // Act
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: false);
 
         // Assert
         Assert.Equal(1, result.TotalRebuilt); // Only TestProjection2 should rebuild
@@ -93,7 +95,7 @@ public class ParallelRebuildTests : IDisposable
         await _projectionManager.SaveCheckpointAsync("TestProjection2", 200);
 
         // Act
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: true);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: true);
 
         // Assert
         Assert.Equal(2, result.TotalRebuilt);
@@ -113,7 +115,7 @@ public class ParallelRebuildTests : IDisposable
         _projectionManager.RegisterProjection(projection3);
 
         // Act - Rebuild only projection1 and projection3
-        var result = await _projectionManager.RebuildAsync(
+        var result = await _projectionRebuilder.RebuildAsync(
             ["TestProjection1", "TestProjection3"]);
 
         // Assert
@@ -129,7 +131,7 @@ public class ParallelRebuildTests : IDisposable
     public async Task RebuildAsync_WithEmptyArray_ReturnsEmptyResultAsync()
     {
         // Act
-        var result = await _projectionManager.RebuildAsync([]);
+        var result = await _projectionRebuilder.RebuildAsync([]);
 
         // Assert
         Assert.Equal(0, result.TotalRebuilt);
@@ -142,14 +144,14 @@ public class ParallelRebuildTests : IDisposable
     {
         // Act & Assert
         await Assert.ThrowsAsync<ArgumentNullException>(
-            async () => await _projectionManager.RebuildAsync((string[])null!));
+            async () => await _projectionRebuilder.RebuildAsync((string[])null!));
     }
 
     [Fact]
     public async Task GetRebuildStatusAsync_WhenNotRebuilding_ReturnsFalseAsync()
     {
         // Act
-        var status = await _projectionManager.GetRebuildStatusAsync();
+        var status = await _projectionRebuilder.GetRebuildStatusAsync();
 
         // Assert
         Assert.False(status.IsRebuilding);
@@ -204,7 +206,7 @@ public class ParallelRebuildTests : IDisposable
         await _eventStore.AppendAsync([.. stream2Events], null);
 
         // Act
-        var result = await _projectionManager.RebuildAsync(["TestProjection1"]);
+        var result = await _projectionRebuilder.RebuildAsync(["TestProjection1"]);
 
         // Assert
         Assert.Single(result.Details);
@@ -226,7 +228,7 @@ public class ParallelRebuildTests : IDisposable
         _projectionManager.RegisterProjection(projection2);
 
         // Act
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: false);
 
         // Assert
         Assert.True(result.Duration > TimeSpan.Zero);

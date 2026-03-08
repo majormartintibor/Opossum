@@ -39,7 +39,7 @@ public class ProjectionFixture : IDisposable
         {
             options.PollingInterval = TimeSpan.FromSeconds(1); // Fast polling for tests
             options.BatchSize = 100;
-            options.EnableAutoRebuild = false; // Manual control in tests
+            options.AutoRebuild = AutoRebuildMode.None; // Manual control in tests
         });
 
         // Add logging for tests
