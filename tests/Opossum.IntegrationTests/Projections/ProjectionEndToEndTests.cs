@@ -33,7 +33,7 @@ public class ProjectionEndToEndTests : IDisposable
             options.ScanAssembly(typeof(ProjectionEndToEndTests).Assembly);
             options.PollingInterval = TimeSpan.FromMilliseconds(500); // Fast polling
             options.BatchSize = 100;
-            options.EnableAutoRebuild = true;
+            options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly;
         });
 
         services.AddLogging(builder =>

@@ -30,7 +30,7 @@ public class ProjectionManagerTests : IDisposable
 
         services.AddProjections(options =>
         {
-            options.EnableAutoRebuild = false;
+            options.AutoRebuild = AutoRebuildMode.None;
         });
 
         services.AddProjectionStore<PmTestItemState>("PmTestItems");
@@ -329,7 +329,7 @@ public class BatchedRebuildTests : IDisposable
 
         services.AddProjections(options =>
         {
-            options.EnableAutoRebuild = false;
+            options.AutoRebuild = AutoRebuildMode.None;
             options.RebuildBatchSize = SmallBatchSize;
         });
 

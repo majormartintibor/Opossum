@@ -40,16 +40,22 @@ internal sealed partial class ProjectionDaemon : BackgroundService
         // Wait a bit for application startup to complete
         await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken).ConfigureAwait(false);
 
-        // Auto-rebuild projections if enabled and checkpoints are missing
-        if (_options.EnableAutoRebuild)
-        {
-            // Resume any rebuilds that were interrupted by a crash or shutdown.
-            // This must run before RebuildMissingProjectionsAsync, which would otherwise
-            // detect a missing checkpoint and start a fresh rebuild — discarding the
-            // progress already written to the temp directory.
-            await _projectionRebuilder.ResumeInterruptedRebuildsAsync(stoppingToken).ConfigureAwait(false);
+        // Always resume interrupted rebuilds (crash recovery) — regardless of AutoRebuild mode.
+        // A manually-triggered rebuild that was interrupted by a crash must be recovered even
+        // when auto-rebuild is off.
+        await _projectionRebuilder.ResumeInterruptedRebuildsAsync(stoppingToken).ConfigureAwait(false);
 
-            await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
+        switch (_options.AutoRebuild)
+        {
+            case AutoRebuildMode.MissingCheckpointsOnly:
+                await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
+                break;
+            case AutoRebuildMode.ForceFullRebuild:
+                await RebuildAllProjectionsAsync(stoppingToken).ConfigureAwait(false);
+                break;
+            case AutoRebuildMode.None:
+            default:
+                break;
         }
 
         LogPollingStarted(_options.PollingInterval);
@@ -83,6 +89,33 @@ internal sealed partial class ProjectionDaemon : BackgroundService
         // Use the new RebuildAllAsync method (only rebuilds missing projections)
         var result = await _projectionRebuilder.RebuildAllAsync(
             forceRebuild: false,
+            cancellationToken).ConfigureAwait(false);
+
+        if (result.TotalRebuilt == 0)
+        {
+            LogAllProjectionsUpToDate();
+            return;
+        }
+
+        if (result.Success)
+        {
+            LogRebuildSucceeded(result.TotalRebuilt, result.Duration);
+        }
+        else
+        {
+            LogRebuildWithFailures(
+                result.TotalRebuilt,
+                result.Details.Count - result.TotalRebuilt,
+                string.Join(", ", result.FailedProjections));
+        }
+    }
+
+    private async Task RebuildAllProjectionsAsync(CancellationToken cancellationToken)
+    {
+        LogCheckingForRebuilds();
+
+        var result = await _projectionRebuilder.RebuildAllAsync(
+            forceRebuild: true,
             cancellationToken).ConfigureAwait(false);
 
         if (result.TotalRebuilt == 0)

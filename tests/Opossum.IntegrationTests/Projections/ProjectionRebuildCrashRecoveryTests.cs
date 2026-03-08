@@ -356,7 +356,7 @@ public class ProjectionRebuildCrashRecoveryTests : IDisposable
         services.AddProjections(options =>
         {
             options.ScanAssembly(typeof(ProjectionRebuildCrashRecoveryTests).Assembly);
-            options.EnableAutoRebuild = false; // We control rebuilds manually
+            options.AutoRebuild = AutoRebuildMode.None; // We control rebuilds manually
             configureProjections?.Invoke(options);
         });
 

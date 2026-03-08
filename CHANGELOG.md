@@ -45,6 +45,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was written to `Metadata/index.json` at commit time. The lazy metadata index handles
   missing `index.json` gracefully on first read after rebuild.
 
+- **`ProjectionOptions.EnableAutoRebuild` (bool) replaced by `AutoRebuild` (`AutoRebuildMode` enum) — ⚠️ breaking change.**
+  The boolean only supported two states (on/off). The new enum adds a third mode:
+  - `None` — daemon starts without triggering any rebuild (was `false`)
+  - `MissingCheckpointsOnly` — only projections with absent checkpoint files are rebuilt
+    on startup (was `true`; this remains the default)
+  - `ForceFullRebuild` — all projections are rebuilt from scratch on every startup
+    (new; useful for development iteration and post-migration scenarios)
+
+  Crash recovery (`ResumeInterruptedRebuildsAsync`) now runs unconditionally on daemon
+  startup, regardless of the `AutoRebuild` mode. Previously it was gated behind
+  `EnableAutoRebuild = true`, which meant manually-triggered rebuilds interrupted by a
+  crash were not resumed when auto-rebuild was disabled.
+
+  **Migration:** replace `"EnableAutoRebuild": true/false` in `appsettings.json` with
+  `"AutoRebuild": "MissingCheckpointsOnly"` / `"AutoRebuild": "None"`.
+  In code: `options.EnableAutoRebuild = true` → `options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly`.
+
 ### Removed
 
 - **`_rebuildStateBuffer` eliminated from `FileSystemProjectionStore`.**
@@ -78,6 +95,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `RebuildProjectionAsync`, `RebuildAllAsync`, `RebuildMissingProjectionsAsync`, and
   `ForceRebuildAllAsync`. Injected by `ProjectionDaemon` and available to application code
   (e.g. admin endpoints) for on-demand rebuilds.
+
+- **`AutoRebuildMode` enum** (`None`, `MissingCheckpointsOnly`, `ForceFullRebuild`).
+  Replaces the boolean `EnableAutoRebuild` property on `ProjectionOptions` with a
+  three-valued enum that unlocks force-rebuild-on-every-startup for development workflows.
 
 - **`RebuildFlushInterval` option on `ProjectionOptions`** (default: 10 000; range: 100–1 000 000).
   Controls how many events are processed between rebuild journal flushes. After every

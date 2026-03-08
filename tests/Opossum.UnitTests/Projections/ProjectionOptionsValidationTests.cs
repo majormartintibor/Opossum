@@ -17,7 +17,7 @@ public sealed class ProjectionOptionsValidationTests
             PollingInterval = TimeSpan.FromSeconds(5),
             BatchSize = 1000,
             MaxConcurrentRebuilds = 4,
-            EnableAutoRebuild = true
+            AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly
         };
 
         var validator = new ProjectionOptionsValidator();
@@ -259,9 +259,10 @@ public sealed class ProjectionOptionsValidationTests
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Validate_EnableAutoRebuild_AcceptsBothValues(bool enableAutoRebuild)
+    [InlineData(AutoRebuildMode.None)]
+    [InlineData(AutoRebuildMode.MissingCheckpointsOnly)]
+    [InlineData(AutoRebuildMode.ForceFullRebuild)]
+    public void Validate_AutoRebuild_AcceptsAllModes(AutoRebuildMode mode)
     {
         // Arrange
         var options = new ProjectionOptions
@@ -269,7 +270,7 @@ public sealed class ProjectionOptionsValidationTests
             PollingInterval = TimeSpan.FromSeconds(5),
             BatchSize = 1000,
             MaxConcurrentRebuilds = 4,
-            EnableAutoRebuild = enableAutoRebuild
+            AutoRebuild = mode
         };
 
         var validator = new ProjectionOptionsValidator();

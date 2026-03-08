@@ -14,7 +14,7 @@ public class ProjectionOptionsTests
         Assert.Equal(TimeSpan.FromSeconds(5), options.PollingInterval);
         Assert.Equal(1000, options.BatchSize);
         Assert.Equal(10_000, options.RebuildFlushInterval);
-        Assert.True(options.EnableAutoRebuild);
+        Assert.Equal(AutoRebuildMode.MissingCheckpointsOnly, options.AutoRebuild);
         Assert.NotNull(options.ScanAssemblies);
         Assert.Empty(options.ScanAssemblies);
     }
@@ -48,17 +48,17 @@ public class ProjectionOptionsTests
     }
 
     [Fact]
-    public void EnableAutoRebuild_CanBeSet()
+    public void AutoRebuild_CanBeSet()
     {
         // Arrange
         var options = new ProjectionOptions
         {
             // Act
-            EnableAutoRebuild = false
+            AutoRebuild = AutoRebuildMode.ForceFullRebuild
         };
 
         // Assert
-        Assert.False(options.EnableAutoRebuild);
+        Assert.Equal(AutoRebuildMode.ForceFullRebuild, options.AutoRebuild);
     }
 
     [Fact]

@@ -58,10 +58,10 @@ public sealed class ProjectionOptions
     public int RebuildFlushInterval { get; set; } = 10_000;
 
     /// <summary>
-    /// Enable automatic projection rebuilding on startup if checkpoint is missing
-    /// Default: true
+    /// Controls how the projection daemon handles projections at startup.
+    /// Default: <see cref="AutoRebuildMode.MissingCheckpointsOnly"/>
     /// </summary>
-    public bool EnableAutoRebuild { get; set; } = true;
+    public AutoRebuildMode AutoRebuild { get; set; } = AutoRebuildMode.MissingCheckpointsOnly;
 
     /// <summary>
     /// Maximum number of projections to rebuild concurrently.

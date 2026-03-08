@@ -27,7 +27,7 @@ Used for normal development and production:
   },
 
   "Projections": {
-    "EnableAutoRebuild": true,
+    "AutoRebuild": "MissingCheckpointsOnly",
     "MaxConcurrentRebuilds": 4,
     "PollingInterval": "00:00:01",
     "BatchSize": 50,
@@ -43,7 +43,7 @@ Automatically loaded when `ASPNETCORE_ENVIRONMENT=Testing`:
 ```json
 {
   "Projections": {
-    "EnableAutoRebuild": false
+    "AutoRebuild": "None"
   }
 }
 ```
@@ -69,7 +69,7 @@ Automatically loaded when `ASPNETCORE_ENVIRONMENT=Testing`:
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `EnableAutoRebuild` | bool | `true` | Auto-rebuild missing projections on startup |
+| `AutoRebuild` | `AutoRebuildMode` | `MissingCheckpointsOnly` | Controls startup rebuild behaviour: `None`, `MissingCheckpointsOnly`, or `ForceFullRebuild` |
 | `MaxConcurrentRebuilds` | int | `4` | Max projections to rebuild in parallel |
 | `PollingInterval` | TimeSpan | `"00:00:05"` | How often to poll for new events |
 | `BatchSize` | int | `1000` | Events to process per batch |
@@ -117,7 +117,7 @@ Create `appsettings.Production.json`:
     "RootPath": "/var/opossum/data"
   },
   "Projections": {
-    "EnableAutoRebuild": false,
+    "AutoRebuild": "None",
     "MaxConcurrentRebuilds": 8
   }
 }
@@ -132,12 +132,12 @@ Create `appsettings.Production.json`:
 ```bash
 # Windows PowerShell
 $env:Opossum__RootPath="C:\CustomPath"
-$env:Projections__EnableAutoRebuild="false"
+$env:Projections__AutoRebuild="None"
 dotnet run
 
 # Linux/Mac
 export Opossum__RootPath="/custom/path"
-export Projections__EnableAutoRebuild="false"
+export Projections__AutoRebuild="None"
 dotnet run
 ```
 
@@ -176,7 +176,7 @@ builder.ConfigureAppConfiguration((context, config) =>
 
 **Result:**
 1. `appsettings.json` loads with defaults
-2. `appsettings.Testing.json` overlays (sets `EnableAutoRebuild=false`)
+2. `appsettings.Testing.json` overlays (sets `AutoRebuild=None`)
 3. In-memory config overlays (sets `RootPath` to temp folder)
 
 ---
@@ -247,7 +247,7 @@ foreach (var kvp in builder.Configuration.AsEnumerable())
 **Before (Hardcoded):**
 ```csharp
 var rootPath = builder.Configuration["Opossum:RootPath"] ?? "D:\\Database";
-options.EnableAutoRebuild = !builder.Environment.IsEnvironment("Testing");
+options.AutoRebuild = builder.Environment.IsEnvironment("Testing") ? AutoRebuildMode.None : AutoRebuildMode.MissingCheckpointsOnly;
 ```
 
 **After (Configuration-Based):**
