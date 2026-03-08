@@ -829,7 +829,7 @@ public class EventStoreExtensionsTests
 
         public long? LastFromPosition { get; private set; }
 
-        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null)
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null)
         {
             LastQuery = query;
             LastReadOptions = readOptions;
@@ -861,7 +861,7 @@ public class EventStoreExtensionsTests
             return Task.CompletedTask;
         }
 
-        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null)
+        public Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null)
         {
             return Task.FromResult(Array.Empty<SequencedEvent>());
         }

@@ -89,7 +89,7 @@ This ensures invalid configurations are caught at **startup**, not runtime.
 - ✅ BatchSize valid range (1 - 100,000)
 - ✅ MaxConcurrentRebuilds too low/high
 - ✅ MaxConcurrentRebuilds valid range (1 - 64)
-- ✅ EnableAutoRebuild both values
+- ✅ AutoRebuild all enum values
 - ✅ Multiple invalid values
 
 **Total: 40 validation tests - ALL PASSING ✅**
@@ -109,7 +109,7 @@ This ensures invalid configurations are caught at **startup**, not runtime.
     "FlushEventsImmediately": true
   },
   "Projections": {
-    "EnableAutoRebuild": true,
+    "AutoRebuild": "MissingCheckpointsOnly",
     "MaxConcurrentRebuilds": 4,
     "PollingInterval": "00:00:01",
     "BatchSize": 50
@@ -196,7 +196,7 @@ ProjectionOptions validation failed:
 | `PollingInterval` | - Min: 100ms<br>- Max: 1 hour |
 | `BatchSize` | - Min: 1<br>- Max: 100,000 |
 | `MaxConcurrentRebuilds` | - Min: 1<br>- Max: 64 |
-| `EnableAutoRebuild` | - No validation (boolean) |
+| `AutoRebuild` | - No validation (enum; all values valid) |
 
 ---
 

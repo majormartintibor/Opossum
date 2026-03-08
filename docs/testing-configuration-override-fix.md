@@ -15,10 +15,10 @@ When using `WebApplicationFactory.WithWebHostBuilder().ConfigureAppConfiguration
 3. Configuration providers are evaluated when the builder is built, not when sources are added
 4. Timing race: Our override might be added AFTER Program.cs already read from configuration
 
-#### Why `EnableAutoRebuild` Worked But `RootPath` Didn't
+#### Why `AutoRebuild` Worked But `RootPath` Didn't
 
 In the previous attempt:
-- Used `builder.UseSetting("Projections:EnableAutoRebuild", "false")` → Worked ✅
+- Used `builder.UseSetting("Projections:AutoRebuild", "None")` → Worked ✅
 - Used `config.AddInMemoryCollection(["Opossum:RootPath"] = tempPath)` → Failed ❌
 
 **Reason:** `UseSetting()` adds to **host configuration** which has different precedence rules than **app configuration**. Host configuration is merged into the final configuration with higher priority.
@@ -73,7 +73,7 @@ builder.ConfigureServices((context, services) =>
     // 5. For ProjectionOptions, use PostConfigure (runs after all config)
     services.PostConfigure<ProjectionOptions>(options =>
     {
-        options.EnableAutoRebuild = false;
+        options.AutoRebuild = AutoRebuildMode.None;
     });
 });
 ```

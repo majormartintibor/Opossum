@@ -14,6 +14,7 @@ public class ParallelRebuildBenchmarks : IDisposable
     private string? _testStoragePath;
     private IEventStore? _eventStore;
     private IProjectionManager? _projectionManager;
+    private IProjectionRebuilder? _projectionRebuilder;
 
     [GlobalSetup]
     public void Setup()
@@ -41,6 +42,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
 
         // Register projections
         _projectionManager.RegisterProjection(new BenchProjection1());
@@ -68,17 +70,17 @@ public class ParallelRebuildBenchmarks : IDisposable
     public async Task SequentialRebuild_4ProjectionsAsync()
     {
         // Rebuild each projection one at a time
-        await _projectionManager!.RebuildAsync("BenchProjection1");
-        await _projectionManager.RebuildAsync("BenchProjection2");
-        await _projectionManager.RebuildAsync("BenchProjection3");
-        await _projectionManager.RebuildAsync("BenchProjection4");
+        await _projectionRebuilder!.RebuildAsync("BenchProjection1");
+        await _projectionRebuilder.RebuildAsync("BenchProjection2");
+        await _projectionRebuilder.RebuildAsync("BenchProjection3");
+        await _projectionRebuilder.RebuildAsync("BenchProjection4");
     }
 
     [Benchmark]
     public async Task ParallelRebuild_4Projections_Concurrency4Async()
     {
         // Rebuild all at once with MaxConcurrentRebuilds = 4
-        await _projectionManager!.RebuildAllAsync(forceRebuild: true);
+        await _projectionRebuilder!.RebuildAllAsync(forceRebuild: true);
     }
 
     [Benchmark]
@@ -102,6 +104,7 @@ public class ParallelRebuildBenchmarks : IDisposable
 
         using var sp = services.BuildServiceProvider();
         var pm = sp.GetRequiredService<IProjectionManager>();
+        var rebuilder = sp.GetRequiredService<IProjectionRebuilder>();
 
         // Register projections
         pm.RegisterProjection(new BenchProjection1());
@@ -109,7 +112,7 @@ public class ParallelRebuildBenchmarks : IDisposable
         pm.RegisterProjection(new BenchProjection3());
         pm.RegisterProjection(new BenchProjection4());
 
-        await pm.RebuildAllAsync(forceRebuild: true);
+        await rebuilder.RebuildAllAsync(forceRebuild: true);
     }
 
     private NewEvent CreateEvent<T>() where T : IEvent, new()

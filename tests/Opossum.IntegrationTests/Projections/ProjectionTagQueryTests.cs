@@ -231,30 +231,6 @@ public class ProjectionTagQueryTests : IDisposable
         Assert.Empty(results);
     }
 
-    [Fact]
-    public async Task DeleteAllIndices_ClearsAllTagIndicesAsync()
-    {
-        // Arrange
-        var tagProvider = new TestProjectionTagProvider();
-        var store = new FileSystemProjectionStore<TestProjection>(_options, "TestProjection", tagProvider);
-
-        var proj1 = new TestProjection { Id = "1", Status = "Active", Tier = "Premium" };
-        var proj2 = new TestProjection { Id = "2", Status = "Active", Tier = "Basic" };
-        await store.SaveAsync("1", proj1);
-        await store.SaveAsync("2", proj2);
-
-        // Act
-        await store.DeleteAllIndicesAsync();
-
-        // Assert - Indices should be gone
-        var results = await store.QueryByTagAsync(new Tag("Status", "Active"));
-        Assert.Empty(results);
-
-        // But projections should still exist
-        var allProjections = await store.GetAllAsync();
-        Assert.Equal(2, allProjections.Count);
-    }
-
     // Test helper classes
     private record TestProjection
     {

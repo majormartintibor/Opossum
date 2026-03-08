@@ -16,6 +16,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     public ProjectionWithRelatedEventsTests()
     {
@@ -40,6 +41,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
@@ -70,7 +72,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
         await _eventStore.AppendAsync([postCreatedEvent], null);
 
         // Rebuild projection
-        await _projectionManager.RebuildAsync("PostsWithAuthor");
+        await _projectionRebuilder.RebuildAsync("PostsWithAuthor");
 
         // Assert
         var store = _serviceProvider.GetRequiredService<IProjectionStore<PostWithAuthorState>>();
@@ -104,9 +106,10 @@ public class ProjectionWithRelatedEventsTests : IDisposable
 
         await _eventStore.AppendAsync([postCreatedEvent], null);
 
-        // Assert - Should throw when related event not found
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _projectionManager.RebuildAsync("PostsWithAuthor"));
+        // Assert - Should return a failed result when related event not found
+        var result = await _projectionRebuilder.RebuildAsync("PostsWithAuthor");
+        Assert.False(result.Success);
+        Assert.Equal(0, result.TotalRebuilt);
     }
 
     [Fact]
@@ -145,7 +148,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
         await _eventStore.AppendAsync([postCreatedEvent], null);
 
         // Rebuild projection
-        await _projectionManager.RebuildAsync("PostsWithAuthor");
+        await _projectionRebuilder.RebuildAsync("PostsWithAuthor");
 
         // Assert - Should use updated name
         var store = _serviceProvider.GetRequiredService<IProjectionStore<PostWithAuthorState>>();
@@ -183,8 +186,9 @@ public class ProjectionWithRelatedEventsTests : IDisposable
         await _eventStore.AppendAsync([postTitleChangedEvent], null);
 
         // This should fail during rebuild when processing PostCreatedEvent
-        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _projectionManager.RebuildAsync("PostsWithAuthor"));
+        var result = await _projectionRebuilder.RebuildAsync("PostsWithAuthor");
+        Assert.False(result.Success);
+        Assert.Equal(0, result.TotalRebuilt);
     }
 
     [Fact]
@@ -242,7 +246,7 @@ public class ProjectionWithRelatedEventsTests : IDisposable
         await _eventStore.AppendAsync([orderCreatedEvent, item1AddedEvent, item2AddedEvent], null);
 
         // Rebuild projection
-        await _projectionManager.RebuildAsync("OrderSummary");
+        await _projectionRebuilder.RebuildAsync("OrderSummary");
 
         // Assert
         var store = _serviceProvider.GetRequiredService<IProjectionStore<OrderSummaryState>>();

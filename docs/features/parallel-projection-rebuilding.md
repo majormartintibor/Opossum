@@ -51,7 +51,7 @@ Add support for **parallel projection rebuilding** to significantly improve rebu
 - Wastes available parallelism
 
 **Production Concerns:**
-- `EnableAutoRebuild = true` blocks app startup for 2+ minutes
+- `AutoRebuild = MissingCheckpointsOnly` blocks app startup for 2+ minutes
 - No control over rebuild timing
 - No progress visibility
 - No manual rebuild API for bug fixes
@@ -79,7 +79,7 @@ Add support for **parallel projection rebuilding** to significantly improve rebu
 // appsettings.Development.json
 builder.Services.AddProjections(options =>
 {
-    options.EnableAutoRebuild = true;
+    options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly;
     options.MaxConcurrentRebuilds = 4; // Use 4 cores
 });
 ```
@@ -99,7 +99,7 @@ builder.Services.AddProjections(options =>
 // appsettings.Production.json
 builder.Services.AddProjections(options =>
 {
-    options.EnableAutoRebuild = false; // Manual control
+    options.AutoRebuild = AutoRebuildMode.None; // Manual control
     options.MaxConcurrentRebuilds = 2; // Limit resource usage
 });
 ```
@@ -192,12 +192,12 @@ public class ProjectionOptions
     /// <summary>
     /// Automatically rebuild missing projections on application startup.
     /// 
-    /// DEVELOPMENT: Set to true for fast iteration.
-    /// PRODUCTION: Set to false and use manual rebuild API.
+    /// DEVELOPMENT: Set to MissingCheckpointsOnly for fast iteration.
+    /// PRODUCTION: Set to None and use manual rebuild API.
     /// 
-    /// Default: true (optimized for development)
+    /// Default: MissingCheckpointsOnly (optimized for development)
     /// </summary>
-    public bool EnableAutoRebuild { get; set; } = true;
+    public AutoRebuildMode AutoRebuild { get; set; } = AutoRebuildMode.MissingCheckpointsOnly;
 
     /// <summary>
     /// Maximum number of projections to rebuild concurrently.
@@ -994,9 +994,9 @@ app.MapProjectionAdminEndpoints();
 //
 // CONFIGURATION OPTIONS:
 //
-// 1. EnableAutoRebuild (default: true)
-//    - Development: Keep true for fast iteration
-//    - Production: Set to false, use admin API for controlled rebuilds
+// 1. AutoRebuild (default: MissingCheckpointsOnly)
+//    - Development: Keep MissingCheckpointsOnly for fast iteration
+//    - Production: Set to None, use admin API for controlled rebuilds
 //
 // 2. MaxConcurrentRebuilds (default: 4)
 //    - Controls how many projections rebuild simultaneously
@@ -1021,8 +1021,8 @@ builder.Services.AddProjections(options =>
     options.ScanAssembly(typeof(Program).Assembly);
 
     // Auto-rebuild missing projections on startup
-    // Set to false in production and use POST /admin/projections/rebuild
-    options.EnableAutoRebuild = true;
+    // Set to None in production and use POST /admin/projections/rebuild
+    options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly;
 
     // Rebuild up to 4 projections concurrently
     // With 4 projections in this sample app, all rebuild simultaneously
@@ -1257,7 +1257,7 @@ By default, projections with missing checkpoints are automatically rebuilt on ap
 ```csharp
 builder.Services.AddProjections(options =>
 {
-    options.EnableAutoRebuild = true; // Default
+    options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly; // Default
     options.MaxConcurrentRebuilds = 4; // Rebuild 4 at once
 });
 ```
@@ -1269,7 +1269,7 @@ In production, disable auto-rebuild and use the admin API:
 ```csharp
 builder.Services.AddProjections(options =>
 {
-    options.EnableAutoRebuild = false;
+    options.AutoRebuild = AutoRebuildMode.None;
 });
 ```
 
@@ -1434,7 +1434,7 @@ public async Task ParallelRebuild_4Projections_10000Events_Concurrency8()
 builder.Services.AddProjections(options =>
 {
     options.ScanAssembly(typeof(Program).Assembly);
-    options.EnableAutoRebuild = true;
+    options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly;
     options.MaxConcurrentRebuilds = 4; // ← NEW (defaults to 4 if not set)
 });
 ```
@@ -1451,7 +1451,7 @@ if (builder.Environment.IsProduction())
 {
     builder.Services.AddProjections(options =>
     {
-        options.EnableAutoRebuild = false; // Use manual API
+        options.AutoRebuild = AutoRebuildMode.None; // Use manual API
     });
 }
 ```
@@ -1563,7 +1563,7 @@ Use this checklist to track progress:
 3. **Non-blocking background rebuilds**
    - App serves requests during rebuild
    - Performance degradation is acceptable (development)
-   - Production should use `EnableAutoRebuild = false`
+   - Production should use `AutoRebuild = AutoRebuildMode.None`
 
 4. **Partial failure handling**
    - 1 failed projection doesn't stop others

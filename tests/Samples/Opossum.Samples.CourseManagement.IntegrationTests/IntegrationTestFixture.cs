@@ -58,7 +58,7 @@ public class IntegrationTestFixture : IDisposable
                     // Override ProjectionOptions using PostConfigure (runs after all other configuration)
                     services.PostConfigure<ProjectionOptions>(options =>
                     {
-                        options.EnableAutoRebuild = false;
+                        options.AutoRebuild = AutoRebuildMode.None;
                     });
                 });
             });

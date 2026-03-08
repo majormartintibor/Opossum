@@ -221,7 +221,7 @@ var status = await projectionManager.GetRebuildStatusAsync();
 - Configurable for different disk types (HDD: 2-4, SSD: 4-8, NVMe: 8-16)
 
 ### Production-Ready
-- Manual rebuild API (`EnableAutoRebuild = false`)
+- Manual rebuild API (`AutoRebuild = AutoRebuildMode.None`)
 - Real-time status monitoring
 - Detailed result tracking
 - Graceful error handling
