@@ -140,6 +140,7 @@
     <File Path="docs/future-plans/0.3.0-preview.1-roadmap.md" />
     <File Path="docs/future-plans/0.4.0-roadmap.md" />
     <File Path="docs/future-plans/0.5.0-roadmap.md" />
+    <File Path="docs/future-plans/0.6.0-roadmap.md" />
     <File Path="docs/future-plans/batched-flush-redesign-plan.md" />
     <File Path="docs/future-plans/docfx-documentation-website.md" />
   </Folder>
@@ -190,6 +191,10 @@
     <File Path="docs/releases/0.4.0-preview.2-tasks.md" />
     <File Path="docs/releases/0.4.0-preview.3-tasks.md" />
     <File Path="docs/releases/0.4.1-preview.1-tasks.md" />
+    <File Path="docs/releases/0.5.0-corrupt-ledger-tasks.md" />
+    <File Path="docs/releases/0.5.0-crash-recovery-tasks.md" />
+    <File Path="docs/releases/0.5.0-log-read-error-tasks.md" />
+    <File Path="docs/releases/0.5.0-preview.1-autorebuildmode-tasks.md" />
     <File Path="docs/releases/automated-release-guide.md" />
   </Folder>
   <Folder Name="/docs/specifications/">
