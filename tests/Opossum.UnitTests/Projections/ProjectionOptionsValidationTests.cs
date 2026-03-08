@@ -285,6 +285,79 @@ public sealed class ProjectionOptionsValidationTests
     [InlineData(0)]
     [InlineData(99)]
     [InlineData(-1)]
+    public void Validate_RebuildFlushIntervalTooLow_ReturnsFail(int rebuildFlushInterval)
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            PollingInterval = TimeSpan.FromSeconds(5),
+            BatchSize = 1000,
+            MaxConcurrentRebuilds = 4,
+            RebuildFlushInterval = rebuildFlushInterval
+        };
+
+        var validator = new ProjectionOptionsValidator();
+
+        // Act
+        var result = validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Failed);
+        Assert.Contains("at least 100", string.Join(", ", result.Failures));
+    }
+
+    [Fact]
+    public void Validate_RebuildFlushIntervalTooHigh_ReturnsFail()
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            PollingInterval = TimeSpan.FromSeconds(5),
+            BatchSize = 1000,
+            MaxConcurrentRebuilds = 4,
+            RebuildFlushInterval = 1_000_001
+        };
+
+        var validator = new ProjectionOptionsValidator();
+
+        // Act
+        var result = validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Failed);
+        Assert.Contains("at most 1,000,000", string.Join(", ", result.Failures));
+    }
+
+    [Theory]
+    [InlineData(100)]
+    [InlineData(1_000)]
+    [InlineData(10_000)]
+    [InlineData(50_000)]
+    [InlineData(1_000_000)]
+    public void Validate_RebuildFlushIntervalValidRange_ReturnsSuccess(int rebuildFlushInterval)
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            PollingInterval = TimeSpan.FromSeconds(5),
+            BatchSize = 1000,
+            MaxConcurrentRebuilds = 4,
+            RebuildFlushInterval = rebuildFlushInterval
+        };
+
+        var validator = new ProjectionOptionsValidator();
+
+        // Act
+        var result = validator.Validate(null, options);
+
+        // Assert
+        Assert.True(result.Succeeded);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(99)]
+    [InlineData(-1)]
     public void Validate_RebuildBatchSizeTooLow_ReturnsFail(int rebuildBatchSize)
     {
         // Arrange

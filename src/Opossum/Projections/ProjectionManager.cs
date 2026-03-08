@@ -355,6 +355,25 @@ internal sealed partial class ProjectionManager : IProjectionManager
         public abstract Task BeginRebuildAsync(string tempPath);
 
         public abstract Task CommitRebuildAsync(CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Returns the path to the temporary directory used during an active rebuild,
+        /// or <c>null</c> if the store is not in rebuild mode.
+        /// </summary>
+        public abstract string? GetRebuildTempPath();
+
+        /// <summary>
+        /// Returns the in-memory tag accumulator used during an active rebuild,
+        /// or <c>null</c> if the store is not in rebuild mode or has no tag provider.
+        /// </summary>
+        public abstract Dictionary<string, HashSet<string>>? GetTagAccumulator();
+
+        /// <summary>
+        /// Restores a previously persisted tag accumulator snapshot into the store.
+        /// Must be called after <see cref="BeginRebuildAsync(string)"/> and before the
+        /// event replay loop starts during crash recovery.
+        /// </summary>
+        public abstract void RestoreTagAccumulator(Dictionary<string, HashSet<string>> tagAccumulator);
     }
 
     internal sealed class ProjectionRegistration<TState> : ProjectionRegistration where TState : class
@@ -440,6 +459,28 @@ internal sealed partial class ProjectionManager : IProjectionManager
             if (_store is FileSystemProjectionStore<TState> fsStore)
             {
                 await fsStore.CommitRebuildAsync(cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        public override string? GetRebuildTempPath()
+        {
+            return _store is FileSystemProjectionStore<TState> fsStore
+                ? fsStore.RebuildTempPath
+                : null;
+        }
+
+        public override Dictionary<string, HashSet<string>>? GetTagAccumulator()
+        {
+            return _store is FileSystemProjectionStore<TState> fsStore
+                ? fsStore.TagAccumulator
+                : null;
+        }
+
+        public override void RestoreTagAccumulator(Dictionary<string, HashSet<string>> tagAccumulator)
+        {
+            if (_store is FileSystemProjectionStore<TState> fsStore)
+            {
+                fsStore.RestoreTagAccumulator(tagAccumulator);
             }
         }
     }

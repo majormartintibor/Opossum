@@ -608,6 +608,35 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     }
 
     /// <summary>
+    /// Returns the current rebuild temp directory path, or <c>null</c> if not in rebuild mode.
+    /// Used by <see cref="ProjectionRebuilder"/> to persist the journal with the correct temp path.
+    /// </summary>
+    internal string? RebuildTempPath => _rebuildTempPath;
+
+    /// <summary>
+    /// Returns the current in-memory tag accumulator, or <c>null</c> if not in rebuild mode.
+    /// Used by <see cref="ProjectionRebuilder"/> to periodically flush the tag accumulator
+    /// alongside the rebuild journal for crash recovery.
+    /// </summary>
+    internal Dictionary<string, HashSet<string>>? TagAccumulator => _tagAccumulator;
+
+    /// <summary>
+    /// Replaces the current (empty) tag accumulator with a previously persisted snapshot.
+    /// Must be called after <see cref="BeginRebuild(string)"/> and before the event replay
+    /// loop starts, so that tags for events processed before the crash are preserved.
+    /// </summary>
+    /// <param name="tagAccumulator">The tag accumulator loaded from the companion file.</param>
+    internal void RestoreTagAccumulator(Dictionary<string, HashSet<string>> tagAccumulator)
+    {
+        ArgumentNullException.ThrowIfNull(tagAccumulator);
+
+        if (!_isInRebuild)
+            throw new InvalidOperationException("Cannot restore tag accumulator outside of rebuild mode");
+
+        _tagAccumulator = tagAccumulator;
+    }
+
+    /// <summary>
     /// Writes tag index files from the in-memory <c>_tagAccumulator</c> to the temp directory,
     /// then atomically swaps the temp directory into the production path.
     /// Projection state files have already been written during event replay (write-through),

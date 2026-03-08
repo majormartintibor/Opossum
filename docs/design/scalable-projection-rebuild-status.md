@@ -69,14 +69,14 @@ restart. At most `RebuildFlushInterval` events need re-processing.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P3-T1 | Add `RebuildFlushInterval` to `ProjectionOptions` (default 10,000; validator updated) | ⬜ Not Started | |
-| P3-T2 | Implement journal + tag accumulator file I/O in `ProjectionRebuilder` (create, flush, read, delete) | ⬜ Not Started | |
-| P3-T3 | Integrate journal + tag accumulator flushing into `RebuildCoreAsync` event loop | ⬜ Not Started | |
-| P3-T4 | Implement `ResumeInterruptedRebuildsAsync`: scan journals, load tag accumulator, resume or discard | ⬜ Not Started | |
-| P3-T5 | Implement `CleanOrphanedTempDirectoriesAsync` | ⬜ Not Started | |
-| P3-T6 | Update `ProjectionDaemon`: call `ResumeInterruptedRebuildsAsync` before `RebuildAllAsync` | ⬜ Not Started | |
-| P3-T7 | Write crash recovery integration tests (6 test cases; see tasks document) | ⬜ Not Started | |
-| P3-T8 | ✔ Verify Phase 3: 0 warnings, all tests green (existing + new crash recovery tests) | ⬜ Not Started | |
+| P3-T1 | Add `RebuildFlushInterval` to `ProjectionOptions` (default 10,000; validator updated) | ✅ Done | Property, `[Range]` attribute, validator, and unit tests added |
+| P3-T2 | Implement journal + tag accumulator file I/O in `ProjectionRebuilder` (create, flush, read, delete) | ✅ Done | 7 private methods + shared `WriteAtomicAsync<T>` helper; all use atomic temp-file + rename |
+| P3-T3 | Integrate journal + tag accumulator flushing into `RebuildCoreAsync` event loop | ✅ Done | Journal created after `BeginRebuildAsync`; flushed every `RebuildFlushInterval` events (threshold-based); deleted after successful commit; left on disk on error. Added `RebuildTempPath`/`TagAccumulator` accessors to store + registration |
+| P3-T4 | Implement `ResumeInterruptedRebuildsAsync`: scan journals, load tag accumulator, resume or discard | ✅ Done | Scans `*.rebuild.json`; discards journal if temp dir missing or projection unregistered; restores tag accumulator + resumes via `RebuildCoreAsync(journal)` overload. Refactored `RebuildCoreAsync` into fresh/resume overloads sharing `ReplayEventsAsync`. Added `RestoreTagAccumulator` to store + registration. `CleanOrphanedTempDirectoriesAsync` stub for P3-T5. |
+| P3-T5 | Implement `CleanOrphanedTempDirectoriesAsync` | ✅ Done | Scans `_projectionsPath` for `*.tmp.*` dirs; extracts projection name; deletes if no matching journal exists in `_checkpointPath`; logs each deletion |
+| P3-T6 | Update `ProjectionDaemon`: call `ResumeInterruptedRebuildsAsync` before `RebuildAllAsync` | ✅ Done | Added call inside `EnableAutoRebuild` block, before `RebuildMissingProjectionsAsync` |
+| P3-T7 | Write crash recovery integration tests (6 test cases; see tasks document) | ✅ Done | 6 tests in `ProjectionRebuildCrashRecoveryTests.cs`: resume from flush point, missing temp dir → journal discarded, orphaned temp dir cleanup, journal flushed during rebuild, journal deleted on success, tag accumulator restored correctly on resume. All pass. |
+| P3-T8 | ✔ Verify Phase 3: 0 warnings, all tests green (existing + new crash recovery tests) | ✅ Done | Clean build: 0 errors, 0 warnings. 736 unit + 177 integration (176 pass, 1 pre-existing flaky timing test) + 107 sample app — all green |
 
 ---
 

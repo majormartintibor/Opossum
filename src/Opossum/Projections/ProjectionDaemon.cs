@@ -43,6 +43,12 @@ internal sealed partial class ProjectionDaemon : BackgroundService
         // Auto-rebuild projections if enabled and checkpoints are missing
         if (_options.EnableAutoRebuild)
         {
+            // Resume any rebuilds that were interrupted by a crash or shutdown.
+            // This must run before RebuildMissingProjectionsAsync, which would otherwise
+            // detect a missing checkpoint and start a fresh rebuild — discarding the
+            // progress already written to the temp directory.
+            await _projectionRebuilder.ResumeInterruptedRebuildsAsync(stoppingToken).ConfigureAwait(false);
+
             await RebuildMissingProjectionsAsync(stoppingToken).ConfigureAwait(false);
         }
 

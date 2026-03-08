@@ -13,6 +13,7 @@ public class ProjectionOptionsTests
         // Assert
         Assert.Equal(TimeSpan.FromSeconds(5), options.PollingInterval);
         Assert.Equal(1000, options.BatchSize);
+        Assert.Equal(10_000, options.RebuildFlushInterval);
         Assert.True(options.EnableAutoRebuild);
         Assert.NotNull(options.ScanAssemblies);
         Assert.Empty(options.ScanAssemblies);
@@ -159,5 +160,33 @@ public class ProjectionOptionsTests
 
         // Assert
         Assert.Equal(1, options.MaxConcurrentRebuilds);
+    }
+
+    [Fact]
+    public void RebuildFlushInterval_DefaultValue_IsTenThousand()
+    {
+        // Arrange & Act
+        var options = new ProjectionOptions();
+
+        // Assert
+        Assert.Equal(10_000, options.RebuildFlushInterval);
+    }
+
+    [Theory]
+    [InlineData(100)]
+    [InlineData(1_000)]
+    [InlineData(10_000)]
+    [InlineData(50_000)]
+    [InlineData(1_000_000)]
+    public void RebuildFlushInterval_CanBeConfigured(int value)
+    {
+        // Arrange
+        var options = new ProjectionOptions
+        {
+            RebuildFlushInterval = value
+        };
+
+        // Assert
+        Assert.Equal(value, options.RebuildFlushInterval);
     }
 }

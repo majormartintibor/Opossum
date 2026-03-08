@@ -40,6 +40,24 @@ public sealed class ProjectionOptions
     public int RebuildBatchSize { get; set; } = 5_000;
 
     /// <summary>
+    /// Number of events processed between rebuild journal flushes.
+    ///
+    /// Controls the maximum re-work required on crash recovery.
+    /// After every <c>RebuildFlushInterval</c> events the rebuilder persists
+    /// a journal checkpoint and the current tag accumulator to disk.
+    /// If the process crashes, at most this many events need to be re-processed.
+    ///
+    /// GUIDANCE:
+    /// - Lower values = more durable, but more journal write overhead
+    /// - Higher values = less journal overhead, but more re-work on recovery
+    /// - Very low values (&lt;1 000) may noticeably slow down rebuilds due to frequent I/O
+    ///
+    /// Default: 10 000
+    /// </summary>
+    [Range(100, 1_000_000, ErrorMessage = "RebuildFlushInterval must be between 100 and 1,000,000")]
+    public int RebuildFlushInterval { get; set; } = 10_000;
+
+    /// <summary>
     /// Enable automatic projection rebuilding on startup if checkpoint is missing
     /// Default: true
     /// </summary>
