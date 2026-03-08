@@ -193,6 +193,7 @@
     <File Path="docs/releases/0.4.0-preview.2-tasks.md" />
     <File Path="docs/releases/0.4.0-preview.3-tasks.md" />
     <File Path="docs/releases/0.4.1-preview.1-tasks.md" />
+    <File Path="docs/releases/0.5.0-preview.1-autorebuildmode-tasks.md" />
     <File Path="docs/releases/automated-release-guide.md" />
   </Folder>
   <Folder Name="/docs/specifications/">

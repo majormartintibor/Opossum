@@ -1,7 +1,7 @@
 # Scalable Projection Rebuild Architecture
 
 > **Status:** Design Complete — Approved for Implementation
-> **Target version:** 0.6.0
+> **Target version:** 0.5.0-preview.1
 > **Tasks document:** docs/design/scalable-projection-rebuild-tasks.md
 > **Status tracker:** docs/design/scalable-projection-rebuild-status.md
 > **Created:** 2026-03
@@ -703,7 +703,8 @@ One new option is added to `ProjectionOptions`:
 Valid range: 100 – 1,000,000.
 
 Existing options unchanged: `RebuildBatchSize`, `MaxConcurrentRebuilds`, `PollingInterval`,
-`BatchSize`, `EnableAutoRebuild`.
+`BatchSize`, `AutoRebuild` (formerly `EnableAutoRebuild` — see
+docs/releases/0.5.0-preview.1-autorebuildmode-tasks.md for the enum migration).
 
 ---
 

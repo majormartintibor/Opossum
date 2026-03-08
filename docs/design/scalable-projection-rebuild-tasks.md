@@ -2,7 +2,7 @@
 
 > **Architecture document:** docs/design/scalable-projection-rebuild-architecture.md
 > **Status tracker:** docs/design/scalable-projection-rebuild-status.md
-> **Target version:** 0.6.0
+> **Target version:** 0.5.0-preview.1
 
 ---
 

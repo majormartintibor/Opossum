@@ -2,7 +2,7 @@
 
 > **Architecture document:** docs/design/scalable-projection-rebuild-architecture.md
 > **Tasks document:** docs/design/scalable-projection-rebuild-tasks.md
-> **Target version:** 0.6.0
+> **Target version:** 0.5.0-preview.1
 
 This document is the single source of truth for tracking progress across implementation
 sessions. Update the Status and Notes columns as work proceeds.
@@ -140,9 +140,9 @@ of scope for this implementation. They should be tracked as separate future item
 
 | Issue | Reason excluded | Suggested target |
 |-------|----------------|-----------------|
-| `ProjectionMetadataIndex._cache` grows unbounded in normal operation (not rebuild) | Not part of the rebuild scaling problem; separate concern | 0.7.0 |
-| Tag accumulator memory at extreme tag counts (10+ tags × 1M+ keys) | Acceptable for now; in-memory accumulation is ~360 MB for 10 tags × 1M keys | 0.7.0 |
-| Parallel writes in `GetAllAsync` threshold (magic number 10) | Pre-existing issue tracked in 0.5.0 roadmap | 0.5.0 |
+| `ProjectionMetadataIndex._cache` grows unbounded in normal operation (not rebuild) | Not part of the rebuild scaling problem; separate concern | Post-0.5.0 |
+| Tag accumulator memory at extreme tag counts (10+ tags × 1M+ keys) | Acceptable for now; in-memory accumulation is ~360 MB for 10 tags × 1M keys | Post-0.5.0 |
+| Parallel writes in `GetAllAsync` threshold (magic number 10) | Pre-existing issue | Post-0.5.0 |
 
 ---
 
