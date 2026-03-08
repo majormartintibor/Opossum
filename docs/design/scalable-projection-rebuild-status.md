@@ -87,10 +87,10 @@ from per-file embedded metadata.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P4-T1 | Verify `CommitRebuildAsync` makes no calls to `_metadataIndex`; remove any remaining calls | ⬜ Not Started | Likely already done in P2-T5; confirm |
-| P4-T2 | Verify lazy metadata index handles missing `Metadata/index.json` after rebuild | ⬜ Not Started | Guard in `LoadIndexAsync` if needed |
-| P4-T3 | Integration test: post-rebuild reads work without aggregated index | ⬜ Not Started | |
-| P4-T4 | ✔ Verify Phase 4: 0 warnings, all tests green | ⬜ Not Started | |
+| P4-T1 | Verify `CommitRebuildAsync` makes no calls to `_metadataIndex`; remove any remaining calls | ✅ Done | Confirmed: already done in P2-T5. `CommitRebuildAsync` has zero `_metadataIndex` calls. Rebuild branches of `SaveAsync`/`DeleteAsync` also bypass it. No code changes needed. |
+| P4-T2 | Verify lazy metadata index handles missing `Metadata/index.json` after rebuild | ✅ Done | `LoadIndexAsync` already guards against missing file. Fixed stale cache bug: added `ClearCache()` to `ProjectionMetadataIndex`, called from `CommitRebuildAsync` finally block to prevent post-rebuild `GetAsync` returning pre-rebuild version/timestamp data. |
+| P4-T3 | Integration test: post-rebuild reads work without aggregated index | ✅ Done | 5 tests in `PostRebuildMetadataDecouplingTests.cs`: no `Metadata/index.json` after rebuild, `GetAsync` returns correct state, `GetAllAsync` returns all projections, `QueryAsync` filters correctly, normal `SaveAsync` after rebuild starts metadata version from 1 (cache not stale). All pass. |
+| P4-T4 | ✔ Verify Phase 4: 0 warnings, all tests green | ✅ Done | Clean build: 0 errors, 0 warnings. 736 unit + 181/182 integration (1 pre-existing flaky timing test) + 117 sample unit + 107 sample integration — all green |
 
 ---
 

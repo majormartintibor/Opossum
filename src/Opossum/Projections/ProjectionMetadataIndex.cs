@@ -182,6 +182,15 @@ internal sealed class ProjectionMetadataIndex
     }
 
     /// <summary>
+    /// Clears the in-memory metadata cache without touching disk.
+    /// Called after a projection rebuild to discard stale entries, because the
+    /// aggregated <c>Metadata/index.json</c> no longer exists in the swapped-in directory.
+    /// The next <see cref="GetAsync"/> call will fall through to <see cref="LoadIndexAsync"/>,
+    /// which handles a missing index file gracefully.
+    /// </summary>
+    internal void ClearCache() => _cache.Clear();
+
+    /// <summary>
     /// Loads the metadata index from disk into cache.
     /// </summary>
     private async Task LoadIndexAsync(string projectionPath)

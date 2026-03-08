@@ -702,6 +702,11 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
             _isInRebuild = false;
             _rebuildTempPath = null;
             _tagAccumulator = null;
+
+            // Discard stale metadata cache — the aggregated Metadata/index.json was in the
+            // old directory and does not exist in the rebuilt directory.  Without this,
+            // subsequent SaveAsync calls would read stale version/timestamp data from cache.
+            _metadataIndex.ClearCache();
         }
     }
 
