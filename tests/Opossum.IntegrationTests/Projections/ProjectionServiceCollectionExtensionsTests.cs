@@ -36,6 +36,7 @@ public class ProjectionServiceCollectionExtensionsTests : IDisposable
         // Assert
         Assert.NotNull(serviceProvider.GetService<ProjectionOptions>());
         Assert.NotNull(serviceProvider.GetService<IProjectionManager>());
+        Assert.NotNull(serviceProvider.GetService<IProjectionRebuilder>());
     }
 
     [Fact]

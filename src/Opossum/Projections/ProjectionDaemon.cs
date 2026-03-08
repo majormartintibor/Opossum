@@ -8,22 +8,26 @@ namespace Opossum.Projections;
 internal sealed partial class ProjectionDaemon : BackgroundService
 {
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
     private readonly IEventStore _eventStore;
     private readonly ProjectionOptions _options;
     private readonly ILogger<ProjectionDaemon> _logger;
 
     public ProjectionDaemon(
         IProjectionManager projectionManager,
+        IProjectionRebuilder projectionRebuilder,
         IEventStore eventStore,
         ProjectionOptions options,
         ILogger<ProjectionDaemon> logger)
     {
         ArgumentNullException.ThrowIfNull(projectionManager);
+        ArgumentNullException.ThrowIfNull(projectionRebuilder);
         ArgumentNullException.ThrowIfNull(eventStore);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(logger);
 
         _projectionManager = projectionManager;
+        _projectionRebuilder = projectionRebuilder;
         _eventStore = eventStore;
         _options = options;
         _logger = logger;
@@ -71,7 +75,7 @@ internal sealed partial class ProjectionDaemon : BackgroundService
         LogCheckingForRebuilds();
 
         // Use the new RebuildAllAsync method (only rebuilds missing projections)
-        var result = await _projectionManager.RebuildAllAsync(
+        var result = await _projectionRebuilder.RebuildAllAsync(
             forceRebuild: false,
             cancellationToken).ConfigureAwait(false);
 

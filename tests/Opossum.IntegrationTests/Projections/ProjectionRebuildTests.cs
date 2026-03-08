@@ -15,6 +15,7 @@ public class ProjectionRebuildTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     public ProjectionRebuildTests()
     {
@@ -39,6 +40,7 @@ public class ProjectionRebuildTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
@@ -69,7 +71,7 @@ public class ProjectionRebuildTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act - Rebuild projection
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
@@ -100,7 +102,7 @@ public class ProjectionRebuildTests : IDisposable
         };
 
         await _eventStore.AppendAsync(initialEvents, null);
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
         var initialState = await store.GetAsync(accountId.ToString());
@@ -118,7 +120,7 @@ public class ProjectionRebuildTests : IDisposable
         await _eventStore.AppendAsync(newEvents, null);
 
         // Act - Rebuild again
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - State should be completely rebuilt
         var rebuiltState = await store.GetAsync(accountId.ToString());
@@ -146,7 +148,7 @@ public class ProjectionRebuildTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act - Rebuild
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - All accounts should be built
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
@@ -182,7 +184,7 @@ public class ProjectionRebuildTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act - Rebuild
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - Projection should not exist (Apply returned null)
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
@@ -223,7 +225,7 @@ public class ProjectionRebuildTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - Final balance should reflect correct order
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
@@ -242,7 +244,7 @@ public class ProjectionRebuildTests : IDisposable
         _projectionManager.RegisterProjection(projection);
 
         // Act - Rebuild with no events
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - No projections should exist
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
@@ -265,7 +267,7 @@ public class ProjectionRebuildTests : IDisposable
         Assert.False(File.Exists(checkpointFile));
 
         // Act - Rebuild against an empty store
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - Checkpoint file must exist so the projection is not treated as
         // "never rebuilt" on the next startup auto-rebuild pass.
@@ -283,11 +285,11 @@ public class ProjectionRebuildTests : IDisposable
         _projectionManager.RegisterProjection(projection);
 
         // First rebuild on empty store — should write checkpoint file with position 0
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Act - RebuildAllAsync(forceRebuild: false) must skip the projection because
         // the checkpoint file now exists (position 0 = rebuilt but store was empty).
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: false);
 
         // Assert
         Assert.Equal(0, result.TotalRebuilt);
@@ -321,7 +323,7 @@ public class ProjectionRebuildTests : IDisposable
         await _eventStore.AppendAsync([.. depositEvents], null);
 
         // Act - Rebuild (should process in batches)
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Assert - All events should be processed
         var store = _serviceProvider.GetRequiredService<IProjectionStore<AccountBalanceState>>();
@@ -353,7 +355,7 @@ public class ProjectionRebuildTests : IDisposable
         };
 
         await _eventStore.AppendAsync(events, null);
-        await _projectionManager.RebuildAsync("AccountBalance");
+        await _projectionRebuilder.RebuildAsync("AccountBalance");
 
         // Act
         var checkpoint = await _projectionManager.GetCheckpointAsync("AccountBalance");

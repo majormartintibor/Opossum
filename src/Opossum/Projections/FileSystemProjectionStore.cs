@@ -17,10 +17,13 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     private readonly Dictionary<string, List<Tag>> _projectionTags = [];
     private readonly bool _writeProtect;
 
-    // Rebuild mode: state changes are buffered in memory; disk writes are deferred to CommitRebuildAsync.
-    // Guarded by the per-projection lock held in ProjectionManager.RebuildAsync — not a concurrent field.
-    private bool _rebuildMode;
-    private readonly Dictionary<string, TState?> _rebuildStateBuffer = [];
+    // Rebuild mode: state changes are written directly to the temp directory (write-through).
+    // Guarded by the per-projection lock held in ProjectionRebuilder.RebuildCoreAsync — not a concurrent field.
+    private bool _isInRebuild;
+
+    // During rebuild, accumulates tag-to-key mappings in memory. Written to disk at commit.
+    // Initialised in BeginRebuild; nulled in CommitRebuildAsync.
+    private Dictionary<string, HashSet<string>>? _tagAccumulator;
 
     // Path to the temporary directory used during rebuild.
     // New projection files are written here and atomically moved to _projectionPath on commit,
@@ -60,10 +63,15 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        // During rebuild disk was cleared — serve reads from the in-memory buffer.
-        if (_rebuildMode)
+        // During rebuild, read from the temp directory (write-through).
+        // The temp directory is the authoritative state; if the key has not been replayed yet, null is correct.
+        if (_isInRebuild)
         {
-            return _rebuildStateBuffer.TryGetValue(key, out var buffered) ? buffered : null;
+            var tempFilePath = GetFilePath(key); // resolves to _rebuildTempPath
+            if (!File.Exists(tempFilePath)) return null;
+            var rebuildJson = await File.ReadAllTextAsync(tempFilePath, cancellationToken).ConfigureAwait(false);
+            var rebuildWrapper = JsonSerializer.Deserialize<ProjectionWithMetadata<TState>>(rebuildJson, _jsonOptions);
+            return rebuildWrapper?.Data;
         }
 
         // Ensure directory exists (might not exist for new projection types)
@@ -295,11 +303,56 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
         ArgumentNullException.ThrowIfNull(state);
 
-        // During rebuild, buffer the state in memory.
-        // All disk writes are deferred to CommitRebuildAsync, reducing I/O from O(events) to O(unique keys).
-        if (_rebuildMode)
+        // During rebuild, write state directly to the temp directory (write-through).
+        // Memory stays bounded: each event writes immediately instead of accumulating all states.
+        if (_isInRebuild)
         {
-            _rebuildStateBuffer[key] = state;
+            var rebuildFilePath = GetFilePath(key);
+            var now = DateTimeOffset.UtcNow;
+
+            var metadata = new ProjectionMetadata
+            {
+                CreatedAt = now,
+                LastUpdatedAt = now,
+                Version = 1,
+                SizeInBytes = 0
+            };
+
+            var wrapper = new ProjectionWithMetadata<TState>
+            {
+                Data = state,
+                Metadata = metadata
+            };
+
+            var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
+
+            if (_writeProtect && File.Exists(rebuildFilePath))
+            {
+                var existing = File.GetAttributes(rebuildFilePath);
+                if ((existing & FileAttributes.ReadOnly) != 0)
+                    File.SetAttributes(rebuildFilePath, existing & ~FileAttributes.ReadOnly);
+            }
+
+            await File.WriteAllTextAsync(rebuildFilePath, json, cancellationToken).ConfigureAwait(false);
+
+            if (_writeProtect)
+                File.SetAttributes(rebuildFilePath, FileAttributes.ReadOnly);
+
+            // Accumulate tags for bulk write at commit
+            if (_tagProvider is not null && _tagAccumulator is not null)
+            {
+                foreach (var tag in _tagProvider.GetTags(state))
+                {
+                    var tagKey = GetTagAccumulatorKey(tag);
+                    if (!_tagAccumulator.TryGetValue(tagKey, out var keys))
+                    {
+                        keys = [];
+                        _tagAccumulator[tagKey] = keys;
+                    }
+                    keys.Add(key);
+                }
+            }
+
             return;
         }
 
@@ -443,10 +496,28 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(key);
 
-        // During rebuild disk was already cleared — just remove the key from the buffer.
-        if (_rebuildMode)
+        // During rebuild, delete from the temp directory and remove from tag accumulator.
+        if (_isInRebuild)
         {
-            _rebuildStateBuffer.Remove(key);
+            var tempFilePath = GetFilePath(key); // resolves to _rebuildTempPath
+            if (File.Exists(tempFilePath))
+            {
+                if (_writeProtect)
+                {
+                    var attrs = File.GetAttributes(tempFilePath);
+                    if ((attrs & FileAttributes.ReadOnly) != 0)
+                        File.SetAttributes(tempFilePath, attrs & ~FileAttributes.ReadOnly);
+                }
+                File.Delete(tempFilePath);
+            }
+
+            // Remove key from every tag set in the accumulator
+            if (_tagAccumulator is not null)
+            {
+                foreach (var keySet in _tagAccumulator.Values)
+                    keySet.Remove(key);
+            }
+
             return;
         }
 
@@ -497,92 +568,95 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
     }
 
     /// <summary>
-    /// Internal method to delete all indices for this projection.
-    /// Used during rebuild to ensure clean state.
-    /// </summary>
-    /// <summary>
-    /// Switches the store into rebuild mode.
-    /// All subsequent <see cref="SaveAsync"/> and <see cref="DeleteAsync"/> calls will update an
-    /// in-memory buffer instead of touching the file system.
+    /// Switches the store into rebuild mode with write-through semantics.
+    /// All subsequent <see cref="SaveAsync"/> calls write directly to a temporary directory,
+    /// and <see cref="GetAsync"/> reads from it. <see cref="DeleteAsync"/> removes files from
+    /// the temp directory.
     /// Creates a temporary directory to hold the new projection files; the existing files in
     /// <c>_projectionPath</c> remain accessible to readers until <see cref="CommitRebuildAsync"/>
     /// performs the atomic swap.
-    /// Must be followed by <see cref="CommitRebuildAsync"/> to flush the buffer to disk.
+    /// Must be followed by <see cref="CommitRebuildAsync"/> to finalise the rebuild.
     /// </summary>
     internal void BeginRebuild()
     {
-        _rebuildStateBuffer.Clear();
         _projectionTags.Clear();
-        _rebuildMode = true;
+        _isInRebuild = true;
+        _tagAccumulator = [];
         _rebuildTempPath = _projectionPath + $".tmp.{Guid.NewGuid():N}";
         Directory.CreateDirectory(_rebuildTempPath);
     }
 
     /// <summary>
-    /// Flushes the in-memory rebuild buffer to a temporary directory in a single pass, then
-    /// atomically replaces the production directory so that old projection files remain
-    /// accessible to readers for the entire duration of the rebuild.
-    /// Writes each unique projection key exactly once, and persists the metadata index in one
-    /// atomic write — regardless of how many events were applied during the rebuild loop.
+    /// Switches the store into rebuild mode using an explicit temporary directory path
+    /// with write-through semantics (see <see cref="BeginRebuild()"/> for details).
+    /// This overload is used during crash recovery to resume a rebuild into the same temp
+    /// directory that was in use before the interruption, ensuring that previously written
+    /// projection files are preserved.
+    /// The directory at <paramref name="tempPath"/> is created if it does not already exist.
+    /// Must be followed by <see cref="CommitRebuildAsync"/> to finalise the rebuild.
+    /// </summary>
+    /// <param name="tempPath">Absolute path to the temporary directory to use for this rebuild.</param>
+    internal void BeginRebuild(string tempPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tempPath);
+
+        _projectionTags.Clear();
+        _isInRebuild = true;
+        _tagAccumulator = [];
+        _rebuildTempPath = tempPath;
+        Directory.CreateDirectory(_rebuildTempPath);
+    }
+
+    /// <summary>
+    /// Writes tag index files from the in-memory <c>_tagAccumulator</c> to the temp directory,
+    /// then atomically swaps the temp directory into the production path.
+    /// Projection state files have already been written during event replay (write-through),
+    /// so no state buffer flush is required.
     /// </summary>
     internal async Task CommitRebuildAsync(CancellationToken cancellationToken = default)
     {
         var tempPath = _rebuildTempPath;
         try
         {
-            // Clear stale metadata cache entries from before the rebuild.
-            // The old metadata index file on disk is also removed here; it will be replaced
-            // by the new one written to tempPath and then moved in during the atomic swap.
-            await _metadataIndex.ClearAsync(_projectionPath).ConfigureAwait(false);
-
-            if (_rebuildStateBuffer.Count > 0)
+            // Write tag index files from the accumulator in parallel
+            if (_tagAccumulator is { Count: > 0 } && tempPath is not null)
             {
-                // tempPath is set by BeginRebuild(), which is always called before CommitRebuildAsync().
-                var now = DateTimeOffset.UtcNow;
-                var metadataEntries = new Dictionary<string, ProjectionMetadata>(_rebuildStateBuffer.Count);
+                var indicesPath = Path.Combine(tempPath, "Indices");
+                Directory.CreateDirectory(indicesPath);
 
-                foreach (var (key, state) in _rebuildStateBuffer)
-                {
-                    var metadata = new ProjectionMetadata
+                await Parallel.ForEachAsync(
+                    _tagAccumulator,
+                    new ParallelOptions
                     {
-                        CreatedAt = now,
-                        LastUpdatedAt = now,
-                        Version = 1,
-                        SizeInBytes = 0
-                    };
-
-                    var wrapper = new ProjectionWithMetadata<TState> { Data = state!, Metadata = metadata };
-                    var json = JsonSerializer.Serialize(wrapper, _jsonOptions);
-                    var filePath = GetFilePath(key);  // Returns path inside tempPath during rebuild
-
-                    await File.WriteAllTextAsync(filePath, json, cancellationToken).ConfigureAwait(false);
-
-                    // Mark committed projection file as read-only after writing
-                    if (_writeProtect)
-                        File.SetAttributes(filePath, FileAttributes.ReadOnly);
-
-                    metadataEntries[key] = metadata with { SizeInBytes = json.Length };
-
-                    if (_tagProvider != null)
+                        MaxDegreeOfParallelism = Environment.ProcessorCount,
+                        CancellationToken = cancellationToken
+                    },
+                    async (entry, ct) =>
                     {
-                        var tags = _tagProvider.GetTags(state!).ToList();
-                        foreach (var tag in tags)
+                        var indexFilePath = Path.Combine(indicesPath, entry.Key);
+                        var json = JsonSerializer.Serialize(entry.Value, _jsonOptions);
+
+                        // Atomic write: temp file + rename
+                        var tempFile = $"{indexFilePath}.tmp.{Guid.NewGuid():N}";
+                        try
                         {
-                            await _tagIndex.AddProjectionAsync(tempPath!, tag, key).ConfigureAwait(false);
+                            await File.WriteAllTextAsync(tempFile, json, ct).ConfigureAwait(false);
+                            File.Move(tempFile, indexFilePath, overwrite: true);
                         }
-                        _projectionTags[key] = tags;
-                    }
-                }
-
-                // Write all metadata in one atomic pass instead of once per event
-                await _metadataIndex.BatchSaveAsync(tempPath!, metadataEntries).ConfigureAwait(false);
+                        catch
+                        {
+                            if (File.Exists(tempFile))
+                            { try { File.Delete(tempFile); } catch { /* ignore cleanup errors */ } }
+                            throw;
+                        }
+                    }).ConfigureAwait(false);
             }
 
             // Atomic swap: replace the production directory with the temp directory.
             // Old projection files remain on disk until this point, keeping them accessible
             // to readers for the entire duration of the rebuild.
             DeleteDirectory(_projectionPath);
-            if (tempPath != null && Directory.Exists(tempPath))
+            if (tempPath is not null && Directory.Exists(tempPath))
                 Directory.Move(tempPath, _projectionPath);
             else
                 Directory.CreateDirectory(_projectionPath);
@@ -590,53 +664,15 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         catch
         {
             // Clean up temp directory on failure so no orphaned directories are left behind.
-            if (tempPath != null)
+            if (tempPath is not null)
                 DeleteDirectory(tempPath);
             throw;
         }
         finally
         {
-            _rebuildMode = false;
-            _rebuildStateBuffer.Clear();
+            _isInRebuild = false;
             _rebuildTempPath = null;
-        }
-    }
-
-    internal async Task DeleteAllIndicesAsync()
-    {
-        _tagIndex.DeleteAllIndices(_projectionPath);
-        await _metadataIndex.ClearAsync(_projectionPath).ConfigureAwait(false);
-        await _lock.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            _projectionTags.Clear();
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
-
-    /// <summary>
-    /// Deletes all projection JSON files in this projection's directory,
-    /// transparently removing the read-only attribute first when write protection is enabled.
-    /// Called during a full rebuild to clear old state before applying events.
-    /// </summary>
-    internal void ClearProjectionFiles()
-    {
-        if (!Directory.Exists(_projectionPath))
-            return;
-
-        foreach (var file in Directory.GetFiles(_projectionPath, "*.json"))
-        {
-            if (_writeProtect)
-            {
-                var attrs = File.GetAttributes(file);
-                if ((attrs & FileAttributes.ReadOnly) != 0)
-                    File.SetAttributes(file, attrs & ~FileAttributes.ReadOnly);
-            }
-
-            File.Delete(file);
+            _tagAccumulator = null;
         }
     }
 
@@ -646,6 +682,18 @@ internal sealed class FileSystemProjectionStore<TState> : IProjectionStore<TStat
         var safeKey = string.Join("_", key.Split(Path.GetInvalidFileNameChars()));
         var dir = _rebuildTempPath ?? _projectionPath;
         return Path.Combine(dir, $"{safeKey}.json");
+    }
+
+    /// <summary>
+    /// Produces the tag index file name (without directory) using the same sanitisation
+    /// logic as <see cref="ProjectionTagIndex"/> so the files written at commit are
+    /// compatible with the read path.
+    /// </summary>
+    private static string GetTagAccumulatorKey(Tag tag)
+    {
+        var safeKey = string.Join("_", tag.Key.ToLowerInvariant().Split(Path.GetInvalidFileNameChars()));
+        var safeValue = string.Join("_", tag.Value.ToLowerInvariant().Split(Path.GetInvalidFileNameChars()));
+        return $"{safeKey}_{safeValue}.json";
     }
 
     /// <summary>

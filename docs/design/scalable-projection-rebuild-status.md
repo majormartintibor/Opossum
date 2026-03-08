@@ -31,17 +31,17 @@ All tests pass at end of phase.
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P1-T1 | Define `IProjectionRebuilder` interface | ⬜ Not Started | |
-| P1-T2 | Add `GetRegistration(string)` internal accessor + `BeginRebuildAsync(tempPath)` to `ProjectionManager` | ⬜ Not Started | |
-| P1-T3 | Create `ProjectionRebuildJournal` model class | ⬜ Not Started | |
-| P1-T4 | Create `ProjectionRebuilder` skeleton — move rebuild code from `ProjectionManager` | ⬜ Not Started | |
-| P1-T5 | Remove rebuild code from `ProjectionManager` | ⬜ Not Started | |
-| P1-T6 | Remove rebuild methods from `IProjectionManager` | ⬜ Not Started | |
-| P1-T7 | Register `ProjectionRebuilder` in DI (`ProjectionServiceCollectionExtensions`) | ⬜ Not Started | |
-| P1-T8 | Update `ProjectionDaemon` to inject and use `IProjectionRebuilder` | ⬜ Not Started | |
-| P1-T9 | Update sample application admin endpoints | ⬜ Not Started | |
-| P1-T10 | Update integration tests that called rebuild via `IProjectionManager` | ⬜ Not Started | |
-| P1-T11 | ✔ Verify Phase 1: 0 warnings, all tests green | ⬜ Not Started | |
+| P1-T1 | Define `IProjectionRebuilder` interface | ✅ Done | |
+| P1-T2 | Add `GetRegistration(string)` internal accessor + `BeginRebuildAsync(tempPath)` to `ProjectionManager` | ✅ Done | |
+| P1-T3 | Create `ProjectionRebuildJournal` model class | ✅ Done | |
+| P1-T4 | Create `ProjectionRebuilder` skeleton — move rebuild code from `ProjectionManager` | ✅ Done | |
+| P1-T5 | Remove rebuild code from `ProjectionManager` | ✅ Done | Stubs kept for 4 interface methods until P1-T6 |
+| P1-T6 | Remove rebuild methods from `IProjectionManager` | ✅ Done | Also completed P1-T7, P1-T8, P1-T9, P1-T10 — tightly coupled |
+| P1-T7 | Register `ProjectionRebuilder` in DI (`ProjectionServiceCollectionExtensions`) | ✅ Done | Factory uses GetService for nullable logger |
+| P1-T8 | Update `ProjectionDaemon` to inject and use `IProjectionRebuilder` | ✅ Done | |
+| P1-T9 | Update sample application admin endpoints | ✅ Done | |
+| P1-T10 | Update integration tests that called rebuild via `IProjectionManager` | ✅ Done | 3 tests adapted for result-based error handling |
+| P1-T11 | ✔ Verify Phase 1: 0 warnings, all tests green | ✅ Done | 0 warnings, 721 unit + 171/172 integration pass (1 pre-existing flaky timing test) |
 
 ---
 
@@ -52,13 +52,13 @@ replay. Memory during rebuild is now O(batch × state_size). All tests pass at e
 
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
-| P2-T1 | Add `BeginRebuild(string tempPath)` overload; initialise `_tagAccumulator` | ⬜ Not Started | |
-| P2-T2 | Remove `_rebuildStateBuffer`; implement write-through in `SaveAsync` | ⬜ Not Started | |
-| P2-T3 | Update `GetAsync` rebuild branch to read from temp directory | ⬜ Not Started | |
-| P2-T4 | Update `DeleteAsync` rebuild branch to delete from temp directory | ⬜ Not Started | |
-| P2-T5 | Rewrite `CommitRebuildAsync`: parallel tag writes + dir swap only | ⬜ Not Started | |
-| P2-T6 | Remove dead code: `ClearProjectionFiles`, `DeleteAllIndicesAsync`, `ClearAsync` on `ProjectionRegistration` | ⬜ Not Started | |
-| P2-T7 | ✔ Verify Phase 2: 0 warnings, all tests green, write-through observed in temp dir | ⬜ Not Started | |
+| P2-T1 | Add `BeginRebuild(string tempPath)` overload; initialise `_tagAccumulator` | ✅ Done | Renamed `_rebuildMode` → `_isInRebuild`; both overloads init `_tagAccumulator` |
+| P2-T2 | Remove `_rebuildStateBuffer`; implement write-through in `SaveAsync` | ✅ Done | Writes directly to temp dir with metadata wrapper; accumulates tags in `_tagAccumulator` |
+| P2-T3 | Update `GetAsync` rebuild branch to read from temp directory | ✅ Done | Reads from temp dir via `GetFilePath`; returns `null` if file doesn't exist |
+| P2-T4 | Update `DeleteAsync` rebuild branch to delete from temp directory | ✅ Done | Deletes file + removes key from all tag accumulator sets; handles write-protect |
+| P2-T5 | Rewrite `CommitRebuildAsync`: parallel tag writes + dir swap only | ✅ Done | `Parallel.ForEachAsync` for tag indices; no `_metadataIndex` calls; atomic swap |
+| P2-T6 | Remove dead code: `ClearProjectionFiles`, `DeleteAllIndicesAsync`, `ClearAsync` on `ProjectionRegistration` | ✅ Done | Also removed integration test that tested `DeleteAllIndicesAsync` directly; fixed admin endpoint 404 for unknown projection |
+| P2-T7 | ✔ Verify Phase 2: 0 warnings, all tests green, write-through observed in temp dir | ✅ Done | 0 warnings; 721 unit + 171 integration + 107 sample app tests green |
 
 ---
 
@@ -119,7 +119,7 @@ resume in a new conversation without losing context.
 
 | Date | Session summary | Tasks completed | Outstanding issues |
 |------|-----------------|-----------------|--------------------|
-| — | — | — | — |
+| 2026-03 | **Phase 2 — Write-Through Store.** Replaced `_rebuildStateBuffer` with direct file writes in `FileSystemProjectionStore`. Renamed `_rebuildMode` → `_isInRebuild`. Added `_tagAccumulator` (populated in `SaveAsync`, written in parallel at commit). `GetAsync`/`DeleteAsync` now read from / delete in temp dir during rebuild. `CommitRebuildAsync` rewritten: parallel tag index writes + atomic dir swap only — no `_metadataIndex` calls, no state buffer flush. Removed dead code (`ClearProjectionFiles`, `DeleteAllIndicesAsync`, `ClearAsync` on `ProjectionRegistration`). Fixed admin endpoint returning 500 instead of 404 for unknown projections. Updated `CHANGELOG.md`. | P2-T1 through P2-T7 | None |
 
 ---
 

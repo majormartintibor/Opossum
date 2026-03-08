@@ -49,6 +49,18 @@ public static class ProjectionServiceCollectionExtensions
         // Register projection manager
         services.AddSingleton<IProjectionManager, ProjectionManager>();
 
+        // Register projection rebuilder — needs the concrete ProjectionManager for
+        // internal access to GetRegistration() and AcquireProjectionLockAsync().
+        services.AddSingleton<IProjectionRebuilder>(sp =>
+        {
+            var opossumOptions = sp.GetRequiredService<OpossumOptions>();
+            var eventStore = sp.GetRequiredService<IEventStore>();
+            var projectionManager = (ProjectionManager)sp.GetRequiredService<IProjectionManager>();
+            var projectionOptions = sp.GetRequiredService<ProjectionOptions>();
+            var logger = sp.GetService<ILogger<ProjectionRebuilder>>();
+            return new ProjectionRebuilder(opossumOptions, eventStore, projectionManager, projectionOptions, logger);
+        });
+
         // Register projection daemon
         services.AddHostedService<ProjectionDaemon>();
 

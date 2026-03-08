@@ -11,6 +11,7 @@ public class ProjectionEndToEndTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     public ProjectionEndToEndTests()
     {
@@ -45,6 +46,7 @@ public class ProjectionEndToEndTests : IDisposable
 
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
@@ -78,7 +80,7 @@ public class ProjectionEndToEndTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Rebuild projection
-        await _projectionManager.RebuildAsync("E2EOrders");
+        await _projectionRebuilder.RebuildAsync("E2EOrders");
 
         // Assert - Query projection
         var store = _serviceProvider.GetRequiredService<IProjectionStore<E2EOrderState>>();
@@ -128,7 +130,7 @@ public class ProjectionEndToEndTests : IDisposable
         };
 
         await _eventStore.AppendAsync(events, null);
-        await _projectionManager.RebuildAsync("E2EOrders");
+        await _projectionRebuilder.RebuildAsync("E2EOrders");
 
         // Assert - Query all orders
         var store = _serviceProvider.GetRequiredService<IProjectionStore<E2EOrderState>>();
@@ -162,7 +164,7 @@ public class ProjectionEndToEndTests : IDisposable
         };
 
         await _eventStore.AppendAsync(initialEvents, null);
-        await _projectionManager.RebuildAsync("E2EOrders");
+        await _projectionRebuilder.RebuildAsync("E2EOrders");
 
         var store = _serviceProvider.GetRequiredService<IProjectionStore<E2EOrderState>>();
         var orderBefore = await store.GetAsync(orderId.ToString());
@@ -211,7 +213,7 @@ public class ProjectionEndToEndTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act
-        await _projectionManager.RebuildAsync("E2EOrders");
+        await _projectionRebuilder.RebuildAsync("E2EOrders");
 
         // Assert
         var store = _serviceProvider.GetRequiredService<IProjectionStore<E2EOrderState>>();
@@ -240,7 +242,7 @@ public class ProjectionEndToEndTests : IDisposable
         };
 
         await _eventStore.AppendAsync(events, null);
-        await _projectionManager.RebuildAsync("E2EOrders");
+        await _projectionRebuilder.RebuildAsync("E2EOrders");
 
         // Assert
         var checkpointAfterRebuild = await _projectionManager.GetCheckpointAsync("E2EOrders");

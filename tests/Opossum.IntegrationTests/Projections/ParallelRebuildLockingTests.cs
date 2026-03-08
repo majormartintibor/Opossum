@@ -17,6 +17,7 @@ public class ParallelRebuildLockingTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     public ParallelRebuildLockingTests()
     {
@@ -43,6 +44,7 @@ public class ParallelRebuildLockingTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
@@ -65,7 +67,7 @@ public class ParallelRebuildLockingTests : IDisposable
 
         // Act - Rebuild all in parallel
         var stopwatch = Stopwatch.StartNew();
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: false);
         stopwatch.Stop();
 
         // Assert
@@ -98,7 +100,7 @@ public class ParallelRebuildLockingTests : IDisposable
         // Act - Start first rebuild in background
         var firstRebuildTask = Task.Run(async () =>
         {
-            await _projectionManager.RebuildAsync("LongRunningProjection");
+            await _projectionRebuilder.RebuildAsync("LongRunningProjection");
         });
 
         // Wait a bit to ensure first rebuild has acquired the lock
@@ -108,7 +110,7 @@ public class ParallelRebuildLockingTests : IDisposable
         // RebuildAsync uses failFast: false so admin-triggered rebuilds WAIT for each other
         // rather than throwing — this prevents an admin rebuild from immediately losing the
         // race against the daemon's polling loop.
-        await _projectionManager.RebuildAsync("LongRunningProjection");
+        await _projectionRebuilder.RebuildAsync("LongRunningProjection");
 
         // Assert - both rebuilds completed without error
         await firstRebuildTask;
@@ -131,7 +133,7 @@ public class ParallelRebuildLockingTests : IDisposable
         // Act - Start rebuild in background
         var rebuildTask = Task.Run(async () =>
         {
-            await _projectionManager.RebuildAsync("LongRunningProjection");
+            await _projectionRebuilder.RebuildAsync("LongRunningProjection");
         });
 
         // Wait a bit to ensure rebuild has started
@@ -159,11 +161,11 @@ public class ParallelRebuildLockingTests : IDisposable
         await _eventStore.AppendAsync([CreateEvent<FastEvent>()], null);
 
         // Act - First rebuild
-        await _projectionManager.RebuildAsync("FastProjection");
+        await _projectionRebuilder.RebuildAsync("FastProjection");
         var checkpointAfterFirst = await _projectionManager.GetCheckpointAsync("FastProjection");
 
         // Second rebuild (should succeed now that first is complete)
-        await _projectionManager.RebuildAsync("FastProjection");
+        await _projectionRebuilder.RebuildAsync("FastProjection");
         var checkpointAfterSecond = await _projectionManager.GetCheckpointAsync("FastProjection");
 
         // Assert
@@ -184,7 +186,7 @@ public class ParallelRebuildLockingTests : IDisposable
         await _eventStore.AppendAsync([CreateEvent<SlowEvent2>()], null);
 
         // Act
-        var result = await _projectionManager.RebuildAllAsync(forceRebuild: false);
+        var result = await _projectionRebuilder.RebuildAllAsync(forceRebuild: false);
 
         // Assert
         Assert.Equal(3, result.TotalRebuilt);

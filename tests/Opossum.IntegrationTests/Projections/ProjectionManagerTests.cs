@@ -11,6 +11,7 @@ public class ProjectionManagerTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     public ProjectionManagerTests()
     {
@@ -43,6 +44,7 @@ public class ProjectionManagerTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
@@ -103,7 +105,7 @@ public class ProjectionManagerTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         // Assert
         var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
@@ -115,14 +117,17 @@ public class ProjectionManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task RebuildAsync_WithNonExistentProjection_ThrowsInvalidOperationExceptionAsync()
+    public async Task RebuildAsync_WithNonExistentProjection_ReturnsFailedResultAsync()
     {
-        // Act & Assert
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _projectionManager.RebuildAsync("NonExistent"));
+        // Act
+        var result = await _projectionRebuilder.RebuildAsync("NonExistent");
 
-        Assert.Contains("NonExistent", ex.Message);
-        Assert.Contains("not registered", ex.Message);
+        // Assert
+        Assert.False(result.Success);
+        Assert.Equal(0, result.TotalRebuilt);
+        Assert.Single(result.Details);
+        Assert.False(result.Details[0].Success);
+        Assert.Contains("not registered", result.Details[0].ErrorMessage);
     }
 
     [Fact]
@@ -146,7 +151,7 @@ public class ProjectionManagerTests : IDisposable
         await _eventStore.AppendAsync(events, null);
 
         // Act
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         // Assert - Apply returned null so projection should not exist
         var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
@@ -192,7 +197,7 @@ public class ProjectionManagerTests : IDisposable
             .Build();
 
         await _eventStore.AppendAsync([createEvent], null);
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         var updateEvent = new PmTestItemUpdatedEvent(itemId, "Updated Name")
             .ToDomainEvent()
@@ -239,7 +244,7 @@ public class ProjectionManagerTests : IDisposable
             null);
 
         // First rebuild: creates the initial projection files on disk (Apply runs unblocked).
-        await _projectionManager.RebuildAsync("SlowPmTestItems");
+        await _projectionRebuilder.RebuildAsync("SlowPmTestItems");
 
         var projectionPath = Path.Combine(
             _testStoragePath, "ProjectionManagerContext", "Projections", "SlowPmTestItems");
@@ -253,7 +258,7 @@ public class ProjectionManagerTests : IDisposable
 
         // Act: start a second rebuild in the background; it will pause inside Apply.
         var rebuildTask = Task.Run(async () =>
-            await _projectionManager.RebuildAsync("SlowPmTestItems"));
+            await _projectionRebuilder.RebuildAsync("SlowPmTestItems"));
 
         // Wait until the rebuild has started processing (Apply was entered).
         Assert.True(startedSignal.Wait(TimeSpan.FromSeconds(10)),
@@ -302,6 +307,7 @@ public class BatchedRebuildTests : IDisposable
     private readonly string _testStoragePath;
     private readonly IEventStore _eventStore;
     private readonly IProjectionManager _projectionManager;
+    private readonly IProjectionRebuilder _projectionRebuilder;
 
     /// <summary>Small batch size to force multi-batch rebuilds with moderate test data sets.</summary>
     private const int SmallBatchSize = 100;
@@ -334,6 +340,7 @@ public class BatchedRebuildTests : IDisposable
         _serviceProvider = services.BuildServiceProvider();
         _eventStore = _serviceProvider.GetRequiredService<IEventStore>();
         _projectionManager = _serviceProvider.GetRequiredService<IProjectionManager>();
+        _projectionRebuilder = _serviceProvider.GetRequiredService<IProjectionRebuilder>();
     }
 
     [Fact]
@@ -354,7 +361,7 @@ public class BatchedRebuildTests : IDisposable
         }
 
         // Act
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         // Assert: every item must appear in the projection store.
         var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
@@ -403,7 +410,7 @@ public class BatchedRebuildTests : IDisposable
             null);
 
         // Act
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         // Assert: the item should reflect the update, not the original value.
         var store = _serviceProvider.GetRequiredService<IProjectionStore<PmTestItemState>>();
@@ -431,7 +438,7 @@ public class BatchedRebuildTests : IDisposable
         }
 
         // Act
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         // Assert: checkpoint must equal the last appended position.
         var checkpoint = await _projectionManager.GetCheckpointAsync("PmTestItems");
@@ -474,7 +481,7 @@ public class BatchedRebuildTests : IDisposable
         }
 
         // Act
-        await _projectionManager.RebuildAsync("PmTestItems");
+        await _projectionRebuilder.RebuildAsync("PmTestItems");
 
         // Assert: checkpoint must equal the store head (10), NOT just the last relevant
         // event position (3).  Without the fix the daemon would call SaveCheckpointAsync

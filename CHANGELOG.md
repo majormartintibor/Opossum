@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Write-through projection rebuild (Phase 2 — Scalable Projection Rebuild).**
+  During a projection rebuild, each `SaveAsync` call now writes the projection state
+  directly to the temporary directory on disk instead of accumulating all states in an
+  in-memory buffer (`_rebuildStateBuffer`). This bounds peak memory during rebuild to
+  `O(batch_size × state_size)` regardless of how many unique projection keys exist,
+  eliminating the previous `O(unique_keys × state_size)` memory requirement that caused
+  out-of-memory failures at scale (e.g. 10 GB heap for 1M keys × 10 KB state).
+
+  `GetAsync` and `DeleteAsync` now read from / delete in the temp directory during rebuild.
+  `CommitRebuildAsync` only writes tag index files (in parallel) and performs the atomic
+  directory swap — no state buffer flush is needed.
+
+  Trade-off: a key updated by N events is now written N times during rebuild (instead of
+  once at commit). This increases total I/O but distributes it over time and eliminates
+  memory pressure. Rebuild is a rare operation where durability and bounded memory outweigh
+  I/O minimisation.
+
+- **Tag accumulator replaces per-key tag index writes at commit.**
+  During rebuild, tag-to-key mappings are accumulated in a lightweight in-memory dictionary
+  (`_tagAccumulator`) and written in a single parallel pass at commit time. This replaces
+  the previous approach of calling `AddProjectionAsync` per key per tag, which caused
+  O(keys × tags) sequential file round-trips.
+
+### Removed
+
+- **`_rebuildStateBuffer` eliminated from `FileSystemProjectionStore`.**
+  The in-memory `Dictionary<string, TState?>` that held all projection states during rebuild
+  has been removed. This was the primary source of unbounded memory growth.
+
+- **`DeleteAllIndicesAsync()` and `ClearProjectionFiles()` removed from `FileSystemProjectionStore`.**
+  These methods were only used by the now-removed `ClearAsync` on `ProjectionRegistration`
+  and are no longer needed with the write-through rebuild approach.
+
+- **`ClearAsync` removed from `ProjectionRegistration` abstract class.**
+  Dead code — was not called from any rebuild path after Phase 1 separation.
+
+### Fixed
+
+- **Admin endpoint returns 404 (not 500) for non-existent projection rebuild.**
+  The `/admin/projections/{name}/rebuild` endpoint now correctly returns `NotFound` when
+  the projection name is not registered, instead of returning `InternalServerError`.
+
 ### Added
 
 - **`RebuildBatchSize` option on `ProjectionOptions`** (default: 5 000).
