@@ -25,12 +25,17 @@ internal sealed class EventFileManager
     /// <summary>
     /// Writes a SequencedEvent to a file in the specified events directory.
     /// File name format: {position:D10}.json (e.g., 0000000001.json)
+    /// When <paramref name="allowOverwrite"/> is <c>false</c> (default) and the destination
+    /// file already exists, the write is skipped. This makes the method idempotent and
+    /// prevents crash-orphaned event files from being silently overwritten on restart.
     /// </summary>
     /// <param name="eventsPath">Path to the Events directory</param>
     /// <param name="sequencedEvent">The event to write</param>
+    /// <param name="allowOverwrite">When <c>true</c>, an existing file at the same position
+    /// will be overwritten (used by maintenance operations such as AddTagsAsync).</param>
     /// <exception cref="ArgumentNullException">When parameters are null</exception>
     /// <exception cref="IOException">When file write fails</exception>
-    public async Task WriteEventAsync(string eventsPath, SequencedEvent sequencedEvent)
+    public async Task WriteEventAsync(string eventsPath, SequencedEvent sequencedEvent, bool allowOverwrite = false)
     {
         ArgumentNullException.ThrowIfNull(eventsPath);
         ArgumentNullException.ThrowIfNull(sequencedEvent);
@@ -44,6 +49,13 @@ internal sealed class EventFileManager
         Directory.CreateDirectory(eventsPath);
 
         var filePath = GetEventFilePath(eventsPath, sequencedEvent.Position);
+
+        // Idempotent guard: if the destination file already exists and we are NOT in
+        // maintenance-overwrite mode, the event was persisted by a previous run that
+        // crashed before updating the ledger. Skip the write to prevent data loss.
+        if (!allowOverwrite && File.Exists(filePath))
+            return;
+
         var json = _serializer.Serialize(sequencedEvent);
 
         // Write atomically using temp file strategy
@@ -62,11 +74,9 @@ internal sealed class EventFileManager
                 await FlushFileToDiskAsync(tempPath).ConfigureAwait(false);
             }
 
-            // If write protection is enabled and the destination already exists (maintenance
-            // rewrite via AddTagsAsync), remove the read-only attribute before the overwrite.
-            // File.Move with overwrite:true throws UnauthorizedAccessException on Windows
-            // when the destination file is read-only.
-            if (_writeProtect && File.Exists(filePath))
+            // Maintenance overwrite (AddTagsAsync): remove the read-only attribute before
+            // the move so File.Move does not throw UnauthorizedAccessException on Windows.
+            if (allowOverwrite && _writeProtect && File.Exists(filePath))
             {
                 var existing = File.GetAttributes(filePath);
                 if ((existing & FileAttributes.ReadOnly) != 0)
@@ -74,7 +84,7 @@ internal sealed class EventFileManager
             }
 
             // Atomic move (now safe - data is on disk if flushing is enabled)
-            File.Move(tempPath, filePath, overwrite: true);
+            File.Move(tempPath, filePath, overwrite: allowOverwrite);
 
             // Mark committed event file as read-only so it cannot be accidentally
             // modified or deleted. All Opossum read operations use FileAccess.Read

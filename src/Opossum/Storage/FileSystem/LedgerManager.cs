@@ -4,18 +4,20 @@ namespace Opossum.Storage.FileSystem;
 /// Manages the ledger file for tracking sequence positions in the event store.
 /// The ledger provides atomic allocation of sequence positions for event appending.
 /// </summary>
-internal sealed class LedgerManager
+internal sealed partial class LedgerManager
 {
     private readonly bool _flushImmediately;
+    private readonly ILogger<LedgerManager> _logger;
     private const string LedgerFileName = ".ledger";
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         WriteIndented = true
     };
 
-    public LedgerManager(bool flushImmediately = true)
+    public LedgerManager(bool flushImmediately = true, ILogger<LedgerManager>? logger = null)
     {
         _flushImmediately = flushImmediately;
+        _logger = logger ?? NullLogger<LedgerManager>.Instance;
     }
 
     /// <summary>
@@ -268,6 +270,48 @@ internal sealed class LedgerManager
             }
         }
     }
+
+    /// <summary>
+    /// Scans the events directory for the highest-numbered event file and updates
+    /// the ledger if it is behind. This reconciles the ledger after a crash that
+    /// wrote event files but did not update the ledger.
+    /// </summary>
+    /// <param name="contextPath">Path to the context directory</param>
+    /// <param name="eventsPath">Path to the events directory</param>
+    public async Task ReconcileLedgerAsync(string contextPath, string eventsPath)
+    {
+        ArgumentNullException.ThrowIfNull(contextPath);
+        ArgumentNullException.ThrowIfNull(eventsPath);
+
+        if (!Directory.Exists(eventsPath))
+            return;
+
+        var files = Directory.GetFiles(eventsPath, "*.json");
+        if (files.Length == 0)
+            return;
+
+        long maxOnDiskPosition = 0;
+        foreach (var file in files)
+        {
+            var name = Path.GetFileNameWithoutExtension(file);
+            if (long.TryParse(name, out var position) && position > maxOnDiskPosition)
+                maxOnDiskPosition = position;
+        }
+
+        if (maxOnDiskPosition <= 0)
+            return;
+
+        var ledgerPosition = await GetLastSequencePositionAsync(contextPath).ConfigureAwait(false);
+
+        if (maxOnDiskPosition > ledgerPosition)
+        {
+            LogLedgerReconciliation(ledgerPosition, maxOnDiskPosition);
+            await UpdateSequencePositionAsync(contextPath, maxOnDiskPosition).ConfigureAwait(false);
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Ledger reconciliation: ledger was at position {OldPosition} but found event files up to position {NewPosition}. Updating ledger to match on-disk state (crash recovery).")]
+    private partial void LogLedgerReconciliation(long oldPosition, long newPosition);
 
     /// <summary>
     /// Internal data structure for ledger file.

@@ -108,19 +108,19 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_OverwritesExistingFileAsync()
+    public async Task WriteEventAsync_SkipsWrite_WhenDestinationAlreadyExistsAsync()
     {
-        // Arrange
+        // Arrange — simulate crash-recovery scenario: file already exists from prior run
         var event1 = CreateTestEvent(1, "FirstEvent", new TestDomainEvent { Data = "first" });
         var event2 = CreateTestEvent(1, "SecondEvent", new TestDomainEvent { Data = "second" });
 
         // Act
         await _manager.WriteEventAsync(_tempEventsPath, event1);
-        await _manager.WriteEventAsync(_tempEventsPath, event2);
+        await _manager.WriteEventAsync(_tempEventsPath, event2); // default allowOverwrite = false
 
-        // Assert
+        // Assert — original file is preserved (idempotent skip)
         var readEvent = await _manager.ReadEventAsync(_tempEventsPath, 1);
-        Assert.Equal("SecondEvent", readEvent.Event.EventType);
+        Assert.Equal("FirstEvent", readEvent.Event.EventType);
     }
 
     // ========================================================================
@@ -525,7 +525,7 @@ public class EventFileManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task WriteEventAsync_CanOverwriteReadOnlyFile_WhenWriteProtectEnabledAsync()
+    public async Task WriteEventAsync_CanOverwriteReadOnlyFile_WhenAllowOverwriteEnabledAsync()
     {
         // Arrange — simulates AddTagsAsync rewriting an existing protected event
         var protectedPath = Path.Combine(Path.GetTempPath(), $"WriteProtectOverwrite_{Guid.NewGuid():N}");
@@ -541,8 +541,8 @@ public class EventFileManagerTests : IDisposable
             var filePath = manager.GetEventFilePath(protectedPath, 1);
             Assert.True((File.GetAttributes(filePath) & FileAttributes.ReadOnly) != 0);
 
-            // Act — overwrite (maintenance scenario, no exception expected)
-            await manager.WriteEventAsync(protectedPath, patched);
+            // Act — overwrite with allowOverwrite: true (maintenance scenario)
+            await manager.WriteEventAsync(protectedPath, patched, allowOverwrite: true);
 
             // Assert — file was overwritten and is ReadOnly again
             Assert.True((File.GetAttributes(filePath) & FileAttributes.ReadOnly) != 0);
@@ -577,6 +577,71 @@ public class EventFileManagerTests : IDisposable
         finally
         {
             RemoveReadOnlyAndDelete(protectedPath);
+        }
+    }
+
+    // ========================================================================
+    // Crash-Recovery Idempotent Write Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task WriteEventAsync_SkipsWrite_WhenDestinationAlreadyExists_OriginalFileUnchangedAsync()
+    {
+        // Arrange — simulate crash-recovery: an orphaned event file exists at position 1
+        var protectedPath = Path.Combine(Path.GetTempPath(), $"IdempotentSkip_{Guid.NewGuid():N}");
+        var manager = new EventFileManager(flushImmediately: false, writeProtect: true);
+        var orphaned = CreateTestEvent(1, "OrphanedEvent", new TestDomainEvent { Data = "orphaned" });
+        var duplicate = CreateTestEvent(1, "DuplicateEvent", new TestDomainEvent { Data = "duplicate" });
+
+        try
+        {
+            await manager.WriteEventAsync(protectedPath, orphaned);
+            var filePath = manager.GetEventFilePath(protectedPath, 1);
+            var originalContent = await File.ReadAllTextAsync(filePath);
+            var originalAttributes = File.GetAttributes(filePath);
+
+            // Act — attempt to write again at the same position (default allowOverwrite = false)
+            await manager.WriteEventAsync(protectedPath, duplicate);
+
+            // Assert — original file content and attributes are completely unchanged
+            var afterContent = await File.ReadAllTextAsync(filePath);
+            var afterAttributes = File.GetAttributes(filePath);
+            Assert.Equal(originalContent, afterContent);
+            Assert.Equal(originalAttributes, afterAttributes);
+            var read = await manager.ReadEventAsync(protectedPath, 1);
+            Assert.Equal("OrphanedEvent", read.Event.EventType);
+        }
+        finally
+        {
+            RemoveReadOnlyAndDelete(protectedPath);
+        }
+    }
+
+    [Fact]
+    public async Task WriteEventAsync_WritesNormally_WhenDestinationDoesNotExistAsync()
+    {
+        // Arrange — fresh write, no pre-existing file
+        var freshPath = Path.Combine(Path.GetTempPath(), $"FreshWrite_{Guid.NewGuid():N}");
+        var manager = new EventFileManager(flushImmediately: false, writeProtect: true);
+        var newEvent = CreateTestEvent(5, "NewEvent", new TestDomainEvent { Data = "new" });
+
+        try
+        {
+            var filePath = manager.GetEventFilePath(freshPath, 5);
+            Assert.False(File.Exists(filePath)); // precondition
+
+            // Act — normal write (allowOverwrite defaults to false)
+            await manager.WriteEventAsync(freshPath, newEvent);
+
+            // Assert — file was created and contains the event
+            Assert.True(File.Exists(filePath));
+            var read = await manager.ReadEventAsync(freshPath, 5);
+            Assert.Equal("NewEvent", read.Event.EventType);
+            Assert.Equal("new", ((TestDomainEvent)read.Event.Event).Data);
+        }
+        finally
+        {
+            RemoveReadOnlyAndDelete(freshPath);
         }
     }
 

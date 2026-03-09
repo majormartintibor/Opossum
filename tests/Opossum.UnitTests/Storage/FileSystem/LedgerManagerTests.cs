@@ -497,4 +497,99 @@ public class LedgerManagerTests : IDisposable
         // Default constructor should enable flush for production safety
         Assert.NotNull(defaultManager);
     }
+
+    // ========================================================================
+    // ReconcileLedgerAsync Tests
+    // ========================================================================
+
+    [Fact]
+    public async Task ReconcileLedgerAsync_UpdatesLedger_WhenEventsExistBeyondLedgerPositionAsync()
+    {
+        // Arrange — ledger at position 3, but event files exist up to position 5
+        var contextPath = Path.Combine(_testDirectory, "ReconcileAhead");
+        var eventsPath = Path.Combine(contextPath, "events");
+        Directory.CreateDirectory(eventsPath);
+
+        await _ledgerManager.UpdateSequencePositionAsync(contextPath, 3);
+        await File.WriteAllTextAsync(Path.Combine(eventsPath, "0000000004.json"), "{}");
+        await File.WriteAllTextAsync(Path.Combine(eventsPath, "0000000005.json"), "{}");
+
+        // Act
+        await _ledgerManager.ReconcileLedgerAsync(contextPath, eventsPath);
+
+        // Assert — ledger should now be at position 5
+        var position = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(5, position);
+    }
+
+    [Fact]
+    public async Task ReconcileLedgerAsync_IsNoOp_WhenLedgerIsAlreadyCorrectAsync()
+    {
+        // Arrange — ledger at position 5, event files up to position 5
+        var contextPath = Path.Combine(_testDirectory, "ReconcileCorrect");
+        var eventsPath = Path.Combine(contextPath, "events");
+        Directory.CreateDirectory(eventsPath);
+
+        await _ledgerManager.UpdateSequencePositionAsync(contextPath, 5);
+        await File.WriteAllTextAsync(Path.Combine(eventsPath, "0000000003.json"), "{}");
+        await File.WriteAllTextAsync(Path.Combine(eventsPath, "0000000005.json"), "{}");
+
+        // Act
+        await _ledgerManager.ReconcileLedgerAsync(contextPath, eventsPath);
+
+        // Assert — ledger should remain at position 5
+        var position = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(5, position);
+    }
+
+    [Fact]
+    public async Task ReconcileLedgerAsync_HandlesEmptyEventsDirectory_NoUpdateAsync()
+    {
+        // Arrange — ledger at position 3, but events directory is empty
+        var contextPath = Path.Combine(_testDirectory, "ReconcileEmpty");
+        var eventsPath = Path.Combine(contextPath, "events");
+        Directory.CreateDirectory(eventsPath);
+
+        await _ledgerManager.UpdateSequencePositionAsync(contextPath, 3);
+
+        // Act
+        await _ledgerManager.ReconcileLedgerAsync(contextPath, eventsPath);
+
+        // Assert — ledger should remain at position 3
+        var position = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(3, position);
+    }
+
+    [Fact]
+    public async Task ReconcileLedgerAsync_HandlesNonExistentEventsDirectory_NoUpdateAsync()
+    {
+        // Arrange — events directory does not exist at all
+        var contextPath = Path.Combine(_testDirectory, "ReconcileNoDir");
+        var eventsPath = Path.Combine(contextPath, "events");
+
+        await _ledgerManager.UpdateSequencePositionAsync(contextPath, 3);
+
+        // Act — should not throw
+        await _ledgerManager.ReconcileLedgerAsync(contextPath, eventsPath);
+
+        // Assert — ledger should remain at position 3
+        var position = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        Assert.Equal(3, position);
+    }
+
+    [Fact]
+    public async Task ReconcileLedgerAsync_WithNullContextPath_ThrowsArgumentNullExceptionAsync()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _ledgerManager.ReconcileLedgerAsync(null!, _testDirectory));
+    }
+
+    [Fact]
+    public async Task ReconcileLedgerAsync_WithNullEventsPath_ThrowsArgumentNullExceptionAsync()
+    {
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(
+            () => _ledgerManager.ReconcileLedgerAsync(_testDirectory, null!));
+    }
 }

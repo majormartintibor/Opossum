@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Crash-recovery position collision — orphaned event files are no longer silently overwritten.**
+  A process crash between writing event files (step 7) and updating the ledger (step 9)
+  previously left orphaned files on disk. On the next `AppendAsync`, the stale ledger
+  allocated the same positions and `WriteEventAsync` overwrote the orphans — even with
+  `WriteProtectEventFiles = true`. The fix makes `WriteEventAsync` idempotent (skip if
+  destination exists) and adds `LedgerManager.ReconcileLedgerAsync` which, on the first
+  append after startup, scans the events directory and advances the ledger to match the
+  actual highest on-disk position. See
+  [limitation doc](docs/limitations/crash-recovery-position-collision.md).
+
 ### Changed
 
 - **Write-through projection rebuild (Phase 2 — Scalable Projection Rebuild).**

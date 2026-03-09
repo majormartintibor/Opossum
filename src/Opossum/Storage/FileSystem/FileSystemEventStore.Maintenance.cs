@@ -42,7 +42,7 @@ internal sealed partial class FileSystemEventStore : IEventStoreMaintenance
                     }
                 };
 
-                await _eventFileManager.WriteEventAsync(eventsPath, patched).ConfigureAwait(false);
+                await _eventFileManager.WriteEventAsync(eventsPath, patched, allowOverwrite: true).ConfigureAwait(false);
                 await _indexManager.AddTagsToIndexAsync(contextPath, newTags, position).ConfigureAwait(false);
 
                 totalTagsAdded += newTags.Count;

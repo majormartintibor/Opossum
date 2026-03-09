@@ -14,6 +14,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
     private readonly CrossProcessLockManager _crossProcessLockManager;
     private readonly SemaphoreSlim _appendLock = new(1, 1);
     private readonly ILogger<FileSystemEventStore> _logger;
+    private bool _reconciled;
 
     public FileSystemEventStore(OpossumOptions options, ILogger<FileSystemEventStore>? logger = null)
     {
@@ -103,6 +104,16 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
             if (condition != null)
             {
                 await ValidateAppendConditionAsync(contextPath, condition).ConfigureAwait(false);
+            }
+
+            // 5b. Reconcile ledger on first append after startup.
+            //     Detects orphaned event files from a crash between step 7 and step 9
+            //     and advances the ledger to match the actual on-disk state.
+            if (!_reconciled)
+            {
+                await _ledgerManager.ReconcileLedgerAsync(contextPath, GetEventsPath(contextPath))
+                    .ConfigureAwait(false);
+                _reconciled = true;
             }
 
             // 6. Allocate sequence positions and build SequencedEvents

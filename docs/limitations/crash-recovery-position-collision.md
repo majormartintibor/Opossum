@@ -1,13 +1,43 @@
-# Known Limitation: Crash-Recovery Position Collision
+# Resolved Limitation: Crash-Recovery Position Collision
 
-> **Severity:** High — silent data loss possible
+> **Severity:** ~~High — silent data loss possible~~ **Resolved in 0.5.0**
 > **Introduced:** v0.1.0
-> **Affects:** All versions up to and including 0.4.x
-> **Fix target:** 0.5.0 — see [roadmap](../future-plans/0.5.0-roadmap.md#5-crash-recovery-position-collision)
+> **Affected:** All versions up to and including 0.4.x
+> **Fixed in:** 0.5.0 — see [implementation tasks](../releases/0.5.0-crash-recovery-tasks.md)
 
 ---
 
-## What Happens
+## Resolution (0.5.0)
+
+This limitation was fixed in v0.5.0 via two complementary changes:
+
+### 1. Idempotent event writes
+
+`WriteEventAsync` now checks whether the destination file already exists before moving
+the temp file into place. If the file exists and this is a normal append (not a
+maintenance rewrite via `AddTagsAsync`), the write is **skipped** — the temp file is
+deleted and the method returns without overwriting the existing event. This makes every
+event write idempotent on restart.
+
+The `allowOverwrite` parameter (default `false`) controls this behaviour. Only the
+`AddTagsAsync` maintenance path passes `allowOverwrite: true`.
+
+### 2. Ledger reconciliation on first append
+
+On the first `AppendAsync` call after process startup, `LedgerManager.ReconcileLedgerAsync`
+scans the events directory for the highest-numbered `*.json` file. If this position
+exceeds the ledger's `LastSequencePosition`, the ledger is updated to match. This runs
+inside the cross-process lock, before position allocation, and is cached so it only
+executes once per process lifetime.
+
+Together, these changes ensure that:
+- Orphaned event files from a crash between step 7 and step 9 are never overwritten.
+- The ledger catches up to the actual on-disk state before allocating new positions.
+- New events are assigned positions **after** the orphaned ones.
+
+---
+
+## Original Problem (pre-0.5.0)
 
 `AppendAsync` writes events in three sequential phases:
 
@@ -97,31 +127,22 @@ an unclean shutdown:
 
 ---
 
-## Planned Fix (0.5.0)
+## Implementation Details (0.5.0)
 
-Two approaches are under consideration; both make the per-event write **idempotent**
-on restart:
+The fix implements **Option B — Existence check before overwrite**:
 
-### Option B — Existence check before overwrite (preferred)
+1. **`EventFileManager.WriteEventAsync`** — added `bool allowOverwrite = false` parameter.
+   When `false` and the destination exists, the write is skipped (idempotent).
+   When `true` (used by `AddTagsAsync`), the existing ReadOnly-stripping and overwrite
+   logic is preserved.
 
-Before calling `File.Move` in `WriteEventAsync`, check `File.Exists(filePath)`. If
-the destination already exists, skip the write (the previous run persisted the event).
-After writing all event files, reconcile the ledger to
-`max(lastSuccessfullyWrittenPosition, currentLedgerPosition)`.
+2. **`LedgerManager.ReconcileLedgerAsync`** — new method that scans the events directory
+   for the highest-numbered event file and updates the ledger if it is behind.
 
-This requires no file-format change and is the lowest-risk fix.
-
-### Option A — Ledger-first (full WAL semantics)
-
-Move the ledger update to **before** step 7. The ledger records intent before event
-files are written. On restart, any position in the ledger that lacks a corresponding
-event file on disk is detected and the write is re-executed.
-
-More principled but more complex. A startup recovery scan adds latency and the recovery
-logic must be carefully tested. Deferred as a future consideration unless Option B proves
-insufficient.
-
-The implementation decision will be recorded in a new ADR.
+3. **`FileSystemEventStore.AppendAsync`** — calls `ReconcileLedgerAsync` on the first
+   append after startup, inside the cross-process lock, before position allocation.
+   Cached with a `_reconciled` flag so it only runs once per process lifetime.
 
 See the [0.5.0 roadmap](../future-plans/0.5.0-roadmap.md#5-crash-recovery-position-collision)
-for the full implementation plan.
+for the design rationale and the
+[implementation tasks](../releases/0.5.0-crash-recovery-tasks.md) for the full task list.
