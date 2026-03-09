@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Corrupt ledger no longer silently resets sequence positions to zero.**
+  `LedgerManager.GetLastSequencePositionAsync` previously caught `JsonException` and
+  returned `0`, causing the next `AppendAsync` to allocate positions starting at 1 and
+  silently overwrite every committed event file. The fix replaces the silent `return 0`
+  with an explicit `InvalidOperationException` that includes the ledger file path and
+  actionable recovery guidance. This transforms silent catastrophic data loss into a loud,
+  actionable failure.
+
 - **Crash-recovery position collision — orphaned event files are no longer silently overwritten.**
   A process crash between writing event files (step 7) and updating the ledger (step 9)
   previously left orphaned files on disk. On the next `AppendAsync`, the stale ledger

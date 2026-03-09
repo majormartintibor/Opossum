@@ -66,13 +66,22 @@ internal sealed partial class LedgerManager
                     FileAccess.Read,
                     FileShare.Read);
 
+                if (fileStream.Length == 0)
+                {
+                    return 0;
+                }
+
                 var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream).ConfigureAwait(false);
                 return ledgerData?.LastSequencePosition ?? 0;
             }
-            catch (JsonException)
+            catch (JsonException ex)
             {
-                // Ledger is corrupt - return 0 and let it be rebuilt
-                return 0;
+                throw new InvalidOperationException(
+                    $"Ledger file at '{ledgerPath}' is corrupt and cannot be parsed. " +
+                    "This would cause silent data loss by overwriting events from position 1. " +
+                    "Delete the ledger file and restart to re-derive the position from the events directory, " +
+                    "or restore the ledger from backup.",
+                    ex);
             }
             catch (IOException) when (attempt < maxRetries - 1)
             {
@@ -97,12 +106,22 @@ internal sealed partial class LedgerManager
                 FileAccess.Read,
                 FileShare.Read);
 
+            if (fileStream.Length == 0)
+            {
+                return 0;
+            }
+
             var ledgerData = await JsonSerializer.DeserializeAsync<LedgerData>(fileStream).ConfigureAwait(false);
             return ledgerData?.LastSequencePosition ?? 0;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return 0;
+            throw new InvalidOperationException(
+                $"Ledger file at '{ledgerPath}' is corrupt and cannot be parsed. " +
+                "This would cause silent data loss by overwriting events from position 1. " +
+                "Delete the ledger file and restart to re-derive the position from the events directory, " +
+                "or restore the ledger from backup.",
+                ex);
         }
     }
 

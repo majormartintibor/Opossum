@@ -70,7 +70,7 @@ public class LedgerManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task GetLastSequencePositionAsync_WhenLedgerIsCorrupt_ReturnsZeroAsync()
+    public async Task GetLastSequencePositionAsync_WhenLedgerIsCorrupt_ThrowsInvalidOperationExceptionAsync()
     {
         // Arrange
         var contextPath = Path.Combine(_testDirectory, "CorruptContext");
@@ -80,11 +80,45 @@ public class LedgerManagerTests : IDisposable
         // Write corrupt JSON
         await File.WriteAllTextAsync(ledgerPath, "{ this is not valid JSON }");
 
+        // Act & Assert
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _ledgerManager.GetLastSequencePositionAsync(contextPath));
+    }
+
+    [Fact]
+    public async Task GetLastSequencePositionAsync_WhenLedgerIsCorrupt_ExceptionMessageContainsLedgerPathAsync()
+    {
+        // Arrange
+        var contextPath = Path.Combine(_testDirectory, "CorruptPathContext");
+        Directory.CreateDirectory(contextPath);
+        var ledgerPath = Path.Combine(contextPath, ".ledger");
+
+        await File.WriteAllTextAsync(ledgerPath, "{ this is not valid JSON }");
+
         // Act
-        var position = await _ledgerManager.GetLastSequencePositionAsync(contextPath);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _ledgerManager.GetLastSequencePositionAsync(contextPath));
 
         // Assert
-        Assert.Equal(0, position); // Corrupt ledger treated as empty
+        Assert.Contains(ledgerPath, ex.Message);
+    }
+
+    [Fact]
+    public async Task GetLastSequencePositionAsync_WhenLedgerIsCorrupt_InnerExceptionIsJsonExceptionAsync()
+    {
+        // Arrange
+        var contextPath = Path.Combine(_testDirectory, "CorruptInnerContext");
+        Directory.CreateDirectory(contextPath);
+        var ledgerPath = Path.Combine(contextPath, ".ledger");
+
+        await File.WriteAllTextAsync(ledgerPath, "{ this is not valid JSON }");
+
+        // Act
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _ledgerManager.GetLastSequencePositionAsync(contextPath));
+
+        // Assert
+        Assert.IsType<JsonException>(ex.InnerException);
     }
 
     [Fact]
