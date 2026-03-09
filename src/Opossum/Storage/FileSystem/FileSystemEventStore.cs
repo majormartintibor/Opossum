@@ -221,7 +221,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         }
         catch (Exception ex)
         {
-            LogReadError(ex, _options.StoreName);
+            LogReadError(ex, _options.StoreName ?? string.Empty);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             throw;
         }
@@ -263,7 +263,7 @@ internal sealed partial class FileSystemEventStore : IEventStore, IDisposable
         }
         catch (Exception ex)
         {
-            LogReadError(ex, _options.StoreName);
+            LogReadError(ex, _options.StoreName ?? string.Empty);
             activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             throw;
         }

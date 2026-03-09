@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`LogReadError` nullable `StoreName` guard.** `LogReadError(ex, _options.StoreName)` passed
+  a nullable `string?` to a non-nullable `string` parameter. Applied the same
+  `?? string.Empty` guard already used by `LogAppendError`.
+
 - **Corrupt ledger no longer silently resets sequence positions to zero.**
   `LedgerManager.GetLastSequencePositionAsync` previously caught `JsonException` and
   returned `0`, causing the next `AppendAsync` to allocate positions starting at 1 and
