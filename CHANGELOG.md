@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [0.5.0-preview.1] - 2026-03-11
+
 ### Fixed
 
-- **`LogReadError` nullable `StoreName` guard.** `LogReadError(ex, _options.StoreName)` passed
+- **`LogReadError` nullable `StoreName` guard.**
   a nullable `string?` to a non-nullable `string` parameter. Applied the same
   `?? string.Empty` guard already used by `LogAppendError`.
 
