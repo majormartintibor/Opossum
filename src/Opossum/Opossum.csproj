@@ -7,7 +7,7 @@
 
     <!-- Package Information -->
     <PackageId>Opossum</PackageId>
-    <Version>0.4.0-preview.3</Version>
+    <Version>0.5.0-preview.1</Version>
     <Authors>Martin Tibor Major</Authors>
     <Company>Martin Tibor Major</Company>
     <Product>Opossum</Product>
@@ -19,24 +19,40 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>opossum.png</PackageIcon>
-    <PackageReleaseNotes>Fixed:
-- ProjectionManager.UpdateAsync correctness bug — duplicate event application and checkpoint regression resolved. Events are now filtered by both event type and position inside the per-projection lock; checkpoint always advances to batchMax.
-- RebuildAsync / RebuildAllAsync — checkpoint file is now always written after a rebuild, even when the event store is empty. Prevents infinite re-queue on daemon restart.
+    <PackageReleaseNotes>Breaking changes:
+- Rebuild methods (RebuildProjectionAsync, RebuildAllAsync, RebuildMissingProjectionsAsync, ForceRebuildAllAsync) removed from IProjectionManager. Inject IProjectionRebuilder instead.
+- ProjectionOptions.EnableAutoRebuild (bool) replaced by AutoRebuild (AutoRebuildMode enum): None | MissingCheckpointsOnly | ForceFullRebuild. Update appsettings.json: "AutoRebuild": "MissingCheckpointsOnly".
 
-Removed:
-- Sample: CourseBookOrderHistory projection removed. It used evt.Position as key selector (O(Events) cardinality), producing 700,000+ files on a Large-seeded database. Covered by the correctly-designed StudentPurchasedBooks projection (O(Students)).
+Added:
+- IProjectionRebuilder: dedicated rebuild orchestrator (RebuildAsync, RebuildAllAsync, GetRebuildStatusAsync).
+- AutoRebuildMode enum: None, MissingCheckpointsOnly, ForceFullRebuild.
+- RebuildBatchSize option (default 5 000): controls per-batch event load during rebuild.
+- RebuildFlushInterval option (default 10 000): crash-recovery journal flush frequency.
+- Crash-recovery rebuild journal: rebuild progress survives process crashes; resume from last flush point on next startup.
+- ResumeInterruptedRebuildsAsync: automatic resume of interrupted rebuilds on daemon startup.
+- Orphaned temp directory cleanup on startup.
+- maxCount parameter on IEventStore.ReadAsync for page-by-page iteration.
+- Per-batch progress logging during rebuild (events/sec, elapsed time).
 
-Performance (2026-03-03):
-- Incremental projection update: 3.68 us / 0 B (zero-allocation hot path verified).
-- ReadLastAsync: 799 us (100 events) to 1,105 us (10,000 events) — near-O(1) confirmed.
-- High-selectivity tag query: 553 us to ~501 us (-9%).
+Fixed:
+- Crash-recovery position collision: orphaned event files from a crash between write and ledger update are no longer silently overwritten. LedgerManager.ReconcileLedgerAsync advances the ledger to match on-disk state on first append after restart; WriteEventAsync is now idempotent (skip if destination exists).
+- Corrupt ledger no longer silently resets sequence positions to zero. JsonException now throws InvalidOperationException with recovery guidance instead of returning 0.
+- LogReadError nullable StoreName guard.
+- Write-through projection rebuild: SaveAsync writes directly to temp directory during rebuild, bounding peak memory to O(batch_size x state_size) regardless of unique key count. Eliminates OOM failures at scale.
+- No aggregated metadata index written during rebuild; post-rebuild reads served from per-file embedded metadata.
+- Post-rebuild daemon thrashing (UnauthorizedAccessException on Windows) on sparse projections fixed.
+
+Performance (benchmark baseline 2026-03-11):
+- Incremental projection update: ~4.6 us / 0 B (zero-allocation hot path confirmed).
+- Parallel rebuild Concurrency=4: ~47 % faster than sequential (strengthened vs 0.4.0).
+- All core read/write/query paths stable vs 0.4.0-preview.3 baseline.
 
 Full changelog: https://github.com/majormartintibor/Opossum/blob/main/CHANGELOG.md</PackageReleaseNotes>
 
     <!-- Assembly Versioning -->
-    <AssemblyVersion>0.4.0.0</AssemblyVersion>
-    <FileVersion>0.4.0.0</FileVersion>
-    <InformationalVersion>0.4.0-preview.2</InformationalVersion>
+    <AssemblyVersion>0.5.0.0</AssemblyVersion>
+    <FileVersion>0.5.0.0</FileVersion>
+    <InformationalVersion>0.5.0-preview.1</InformationalVersion>
 
     <!-- Documentation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

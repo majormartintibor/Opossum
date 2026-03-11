@@ -649,8 +649,21 @@ builder.Services.AddProjections(options =>
     // Scan assembly for projection definitions
     options.ScanAssembly(typeof(Program).Assembly);
 
-    // Rebuild all projections on startup (default: false)
-    options.RebuildOnStartup = false;
+    // Controls startup rebuild behaviour (default: MissingCheckpointsOnly)
+    // None                   — no automatic rebuilds on startup
+    // MissingCheckpointsOnly — only rebuild projections with no checkpoint file (default, recommended)
+    // ForceFullRebuild       — rebuild all projections on every startup (dev / post-migration)
+    options.AutoRebuild = AutoRebuildMode.MissingCheckpointsOnly;
+
+    // Maximum projections rebuilt in parallel (default: 4). Increase on NVMe SSDs.
+    options.MaxConcurrentRebuilds = 4;
+
+    // Events loaded per batch during rebuild (default: 5 000). Lower = less peak memory.
+    options.RebuildBatchSize = 5_000;
+
+    // Events processed between crash-recovery journal flushes (default: 10 000).
+    // Lower = more crash-durable; higher = less journal write overhead.
+    options.RebuildFlushInterval = 10_000;
 });
 ```
 
@@ -664,7 +677,10 @@ builder.Services.AddProjections(options =>
     "FlushEventsImmediately": true
   },
   "Projections": {
-    "RebuildOnStartup": false
+    "AutoRebuild": "MissingCheckpointsOnly",
+    "MaxConcurrentRebuilds": 4,
+    "RebuildBatchSize": 5000,
+    "RebuildFlushInterval": 10000
   }
 }
 ```
@@ -929,21 +945,49 @@ public class CourseController(IProjectionStore<CourseShortInfo> courseStore)
 
 ### IProjectionManager
 
-Manage projection lifecycle for operational tasks such as disaster recovery or evolving projections in a live system:
+Manages live projection lifecycle — registration, incremental updates, and checkpoint tracking. In normal use this is handled automatically by the background daemon:
 
 ```csharp
 public interface IProjectionManager
 {
-    // Rebuild all projections in parallel (respects MaxConcurrentRebuilds config)
-    // forceRebuild: true  = rebuild even projections that already have a checkpoint
-    // forceRebuild: false = only rebuild projections with checkpoint = 0 (new/missing)
-    Task<ProjectionRebuildResult> RebuildAllAsync(bool forceRebuild = false);
+    // Register a projection definition (called during startup)
+    void RegisterProjection<TState>(IProjectionDefinition<TState> definition) where TState : class;
 
+    // Apply new events to all registered projections (called by the daemon)
+    Task UpdateAsync(SequencedEvent[] events, CancellationToken cancellationToken = default);
+
+    // Read the last processed event position for a named projection
+    Task<long> GetCheckpointAsync(string projectionName, CancellationToken cancellationToken = default);
+
+    // Names of all currently registered projections
+    IReadOnlyList<string> GetRegisteredProjections();
+}
+```
+
+### IProjectionRebuilder
+
+Rebuild projections from scratch — for disaster recovery, deploying projection logic fixes,
+or post-migration replays. Available from DI alongside `IProjectionManager`:
+
+```csharp
+public interface IProjectionRebuilder
+{
     // Rebuild a single named projection
-    Task RebuildAsync(string projectionName);
+    Task<ProjectionRebuildResult> RebuildAsync(
+        string projectionName,
+        CancellationToken cancellationToken = default);
+
+    // Rebuild all registered projections in parallel (respects MaxConcurrentRebuilds)
+    // forceRebuild: true  — rebuild every projection regardless of checkpoint
+    // forceRebuild: false — only rebuild projections with no checkpoint file
+    Task<ProjectionRebuildResult> RebuildAllAsync(
+        bool forceRebuild = false,
+        CancellationToken cancellationToken = default);
 
     // Rebuild a specific subset — useful after fixing a bug in one projection
-    Task<ProjectionRebuildResult> RebuildAsync(string[] projectionNames);
+    Task<ProjectionRebuildResult> RebuildAsync(
+        string[] projectionNames,
+        CancellationToken cancellationToken = default);
 
     // Poll current rebuild progress
     Task<ProjectionRebuildStatus> GetRebuildStatusAsync();
@@ -953,9 +997,9 @@ public interface IProjectionManager
 Expose as an admin endpoint (add proper authentication in production):
 
 ```csharp
-app.MapPost("/admin/projections/rebuild", async (IProjectionManager manager) =>
+app.MapPost("/admin/projections/rebuild", async (IProjectionRebuilder rebuilder) =>
 {
-    var result = await manager.RebuildAllAsync(forceRebuild: false);
+    var result = await rebuilder.RebuildAllAsync(forceRebuild: false);
     return result.Success
         ? Results.Ok(result)
         : Results.Problem($"Rebuild failed: {string.Join(", ", result.FailedProjections)}");
@@ -1501,34 +1545,34 @@ See [`ExamRegistration/`](Samples/Opossum.Samples.CourseManagement/ExamRegistrat
 
 ### Typical Throughput
 
-**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-03-03):**
+**Benchmarked on Windows 11, .NET 10.0.2, SSD storage (2026-03-11):**
 
 | Operation | Throughput | Notes |
 |-----------|-----------|-------|
-| **Append (FlushImmediately = true, single event)** | ~61 events/sec | True durability: event + index files flushed (~16ms/event on SSD) |
-| **Append (FlushImmediately = true, batch 10)** | ~81 events/sec | ~12ms/event when amortised over a batch |
-| **Append (FlushImmediately = false)** | ~213 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
-| **Tag query (high selectivity)** | ~501 μs | Index-based, excellent for targeted queries |
-| **Tag query (1K events)** | ~11 ms | Sub-linear scaling |
-| **ReadLastAsync (100 → 10K events)** | 799–1,105 μs | Near-O(1): one index lookup + one file read |
-| **Read by EventType (10K events)** | ~212 ms | Index-based |
-| **Projection rebuild** | ~15,000 events/sec | Batched I/O (see rebuild note below) |
-| **Incremental projection update** | ~3.7 μs / 0 B | ~1,500x faster than full rebuild; zero allocation |
+| **Append (FlushImmediately = true, single event)** | ~55 events/sec | True durability: event + index files flushed (~18ms/event on SSD) |
+| **Append (FlushImmediately = true, batch 10)** | ~78 events/sec | ~13ms/event when amortised over a batch |
+| **Append (FlushImmediately = false)** | ~185 events/sec | OS page cache only (testing/dev mode — data loss risk on power failure) |
+| **Tag query (high selectivity)** | ~524 μs | Index-based, excellent for targeted queries |
+| **Tag query (1K events)** | ~11.6 ms | Sub-linear scaling |
+| **ReadLastAsync (100 → 10K events)** | 948–1,158 μs | Near-O(1): one index lookup + one file read |
+| **Read by EventType (10K events)** | ~206 ms | Index-based |
+| **Projection rebuild** | ~4.5 ms / 50 events | Write-through; bounded memory regardless of unique key count |
+| **Incremental projection update** | ~4.6 μs / 0 B | ~978× faster than full rebuild; zero allocation |
 
 ### Query Performance by Selectivity
 
 | Selectivity | 10K Events | Performance |
 |------------|-----------|-------------|
-| **High** (few matches) | ~501 μs | ⭐ Excellent - tag index highly effective |
+| **High** (few matches) | ~524 μs | ⭐ Excellent - tag index highly effective |
 | **Medium** (moderate matches) | ~5.3 ms | ✅ Good - typical use case |
-| **Low** (many matches) | ~99 ms | ⚠️ Expected - must deserialize many events |
+| **Low** (many matches) | ~103 ms | ⚠️ Expected - must deserialize many events |
 
 ### Optimization Tips
 
 ✅ **Use SSDs** - Flush operations are much faster (10ms vs 50ms+ on HDD)  
-✅ **Use tag-based queries** - ~501μs for high selectivity vs ~5.3ms for broader queries  
-✅ **Enable parallel projection rebuilding** - `MaxConcurrentRebuilds` config; note: after the rebuild I/O optimization, sequential and parallel complete in similar time (~370ms for 4 projections) — the disk bottleneck is gone  
-✅ **Use incremental projection updates** - ~1,500x faster than full rebuild; zero allocation  
+✅ **Use tag-based queries** - ~524μs for high selectivity vs ~5.3ms for broader queries  
+✅ **Enable parallel projection rebuilding** - `MaxConcurrentRebuilds` config; Concurrency=4 is ~47 % faster than sequential for large datasets (write-through I/O parallelises well)  
+✅ **Use incremental projection updates** - ~978× faster than full rebuild; zero allocation  
 ✅ **Optimize query selectivity** - More specific tags = faster queries  
 ⚠️ **Avoid Query.All() for large datasets** - Use projections for read models instead  
 ⚠️ **Use `FlushEventsImmediately = false`** for testing only (data loss risk on power failure)
@@ -1556,9 +1600,15 @@ Opossum is designed for **single-server deployments**:
 
 **Beyond these limits?** Consider cloud-based event stores (EventStoreDB, Azure Event Hubs).
 
-**Detailed benchmarks:** See `docs/benchmarking/results/20260303/`
+**Detailed benchmarks:** See `docs/benchmarking/results/20260311/`
 
-> **Rebuild performance note:** The projection rebuild I/O optimisation reduced the 4-projection sequential rebuild from **5.5 s → 370 ms (~15×)** and memory from **85.9 MB → 21.5 MB (~4×)**. As a consequence, the parallel-over-sequential speedup collapsed to near-parity — the disk I/O bottleneck that made parallelism valuable was eliminated. See `CHANGELOG.md` for the full benchmark comparison.
+> **Rebuild performance note (0.5.0):** The write-through projection rebuild introduced in 0.5.0
+> writes each `SaveAsync` call directly to disk during rebuild rather than accumulating state
+> in memory. For large datasets, sequential rebuild of 4 projections takes ~3.7 s; with
+> `MaxConcurrentRebuilds = 4` this drops to ~2.0 s (~47 % faster). This is the expected
+> trade-off for bounded memory (no more OOM with 1 M+ unique keys) and crash-recovery
+> durability. Rebuild is a rare, background operation — the memory and safety guarantees
+> outweigh the I/O cost.
 
 ### IEventStoreAdmin
 
@@ -1601,25 +1651,23 @@ When no listener is attached the overhead is a single null-check per operation.
 
 ## ⚠️ Known Limitations
 
-### Crash-Recovery Position Collision (tracked for 0.5.0)
+### Single-Server / Single-Context Design
 
-**Severity:** High — silent data loss possible on power failure during an append.
+Opossum is designed as a **single-context** event store — one store name per `AddOpossum()`
+call. Multi-tenancy is handled at the application layer (e.g. per-tenant root paths).
+See [ADR-004](docs/decisions/004-single-context-by-design.md) for the full rationale.
 
-If the process crashes or loses power **after** event files are written to disk but **before**
-the ledger is updated, orphaned event files remain at positions the ledger does not record.
-On the next `AppendAsync`, those positions are reallocated and the orphaned files are
-**silently overwritten**.
+### ProjectionTagIndex Lock Growth (long-running processes, high cardinality)
 
-- `WriteProtectEventFiles = true` does **not** protect against this — the write path strips
-  the read-only attribute before overwriting.
-- `FlushEventsImmediately = true` ensures the original events survive on disk but does not
-  prevent the overwrite on restart.
+Each unique projection key that is ever written to a `[ProjectionTags]`-enabled projection
+causes a per-key `SemaphoreSlim` to be allocated and held in memory for the lifetime of
+the process. For projections with high-cardinality keys (e.g. one projection per order
+over years), this map grows without bound — ~48 bytes per key.
 
-**Workaround:** After any unclean shutdown, check for event files at positions greater than
-the value in `.ledger`. Full analysis and manual recovery steps:
-[`docs/limitations/crash-recovery-position-collision.md`](docs/limitations/crash-recovery-position-collision.md).
+**Impact:** Negligible for typical deployments (< 100 K unique keys = < 5 MB).
+Relevant only for long-running processes on high-cardinality projections.
 
-**Fix target:** 0.5.0 (write-ahead log approach).
+**Fix target:** 0.6.0 (lock pooling or weak-reference cleanup).
 
 ---
 
