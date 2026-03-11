@@ -229,6 +229,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   freshly rebuilt files. The cache is now invalidated so the next read loads metadata
   from the new per-file data on disk.
 
+### Performance (benchmark baseline 2026-03-11)
+
+- **Parallel projection rebuild: ~6–10× slower vs 0.4.0 baseline — expected, by design.**
+  The write-through projection rebuild (Phase 2) writes each `SaveAsync` call directly
+  to disk during rebuild instead of buffering in memory. For a large dataset, total disk
+  I/O is O(N events × updates_per_key) instead of O(unique_keys) at commit time. At the
+  parallel benchmark's scale (four projections, ~3.5× larger dataset than the 0.4.0
+  baseline), sequential rebuild takes ~3.7 s vs ~381 ms; Concurrency=4 takes ~2.0 s.
+  This is the correct trade-off: the alternative was unbounded memory growth (10 GB+ for
+  1 M unique keys × 10 KB state) and unrecoverable OOM failures on large datasets.
+  The Concurrency=4 benefit is stronger than before (~47 % faster than sequential, up
+  from ~7 %), because write-through I/O parallelises better than in-memory commit
+  serialisation.
+- **Incremental projection update: ~4.6 μs / 0 B** (1 new event), ~4.8 μs / 0 B
+  (10 new events) — **2× faster and zero-allocation** vs the 0.4.0-preview.2 baseline
+  (10.4 μs / 11.8 KB). The in-memory checkpoint cache fix is confirmed in this first
+  full benchmark run since the fix was applied.
+- **All core paths stable:** append, read, query, ReadLast, and descending-order
+  benchmarks are all within ±9 % of the 0.4.0-preview.2 baseline (within expected
+  InvocationCount=1 noise). No regressions introduced in core I/O paths.
+- Full benchmark report: `docs/benchmarking/results/20260311/`
+
 ---
 
 ## [0.4.0-preview.3] - 2026-03-04
