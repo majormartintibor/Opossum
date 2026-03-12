@@ -110,6 +110,57 @@ If you add `docs/performance/new-benchmark.md`, you must also add:
 
 This ensures the documentation is visible and navigable in Visual Studio's Solution Explorer.
 
+### GitHub Pages Documentation Site
+
+The documentation site lives under `docs/docfx/` and is published automatically to
+`https://majormartintibor.github.io/Opossum/` on every push to `master`.
+
+**Every code change that affects a public API, behaviour, or configuration option MUST also update the relevant article(s) in `docs/docfx/articles/`.**
+
+#### What to update and where
+
+| Change type | Articles to update |
+|---|---|
+| New public type, interface, or method | `getting-started/installation.md` (registered-services table if applicable) + any article with a relevant code example |
+| Changed method signature or return type | Every article that contains a code example calling that method |
+| New or changed configuration option | `getting-started/configuration.md`, `getting-started/installation.md` |
+| New feature or concept | Author or extend the relevant article in the appropriate section (`concepts/`, `guides/`) |
+| Renamed type or namespace | All articles that reference the old name |
+
+#### Copied articles
+
+Articles marked with a `<!-- source: docs/... — keep in sync -->` comment at the top are
+copies of files from `docs/`. When the source file changes, update the copy in
+`docs/docfx/articles/` too.
+
+| Source | Copy in `docs/docfx/articles/` |
+|---|---|
+| `docs/configuration-guide.md` | `getting-started/configuration.md` |
+| `docs/specifications/DCB-Specification.md` | `concepts/dcb.md` |
+| `docs/specifications/dcb-projections.md` | `concepts/projections.md` |
+| `docs/guides/use-cases.md` | `guides/use-cases.md` |
+| `docs/guides/durability-quick-reference.md` | `guides/durability.md` |
+| `docs/configuration-validation.md` | `guides/configuration-validation.md` |
+| `docs/decisions/001-*.md` | `decisions/adr-001.md` |
+| `docs/decisions/003-*.md` | `decisions/adr-003.md` |
+| `docs/decisions/004-*.md` | `decisions/adr-004.md` |
+| `docs/decisions/005-*.md` | `decisions/adr-005.md` |
+
+#### Local verification before committing
+
+Always run DocFX locally after editing articles and confirm zero warnings:
+
+```bash
+docfx docs/docfx/docfx.json
+# Expected: Build succeeded.  0 warning(s)  0 error(s)
+```
+
+Install DocFX if not already present:
+
+```bash
+dotnet tool install -g docfx
+```
+
 ## External Libraries
 In the core Opossum project and its test projects, avoid using external libraries.
 Only official Microsoft packages are allowed.
@@ -500,6 +551,8 @@ A feature or task is ONLY considered complete when ALL of the following criteria
 - ✅ Code comments updated (if needed)
 - ✅ README updated (if needed)
 - ✅ **CHANGELOG.md updated** (MANDATORY for all new features, bug fixes, and breaking changes)
+- ✅ **GitHub Pages articles updated** — all affected `docs/docfx/articles/` pages reflect the change
+- ✅ **DocFX build clean** — `docfx docs/docfx/docfx.json` reports `0 warning(s)  0 error(s)`
 
 ### 4. Verification Checklist
 
@@ -515,6 +568,8 @@ Before claiming "Implementation Complete", you MUST explicitly confirm:
 - [ ] ✅ Sample app runs without errors (if applicable)
 - [ ] ✅ No breaking changes to existing APIs
 - [ ] ✅ All documentation updated
+- [ ] ✅ GitHub Pages articles updated (affected `docs/docfx/articles/` pages)
+- [ ] ✅ DocFX build clean: `docfx docs/docfx/docfx.json` → `0 warning(s)  0 error(s)`
 - [ ] ✅ CHANGELOG.md updated with changes
 - [ ] ✅ Copilot-instructions followed
 ```
