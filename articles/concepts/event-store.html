@@ -103,20 +103,20 @@
 <p>Opossum stores events as <strong>individual JSON files</strong> in a structured directory hierarchy — one file per event, named by their monotonically increasing sequence position:</p>
 <pre><code>EventStore\
   MyApp\
-    events\
-      position_1.json      ← {&quot;eventType&quot;:&quot;StudentRegisteredEvent&quot;, &quot;data&quot;:{...}, &quot;tags&quot;:[...]}
-      position_2.json
-      position_3.json
-    index\
-      event-types\
-        StudentRegisteredEvent.idx   ← list of positions
+    .ledger                            ← tracks last committed position
+    Events\
+      0000000001.json                  ← {&quot;eventType&quot;:&quot;StudentRegisteredEvent&quot;, &quot;data&quot;:{...}, &quot;tags&quot;:[...]}
+      0000000002.json
+      0000000003.json
+    Indices\
+      EventType\
+        StudentRegisteredEvent.idx     ← list of positions
         CourseCreatedEvent.idx
-      tags\
-        studentId_abc123.idx         ← positions for tag &quot;studentId:abc123&quot;
-    ledger.json                      ← tracks last committed position
-    projections\
+      Tags\
+        studentId_abc123.idx           ← positions for tag &quot;studentId:abc123&quot;
+    Projections\
       StudentView\
-        abc123.json                  ← current state for key &quot;abc123&quot;
+        abc123.json                    ← current state for key &quot;abc123&quot;
 </code></pre>
 <h3 id="why-files">Why files?</h3>
 <table>

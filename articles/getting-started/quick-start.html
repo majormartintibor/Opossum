@@ -277,16 +277,16 @@ var enrolled = await projectionStore.QueryAsync(
 <p>After running the above, your event store directory looks like:</p>
 <pre><code>D:\MyData\EventStore\
   QuickStart\
-    events\
-      position_1.json
-      position_2.json
-    index\
-      event-types\
+    .ledger
+    Events\
+      0000000001.json
+      0000000002.json
+    Indices\
+      EventType\
         StudentRegisteredEvent.idx
-      tags\
+      Tags\
         studentId_&lt;guid&gt;.idx
-    ledger.json
-    projections\
+    Projections\
       StudentView\
         &lt;student-guid&gt;.json
 </code></pre>
