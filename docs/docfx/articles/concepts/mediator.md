@@ -1,6 +1,6 @@
 # Mediator Pattern in Opossum
 
-Opossum ships a lightweight mediator that dispatches commands and queries to registered handlers, discovered automatically via dependency injection.
+Opossum ships a lightweight, convention-based mediator that dispatches commands and queries to handlers discovered automatically at startup.
 
 ---
 
@@ -8,22 +8,25 @@ Opossum ships a lightweight mediator that dispatches commands and queries to reg
 
 The mediator pattern decouples the **sender** of a request from its **handler**. In a CQRS/event-sourcing context this means:
 
-- Controllers and API endpoints send a command/query object — they don't know which class handles it.
-- Handlers are registered in DI and discovered at startup — no manual wiring.
-- Business logic stays in focused, testable handler classes rather than leaking into controllers.
+- API endpoints send a command/query object — they don't know which class handles it.
+- Handlers are discovered by reflection at startup — no manual wiring.
+- Business logic stays in focused, testable handler classes rather than leaking into endpoints.
 
 ---
 
 ## Setup
 
 ```csharp
+using Opossum.DependencyInjection;
 using Opossum.Mediator;
 
-// In Program.cs / Startup
-builder.Services.AddMediator();
+// In Program.cs
+builder.Services
+    .AddOpossum(options => { /* ... */ })
+    .AddMediator();
 ```
 
-`AddMediator()` scans the entry assembly for all classes decorated with `[MessageHandler]` and registers them automatically.
+`AddMediator()` scans the calling assembly for handler classes and registers them automatically.
 
 To scan additional assemblies:
 
@@ -38,37 +41,119 @@ builder.Services.AddMediator(options =>
 
 ## Defining a Handler
 
-Implement `IMessageHandler<TMessage, TResponse>` and decorate with `[MessageHandler]`:
+A handler is a plain class — no interface implementation is required. The mediator discovers it by **convention**:
+
+1. The class name ends with `Handler`, **or** it is decorated with `[MessageHandler]`.
+2. It exposes a public method named `HandleAsync`, `Handle`, `ConsumeAsync`, or `Consume`.
+3. The **first parameter** of that method is the message type (the command or query).
+4. Additional parameters are resolved from the DI container at invocation time.
+
+### Command Handler Example
+
+From the Course Management sample app — registering a student:
 
 ```csharp
-using Opossum.Mediator;
+using Opossum.Core;
+using Opossum.Extensions;
 
-// Command / request message
-public record RegisterStudentCommand(string Name, string Email);
+// Command message
+public sealed record RegisterStudentCommand(
+    Guid StudentId, string FirstName, string LastName, string Email);
 
-// Handler
-[MessageHandler]
-public class RegisterStudentHandler(IEventStore eventStore)
-    : IMessageHandler<RegisterStudentCommand, Guid>
+// Handler — discovered by naming convention (ends with "Handler")
+public sealed class RegisterStudentCommandHandler()
 {
-    public async Task<Guid> HandleAsync(
+    public async Task<CommandResult> HandleAsync(
         RegisterStudentCommand command,
-        CancellationToken cancellationToken)
+        IEventStore eventStore)            // resolved from DI
     {
-        var studentId = Guid.NewGuid();
-
-        var evt = new StudentRegisteredEvent(studentId, command.Name, command.Email)
+        // Build the event using the fluent builder
+        NewEvent newEvent = new StudentRegisteredEvent(
+                command.StudentId,
+                command.FirstName,
+                command.LastName,
+                command.Email)
             .ToDomainEvent()
-            .WithTag("studentId", studentId.ToString())
-            .WithTag("studentEmail", command.Email);
+            .WithTag("studentId", command.StudentId.ToString())
+            .WithTag("studentEmail", command.Email)
+            .WithTimestamp(DateTimeOffset.UtcNow);
 
-        // DomainEventBuilder implicitly converts to NewEvent
+        // Append with DCB concurrency guard (unique email)
+        var emailQuery = Query.FromItems(new QueryItem
+        {
+            Tags = [new Tag("studentEmail", command.Email)]
+        });
+
         await eventStore.AppendAsync(
-            [evt],
-            condition: null,
-            cancellationToken);
+            newEvent,
+            condition: new AppendCondition { FailIfEventsMatch = emailQuery });
 
-        return studentId;
+        return CommandResult.Ok();
+    }
+}
+```
+
+### Command Handler with Decision Model
+
+For commands that need to enforce multiple business rules, use `BuildDecisionModelAsync` and `ExecuteDecisionAsync`:
+
+```csharp
+using Opossum.Core;
+using Opossum.DecisionModel;
+using Opossum.Exceptions;
+using Opossum.Extensions;
+
+public sealed record EnrollStudentToCourseCommand(Guid CourseId, Guid StudentId);
+
+public sealed class EnrollStudentToCourseCommandHandler()
+{
+    public async Task<CommandResult> HandleAsync(
+        EnrollStudentToCourseCommand command,
+        IEventStore eventStore)
+    {
+        try
+        {
+            return await eventStore.ExecuteDecisionAsync(
+                (store, ct) => TryEnrollStudentAsync(command, store));
+        }
+        catch (AppendConditionFailedException)
+        {
+            return CommandResult.Fail(
+                "Failed to enroll student due to concurrent updates. Please try again.");
+        }
+    }
+
+    private static async Task<CommandResult> TryEnrollStudentAsync(
+        EnrollStudentToCourseCommand command,
+        IEventStore eventStore)
+    {
+        // Build decision model from three independent projections in a single read
+        var (courseCapacity, studentLimit, alreadyEnrolled, appendCondition) =
+            await eventStore.BuildDecisionModelAsync(
+                CourseEnrollmentProjections.CourseCapacity(command.CourseId),
+                CourseEnrollmentProjections.StudentEnrollmentLimit(command.StudentId),
+                CourseEnrollmentProjections.AlreadyEnrolled(command.CourseId, command.StudentId));
+
+        if (courseCapacity is null)
+            return CommandResult.Fail("Course does not exist.");
+
+        if (alreadyEnrolled)
+            return CommandResult.Fail("Student is already enrolled in this course.");
+
+        if (courseCapacity.IsFull)
+            return CommandResult.Fail("Course is at maximum capacity.");
+
+        NewEvent enrollmentEvent = new StudentEnrolledToCourseEvent(
+                CourseId: command.CourseId,
+                StudentId: command.StudentId)
+            .ToDomainEvent()
+            .WithTag("courseId", command.CourseId.ToString())
+            .WithTag("studentId", command.StudentId.ToString())
+            .WithTimestamp(DateTimeOffset.UtcNow);
+
+        await eventStore.AppendAsync(enrollmentEvent, appendCondition);
+
+        return CommandResult.Ok();
     }
 }
 ```
@@ -80,54 +165,76 @@ public class RegisterStudentHandler(IEventStore eventStore)
 Inject `IMediator` and call `InvokeAsync<TResponse>`:
 
 ```csharp
-public class StudentController(IMediator mediator)
-{
-    [HttpPost]
-    public async Task<IActionResult> Register([FromBody] RegisterStudentRequest request)
-    {
-        var studentId = await mediator.InvokeAsync<Guid>(
-            new RegisterStudentCommand(request.Name, request.Email));
+using Opossum.Core;
+using Opossum.Mediator;
 
-        return Ok(studentId);
-    }
-}
+// Minimal API endpoint
+app.MapPost("/students", async (
+    [FromBody] RegisterStudentRequest request,
+    [FromServices] IMediator mediator) =>
+{
+    var studentId = Guid.NewGuid();
+
+    var command = new RegisterStudentCommand(
+        StudentId: studentId,
+        FirstName: request.FirstName,
+        LastName: request.LastName,
+        Email: request.Email);
+
+    var commandResult = await mediator.InvokeAsync<CommandResult>(command);
+
+    if (!commandResult.Success)
+        return Results.BadRequest(commandResult.ErrorMessage);
+
+    return Results.Created($"/students/{studentId}", new { id = studentId });
+});
 ```
 
-The mediator resolves the correct handler from DI, executes it, and returns the result.
+The mediator resolves the correct handler, creates an instance via `ActivatorUtilities.CreateInstance`, injects method parameters from DI, executes the method, and returns the result.
 
 ---
 
 ## Query Handlers
 
-The same pattern works for queries:
+The same convention works for queries. Query handlers typically inject `IProjectionStore<T>` to read materialized views:
 
 ```csharp
-public record GetStudentQuery(Guid StudentId);
+using Opossum.Core;
+using Opossum.Projections;
 
-[MessageHandler]
-public class GetStudentHandler(IProjectionStore<StudentView> store)
-    : IMessageHandler<GetStudentQuery, StudentView?>
+public sealed record GetCourseShortInfoCommand(Guid CourseId);
+
+public sealed class GetCourseShortInfoCommandHandler()
 {
-    public async Task<StudentView?> HandleAsync(
-        GetStudentQuery query,
-        CancellationToken cancellationToken) =>
-        await store.GetAsync(query.StudentId.ToString());
+    public async Task<CommandResult<CourseShortInfo>> HandleAsync(
+        GetCourseShortInfoCommand command,
+        IProjectionStore<CourseShortInfo> projectionStore)
+    {
+        var course = await projectionStore.GetAsync(command.CourseId.ToString());
+
+        return course is null
+            ? CommandResult<CourseShortInfo>.Fail("Course not found.")
+            : CommandResult<CourseShortInfo>.Ok(course);
+    }
 }
 ```
 
 ```csharp
-// Usage
-var student = await mediator.InvokeAsync<StudentView?>(new GetStudentQuery(studentId));
+// Dispatch from a minimal API endpoint
+var result = await mediator.InvokeAsync<CommandResult<CourseShortInfo>>(
+    new GetCourseShortInfoCommand(courseId));
 ```
 
 ---
 
 ## Handler Discovery Rules
 
-- The handler class **must** be decorated with `[MessageHandler]`.
-- The handler class **must** implement `IMessageHandler<TMessage, TResponse>`.
-- Exactly **one handler per message type** is supported.
-- Handlers are discovered by reflection at startup and stored in the mediator's internal handler map. They are **not registered as DI services**; they are resolved and invoked directly by the mediator.
+- The handler class name **ends with `Handler`**, or it is decorated with `[MessageHandler]`. Either condition is sufficient.
+- The handler must expose a public method named `HandleAsync`, `Handle`, `ConsumeAsync`, or `Consume`.
+- The first parameter of that method is the **message type** (command or query).
+- Additional parameters are **resolved from DI** at invocation time — this includes `IEventStore`, `IProjectionStore<T>`, `CancellationToken`, and any other registered service.
+- Exactly **one handler per message type** is supported — a duplicate throws at startup.
+- Handlers are discovered by reflection at startup and stored in the mediator's internal handler map. They are created per invocation via `ActivatorUtilities.CreateInstance`.
 
 ---
 
@@ -136,7 +243,7 @@ var student = await mediator.InvokeAsync<StudentView?>(new GetStudentQuery(stude
 `InvokeAsync` accepts an optional `timeout` parameter:
 
 ```csharp
-var result = await mediator.InvokeAsync<Guid>(
+var result = await mediator.InvokeAsync<CommandResult>(
     command,
     cancellationToken: cts.Token,
     timeout: TimeSpan.FromSeconds(5));
@@ -151,6 +258,6 @@ If the handler does not complete within the timeout, an `OperationCanceledExcept
 See the generated API docs for full details:
 
 - [`IMediator`](../../api/Opossum.Mediator.IMediator.yml)
-- [`IMessageHandler<TMessage, TResponse>`](../../api/Opossum.Mediator.IMessageHandler.yml)
+- [`IMessageHandler`](../../api/Opossum.Mediator.IMessageHandler.yml)
 - [`MessageHandlerAttribute`](../../api/Opossum.Mediator.MessageHandlerAttribute.yml)
 - [`MediatorServiceExtensions`](../../api/Opossum.Mediator.MediatorServiceExtensions.yml)

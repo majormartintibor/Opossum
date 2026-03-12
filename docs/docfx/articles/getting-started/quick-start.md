@@ -21,19 +21,20 @@ dotnet add package Opossum
 
 ```csharp
 using Opossum.DependencyInjection;
+using Opossum.Projections;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpossum(options =>
-{
-    options.RootPath = @"D:\MyData\EventStore";
-    options.UseStore("QuickStart");
-});
-
-builder.Services.AddProjections(options =>
-{
-    options.ScanAssembly(typeof(Program).Assembly);
-});
+builder.Services
+    .AddOpossum(options =>
+    {
+        options.RootPath = @"D:\MyData\EventStore";
+        options.UseStore("QuickStart");
+    })
+    .AddProjections(options =>
+    {
+        options.ScanAssembly(typeof(Program).Assembly);
+    });
 
 var app = builder.Build();
 app.Run();
@@ -48,21 +49,22 @@ Events are immutable records implementing `IEvent`:
 ```csharp
 using Opossum;
 
-public record StudentRegisteredEvent(
+public sealed record StudentRegisteredEvent(
     Guid StudentId,
-    string Name,
+    string FirstName,
+    string LastName,
     string Email) : IEvent;
 
-public record StudentEnrolledToCourseEvent(
-    Guid StudentId,
-    Guid CourseId) : IEvent;
+public sealed record StudentEnrolledToCourseEvent(
+    Guid CourseId,
+    Guid StudentId) : IEvent;
 ```
 
 ---
 
 ## Step 3 — Append Events
 
-Inject `IEventStore` and append events using `NewEvent` + `DomainEvent`:
+Inject `IEventStore` and append events using the fluent builder from `Opossum.Extensions`:
 
 ```csharp
 using Opossum;
@@ -71,24 +73,28 @@ using Opossum.Extensions;
 
 public class StudentService(IEventStore eventStore)
 {
-    public async Task<Guid> RegisterAsync(string name, string email)
+    public async Task<Guid> RegisterAsync(
+        string firstName, string lastName, string email)
     {
         var studentId = Guid.NewGuid();
 
-        var evt = new StudentRegisteredEvent(studentId, name, email)
+        // Fluent builder — implicitly converts to NewEvent
+        NewEvent evt = new StudentRegisteredEvent(
+                studentId, firstName, lastName, email)
             .ToDomainEvent()
             .WithTag("studentId", studentId.ToString())
+            .WithTag("studentEmail", email)
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        // DomainEventBuilder implicitly converts to NewEvent
-        await eventStore.AppendAsync([evt], condition: null);
+        // Single-event convenience extension (from Opossum.Extensions)
+        await eventStore.AppendAsync(evt, condition: null);
 
         return studentId;
     }
 }
 ```
 
-> `ToDomainEvent()` and `WithTag()` are extension methods from `Opossum.Extensions`.
+> `ToDomainEvent()` and `WithTag()` are extension methods from `Opossum.Extensions`. The `DomainEventBuilder` has an implicit conversion to `NewEvent`.
 
 ---
 
@@ -121,10 +127,15 @@ Projections are materialized views maintained automatically by `IProjectionManag
 using Opossum.Core;
 using Opossum.Projections;
 
-public record StudentView(Guid StudentId, string Name, string Email, int EnrolledCourses);
+public sealed record StudentView(
+    Guid StudentId,
+    string FirstName,
+    string LastName,
+    string Email,
+    int EnrolledCourses);
 
 [ProjectionDefinition("StudentView")]
-public class StudentViewProjection : IProjectionDefinition<StudentView>
+public sealed class StudentViewProjection : IProjectionDefinition<StudentView>
 {
     public string ProjectionName => "StudentView";
 
@@ -140,7 +151,8 @@ public class StudentViewProjection : IProjectionDefinition<StudentView>
     public StudentView? Apply(StudentView? current, SequencedEvent evt) =>
         evt.Event.Event switch
         {
-            StudentRegisteredEvent r => new StudentView(r.StudentId, r.Name, r.Email, 0),
+            StudentRegisteredEvent r => new StudentView(
+                r.StudentId, r.FirstName, r.LastName, r.Email, 0),
             StudentEnrolledToCourseEvent when current is not null =>
                 current with { EnrolledCourses = current.EnrolledCourses + 1 },
             _ => current
@@ -153,11 +165,12 @@ Query the projection via `IProjectionStore<T>`:
 ```csharp
 using Opossum.Projections;
 
-public class StudentController(IProjectionStore<StudentView> store)
-{
-    public async Task<StudentView?> GetStudentAsync(Guid studentId) =>
-        await store.GetAsync(studentId.ToString());
-}
+// Inject IProjectionStore<T> via DI — one registration per projection type
+var student = await projectionStore.GetAsync(studentId.ToString());
+
+// Or query all with a predicate
+var enrolled = await projectionStore.QueryAsync(
+    s => s.EnrolledCourses > 0);
 ```
 
 ---
@@ -167,50 +180,44 @@ public class StudentController(IProjectionStore<StudentView> store)
 Use `AppendCondition` to prevent duplicate registrations — the DCB read → decide → append pattern:
 
 ```csharp
-public async Task<Guid> RegisterUniqueAsync(string email)
+public async Task<CommandResult> RegisterUniqueAsync(
+    RegisterStudentCommand command, IEventStore eventStore)
 {
     // 1. READ — find any existing registration for this email
-    var query = Query.FromItems(new QueryItem
+    var emailQuery = Query.FromItems(new QueryItem
     {
-        EventTypes = [nameof(StudentRegisteredEvent)],
-        Tags = [new Tag("studentEmail", email)]
+        Tags = [new Tag("studentEmail", command.Email)]
     });
 
-    var existing = await eventStore.ReadAsync(query, readOptions: null);
+    var existing = await eventStore.ReadAsync(emailQuery, ReadOption.None);
 
     // 2. DECIDE — enforce the "no duplicate email" invariant
-    if (existing.Length > 0)
-        throw new InvalidOperationException($"Email {email} is already registered.");
-
-    var highestPosition = existing.Length > 0 ? existing[^1].Position : (long?)null;
+    if (existing.Length != 0)
+        return CommandResult.Fail("A user with this email already exists.");
 
     // 3. APPEND — with a guard: fail if a conflicting event appeared since our read
-    var studentId = Guid.NewGuid();
-    var condition = new AppendCondition
-    {
-        FailIfEventsMatch = query,
-        AfterSequencePosition = highestPosition
-    };
-
-    var evt = new StudentRegisteredEvent(studentId, "New Student", email)
+    NewEvent newEvent = new StudentRegisteredEvent(
+            command.StudentId,
+            command.FirstName,
+            command.LastName,
+            command.Email)
         .ToDomainEvent()
-        .WithTag("studentId", studentId.ToString())
-        .WithTag("studentEmail", email);
+        .WithTag("studentId", command.StudentId.ToString())
+        .WithTag("studentEmail", command.Email)
+        .WithTimestamp(DateTimeOffset.UtcNow);
 
-    try
-    {
-        // DomainEventBuilder implicitly converts to NewEvent
-        await eventStore.AppendAsync([evt], condition);
-    }
-    catch (AppendConditionFailedException)
-    {
-        // A concurrent writer registered the same email — retry or surface error
-        throw new InvalidOperationException("Concurrent registration detected. Please retry.");
-    }
+    // The AppendCondition guards against concurrent writes:
+    // If any event with the same email tag appeared between our read and this
+    // append, the event store throws AppendConditionFailedException.
+    await eventStore.AppendAsync(
+        newEvent,
+        condition: new AppendCondition { FailIfEventsMatch = emailQuery });
 
-    return studentId;
+    return CommandResult.Ok();
 }
 ```
+
+For more complex scenarios with multiple business rules, use `BuildDecisionModelAsync` which composes multiple projections and returns a combined `AppendCondition` automatically. See the [Mediator](../concepts/mediator.md) article for a full example.
 
 ---
 

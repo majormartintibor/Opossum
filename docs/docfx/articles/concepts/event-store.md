@@ -57,12 +57,25 @@ EventStore\
 
 ### 1. Append
 
-Add one or more events atomically. An optional `AppendCondition` enforces optimistic concurrency (the DCB pattern):
+Add one or more events atomically. An optional `AppendCondition` enforces optimistic concurrency (the DCB pattern).
+
+The recommended way to create events is the **fluent builder** — the `DomainEventBuilder` implicitly converts to `NewEvent`:
 
 ```csharp
-await eventStore.AppendAsync(
-    events: [new NewEvent { Event = new DomainEvent { Event = myEvent } }],
-    condition: null); // or an AppendCondition for concurrency control
+using Opossum.Extensions;
+
+// Fluent builder — implicit conversion to NewEvent
+NewEvent evt = new StudentRegisteredEvent(studentId, "Alice", "Smith", "alice@example.com")
+    .ToDomainEvent()
+    .WithTag("studentId", studentId.ToString())
+    .WithTag("studentEmail", "alice@example.com")
+    .WithTimestamp(DateTimeOffset.UtcNow);
+
+// Single-event convenience extension
+await eventStore.AppendAsync(evt, condition: null);
+
+// Multi-event append via the core interface
+await eventStore.AppendAsync([evt1, evt2], condition: null);
 ```
 
 Each appended batch is assigned a globally unique, monotonically increasing **sequence position**.
@@ -72,6 +85,8 @@ Each appended batch is assigned a globally unique, monotonically increasing **se
 Query events by event type, tags, or both:
 
 ```csharp
+using Opossum.Core;
+
 // All events
 var all = await eventStore.ReadAsync(Query.All(), readOptions: null);
 
@@ -83,6 +98,10 @@ var typed = await eventStore.ReadAsync(
 var tagged = await eventStore.ReadAsync(
     Query.FromItems(new QueryItem { Tags = [new Tag("studentId", id)] }),
     readOptions: null);
+
+// Convenience extension — single ReadOption instead of array
+var descending = await eventStore.ReadAsync(
+    Query.All(), ReadOption.Descending);
 ```
 
 ### 3. ReadLast
@@ -114,10 +133,12 @@ The position is the key concept enabling DCB's optimistic concurrency: you read 
 Tags are key/value pairs attached to events at append time. They are stored in a separate index that allows fast retrieval without scanning all events:
 
 ```csharp
-// Tag conventions: "entityType", "entityId", or combined "entityType_entityId"
-.WithTag("studentId", studentId.ToString())
-.WithTag("courseId", courseId.ToString())
-.WithTag("month", "2024-01")
+// Tags are added via the fluent builder when creating events
+NewEvent evt = new StudentEnrolledToCourseEvent(courseId, studentId)
+    .ToDomainEvent()
+    .WithTag("studentId", studentId.ToString())
+    .WithTag("courseId", courseId.ToString())
+    .WithTimestamp(DateTimeOffset.UtcNow);
 ```
 
 A query using tags touches only the indexed positions for those tags — not the full event log.

@@ -1,4 +1,4 @@
-<!-- source: docs/configuration-guide.md — keep in sync -->
+ï»¿<!-- source: docs/configuration-guide.md ï¿½ keep in sync -->
 
 # Configuration Guide
 
@@ -22,9 +22,7 @@ Used for normal development and production:
 {
   "Opossum": {
     "RootPath": "D:\\Database",
-    "Contexts": [
-      "OpossumSampleApp"
-    ],
+    "StoreName": "OpossumSampleApp",
     "FlushEventsImmediately": true
   },
 
@@ -64,7 +62,7 @@ Automatically loaded when `ASPNETCORE_ENVIRONMENT=Testing`:
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `RootPath` | string | `"OpossumStore"` | Root directory for event store data |
-| `Contexts` | string[] | `[]` | List of bounded context names |
+| `StoreName` | string | *(none)* | Name of the event store (subdirectory under RootPath). Set via `UseStore()` or config binding |
 | `FlushEventsImmediately` | bool | `true` | Force disk flush after writes (durability) |
 
 ### Projections Section
@@ -91,7 +89,7 @@ dotnet run
 
 Uses: `appsettings.json`
 - Database: `D:\Database`
-- Auto-rebuild: `true`
+- Auto-rebuild: `MissingCheckpointsOnly`
 
 ### Testing (Integration Tests)
 

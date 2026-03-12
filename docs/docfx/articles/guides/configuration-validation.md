@@ -1,4 +1,4 @@
-<!-- source: docs/configuration-validation.md � keep in sync -->
+<!-- source: docs/configuration-validation.md � keep in sync -->
 
 # Configuration Validation - Implementation Summary
 
@@ -37,8 +37,8 @@ public int MaxConcurrentRebuilds { get; set; } = 4;
 - Validates RootPath is not null/empty
 - Checks for invalid path characters
 - Ensures path is absolute (rooted)
-- Validates at least one context exists
-- Checks context names are valid directory names
+- Validates StoreName is set
+- Checks StoreName is a valid directory name
 - Rejects Windows reserved names (CON, PRN, etc.)
 
 **ProjectionOptionsValidator** (`IValidateOptions<ProjectionOptions>`):
@@ -76,10 +76,10 @@ This ensures invalid configurations are caught at **startup**, not runtime.
 - ✅ Empty/null RootPath
 - ✅ Relative paths (must be absolute)
 - ✅ Invalid path characters
-- ✅ No contexts configured
-- ✅ Empty/invalid context names
+- ✅ No StoreName configured
+- ✅ Invalid StoreName values
 - ✅ Windows reserved names (CON, PRN, etc.)
-- ✅ Multiple valid contexts
+- ✅ Valid StoreName values
 - ✅ Multiple validation failures
 
 ### ProjectionOptionsValidationTests (22 tests)
@@ -107,7 +107,7 @@ This ensures invalid configurations are caught at **startup**, not runtime.
 {
   "Opossum": {
     "RootPath": "D:\\Database",
-    "Contexts": ["MyContext"],
+    "StoreName": "MyContext",
     "FlushEventsImmediately": true
   },
   "Projections": {
@@ -124,7 +124,7 @@ This ensures invalid configurations are caught at **startup**, not runtime.
 {
   "Opossum": {
     "RootPath": "relative/path",  // ❌ Must be absolute!
-    "Contexts": []                // ❌ At least one context required!
+    // StoreName not set          // ❌ StoreName is required!
   },
   "Projections": {
     "MaxConcurrentRebuilds": 100,  // ❌ Max is 64!
@@ -139,7 +139,7 @@ This ensures invalid configurations are caught at **startup**, not runtime.
 Microsoft.Extensions.Options.OptionsValidationException: 
 OpossumOptions validation failed:
 - RootPath must be an absolute path: relative/path
-- At least one context must be configured. Use AddContext() to add contexts.
+- A store name must be configured. Call options.UseStore("YourStoreName").
 
 ProjectionOptions validation failed:
 - MaxConcurrentRebuilds must be at most 64, got 100
@@ -165,7 +165,7 @@ ProjectionOptions validation failed:
 ### 3. Comprehensive Validation
 ✅ Range validation (min/max)  
 ✅ Format validation (absolute paths)  
-✅ Business rules (at least one context)  
+✅ Business rules (StoreName must be set)  
 ✅ Platform-specific rules (Windows reserved names)
 
 ### 4. Clear Error Messages
@@ -188,7 +188,7 @@ ProjectionOptions validation failed:
 | Property | Validation Rules |
 |----------|-----------------|
 | `RootPath` | - Not null/empty<br>- No invalid path characters<br>- Must be absolute (rooted) path |
-| `Contexts` | - At least one context required<br>- No null/whitespace names<br>- Valid directory names<br>- No Windows reserved names |
+| `StoreName` | - Must be set (via `UseStore()` or config binding)<br>- Valid directory name<br>- No Windows reserved names |
 | `FlushEventsImmediately` | - No validation (boolean) |
 
 ### ProjectionOptions

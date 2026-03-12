@@ -31,29 +31,30 @@ Install-Package Opossum
 
 ## Register with Dependency Injection
 
-Opossum integrates with Microsoft's standard `IServiceCollection`:
+Opossum integrates with Microsoft's standard `IServiceCollection`. All services chain from `AddOpossum()`:
 
 ```csharp
 using Opossum.DependencyInjection;
+using Opossum.Mediator;
+using Opossum.Projections;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Core event store
-builder.Services.AddOpossum(options =>
-{
-    options.RootPath = @"D:\MyAppData\EventStore"; // where events are stored
-    options.UseStore("MyApp");                      // store/context name
-    options.FlushEventsImmediately = true;          // durability (recommended for production)
-});
-
-// Projection system (optional — for read models)
-builder.Services.AddProjections(options =>
-{
-    options.ScanAssembly(typeof(Program).Assembly); // auto-discover IProjectionDefinition<T>
-});
-
-// Mediator (optional — for command/query handling)
-builder.Services.AddMediator();
+builder.Services
+    // Core event store
+    .AddOpossum(options =>
+    {
+        options.RootPath = @"D:\MyAppData\EventStore"; // where events are stored
+        options.UseStore("MyApp");                      // store name
+        options.FlushEventsImmediately = true;          // durability (recommended for production)
+    })
+    // Mediator (optional — for command/query handling)
+    .AddMediator()
+    // Projection system (optional — for read models)
+    .AddProjections(options =>
+    {
+        options.ScanAssembly(typeof(Program).Assembly); // auto-discover IProjectionDefinition<T>
+    });
 
 var app = builder.Build();
 app.Run();
@@ -66,8 +67,8 @@ app.Run();
 | Service | Lifetime | Description |
 |---|---|---|
 | `IEventStore` | Singleton | Core append/read interface |
-| `IEventStoreAdmin` | Singleton | Administrative operations (tag migration, etc.) |
-| `IEventStoreMaintenance` | Singleton | Maintenance operations (add tags retroactively) |
+| `IEventStoreAdmin` | Singleton | Destructive admin operations (`DeleteStoreAsync`) |
+| `IEventStoreMaintenance` | Singleton | Additive maintenance operations (retroactive tag migration) |
 
 **`AddProjections()`**
 

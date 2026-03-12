@@ -84,7 +84,7 @@ Car Dealership Event Store
 
 ```csharp
 // Event: Vehicle sale transaction
-public record VehicleSoldEvent : IEvent
+public sealed record VehicleSoldEvent : IEvent
 {
     public Guid VehicleId { get; init; }
     public Guid SalespersonId { get; init; }
@@ -96,22 +96,32 @@ public record VehicleSoldEvent : IEvent
 // Projection: Calculate total commission for a salesperson
 [ProjectionDefinition("SalespersonCommissions")]
 [ProjectionTags(typeof(CommissionTagProvider))]
-public class SalespersonCommissionProjection : IProjectionDefinition<CommissionSummary>
+public sealed class SalespersonCommissionProjection : IProjectionDefinition<CommissionSummary>
 {
-    public CommissionSummary? Apply(CommissionSummary? current, IEvent evt)
+    public string ProjectionName => "SalespersonCommissions";
+
+    public string[] EventTypes =>
+    [
+        nameof(VehicleSoldEvent),
+        nameof(CommissionAdjusted)
+    ];
+
+    public string KeySelector(SequencedEvent evt) =>
+        evt.Event.Tags.First(t => t.Key == "SalespersonId").Value;
+
+    public CommissionSummary? Apply(CommissionSummary? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
-            VehicleSoldEvent sold => current with
+            VehicleSoldEvent sold when current is not null => current with
             {
-                TotalCommission = current.TotalCommission + 
+                TotalCommission = current.TotalCommission +
                     (sold.SalePrice * sold.CommissionRate),
                 SalesCount = current.SalesCount + 1
             },
-            CommissionAdjusted adjusted => current with
+            CommissionAdjusted adjusted when current is not null => current with
             {
-                TotalCommission = adjusted.NewCommissionAmount,
-                Adjustments = current.Adjustments.Add(adjusted)
+                TotalCommission = adjusted.NewCommissionAmount
             },
             _ => current
         };
@@ -119,22 +129,22 @@ public class SalespersonCommissionProjection : IProjectionDefinition<CommissionS
 }
 
 // Tag Provider: Index by salesperson and date
-public class CommissionTagProvider : IProjectionTagProvider<CommissionSummary>
+public sealed class CommissionTagProvider : IProjectionTagProvider<CommissionSummary>
 {
     public IEnumerable<Tag> GetTags(CommissionSummary state)
     {
-        yield return new Tag { Key = "SalespersonId", Value = state.SalespersonId.ToString() };
-        yield return new Tag { Key = "Month", Value = state.Month.ToString("yyyy-MM") };
-        yield return new Tag { Key = "Year", Value = state.Year.ToString() };
+        yield return new Tag("SalespersonId", state.SalespersonId.ToString());
+        yield return new Tag("Month", state.Month.ToString("yyyy-MM"));
+        yield return new Tag("Year", state.Year.ToString());
     }
 }
 
 // Query: Get all commissions for a salesperson in a specific month
-var commissions = await projectionStore.QueryByTagsAsync(new[]
-{
-    new Tag { Key = "SalespersonId", Value = johnDoeId.ToString() },
-    new Tag { Key = "Month", Value = "2024-01" }
-});
+var commissions = await projectionStore.QueryByTagsAsync(
+[
+    new Tag("SalespersonId", johnDoeId.ToString()),
+    new Tag("Month", "2024-01")
+]);
 ```
 
 #### Migration from Existing System
@@ -241,7 +251,7 @@ Factory Assembly Line Event Store
 
 ```csharp
 // Event: Robot command issued
-public record RobotCommandIssuedEvent : IEvent
+public sealed record RobotCommandIssuedEvent : IEvent
 {
     public string RobotId { get; init; } = string.Empty;
     public string CommandType { get; init; } = string.Empty; // "Pick", "Place", "Weld"
@@ -250,7 +260,7 @@ public record RobotCommandIssuedEvent : IEvent
 }
 
 // Event: Robot command completed
-public record RobotCommandCompletedEvent : IEvent
+public sealed record RobotCommandCompletedEvent : IEvent
 {
     public string RobotId { get; init; } = string.Empty;
     public Guid CommandId { get; init; }
@@ -262,11 +272,23 @@ public record RobotCommandCompletedEvent : IEvent
 // Projection: Track unit progress through stations
 [ProjectionDefinition("UnitProgress")]
 [ProjectionTags(typeof(UnitProgressTagProvider))]
-public class UnitProgressProjection : IProjectionDefinition<UnitProgress>
+public sealed class UnitProgressProjection : IProjectionDefinition<UnitProgress>
 {
-    public UnitProgress? Apply(UnitProgress? current, IEvent evt)
+    public string ProjectionName => "UnitProgress";
+
+    public string[] EventTypes =>
+    [
+        nameof(UnitStartedEvent),
+        nameof(StationCompletedEvent),
+        nameof(DefectDetectedEvent)
+    ];
+
+    public string KeySelector(SequencedEvent evt) =>
+        evt.Event.Tags.First(t => t.Key == "UnitId").Value;
+
+    public UnitProgress? Apply(UnitProgress? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             UnitStartedEvent started => new UnitProgress
             {
@@ -276,37 +298,37 @@ public class UnitProgressProjection : IProjectionDefinition<UnitProgress>
                 Status = "InProgress",
                 StartTime = started.Timestamp
             },
-            
-            StationCompletedEvent completed when current != null => current with
+
+            StationCompletedEvent completed when current is not null => current with
             {
                 CurrentStation = completed.NextStation,
                 CompletedStations = current.CompletedStations.Add(completed.WorkstationId),
                 LastUpdate = completed.Timestamp
             },
-            
-            DefectDetectedEvent defect when current != null => current with
+
+            DefectDetectedEvent defect when current is not null => current with
             {
                 Status = "Failed",
                 DefectType = defect.DefectType,
                 RequiresRework = defect.Severity > SeverityThreshold.Medium
             },
-            
+
             _ => current
         };
     }
 }
 
 // Tag Provider: Index by unit ID and product type
-public class UnitProgressTagProvider : IProjectionTagProvider<UnitProgress>
+public sealed class UnitProgressTagProvider : IProjectionTagProvider<UnitProgress>
 {
     public IEnumerable<Tag> GetTags(UnitProgress state)
     {
-        yield return new Tag { Key = "UnitId", Value = state.UnitId.ToString() };
-        yield return new Tag { Key = "ProductType", Value = state.ProductType };
-        yield return new Tag { Key = "Status", Value = state.Status };
-        yield return new Tag { Key = "Shift", Value = GetShift(state.StartTime) };
+        yield return new Tag("UnitId", state.UnitId.ToString());
+        yield return new Tag("ProductType", state.ProductType);
+        yield return new Tag("Status", state.Status);
+        yield return new Tag("Shift", GetShift(state.StartTime));
     }
-    
+
     private static string GetShift(DateTime time)
     {
         // Day shift: 6 AM - 2 PM, Evening: 2 PM - 10 PM, Night: 10 PM - 6 AM
@@ -320,11 +342,11 @@ public class UnitProgressTagProvider : IProjectionTagProvider<UnitProgress>
 }
 
 // Query: Find all units that failed quality check in Station 3
-var failedUnits = await projectionStore.QueryByTagsAsync(new[]
-{
-    new Tag { Key = "Status", Value = "Failed" },
-    new Tag { Key = "CurrentStation", Value = "Station3" }
-});
+var failedUnits = await projectionStore.QueryByTagsAsync(
+[
+    new Tag("Status", "Failed"),
+    new Tag("CurrentStation", "Station3")
+]);
 ```
 
 #### Troubleshooting Scenario: Robot Malfunction
@@ -340,16 +362,15 @@ var failedUnits = await projectionStore.QueryByTagsAsync(new[]
 ```csharp
 // Replay all events for Robot #7 in last 24 hours
 var robotEvents = await eventStore.ReadAsync(
-    Query.FromTags(new Tag { Key = "RobotId", Value = "Robot7" }),
-    startPosition: GetPositionForTimestamp(DateTime.Now.AddDays(-1))
-);
+    Query.FromTags(new Tag("RobotId", "Robot7")),
+    readOptions: null);
 
 // Analyze pattern
 foreach (var evt in robotEvents)
 {
-    if (evt.Event is RobotCommandCompletedEvent completed && !completed.Success)
+    if (evt.Event.Event is RobotCommandCompletedEvent completed && !completed.Success)
     {
-        Console.WriteLine($"{completed.Timestamp}: Failed {completed.CommandType}");
+        Console.WriteLine($"{evt.Metadata.Timestamp}: Failed command");
         Console.WriteLine($"  Duration: {completed.Duration}");
         Console.WriteLine($"  Error: {completed.ErrorMessage}");
     }
@@ -587,11 +608,19 @@ Create read models from events:
 ```csharp
 // Projection replaces database view
 [ProjectionDefinition("OrderSummary")]
-public class OrderSummaryProjection : IProjectionDefinition<OrderSummary>
+public sealed class OrderSummaryProjection : IProjectionDefinition<OrderSummary>
 {
-    public OrderSummary? Apply(OrderSummary? current, IEvent evt)
+    public string ProjectionName => "OrderSummary";
+
+    public string[] EventTypes => [/* ... */];
+
+    public string KeySelector(SequencedEvent evt) =>
+        evt.Event.Tags.First(t => t.Key == "orderId").Value;
+
+    public OrderSummary? Apply(OrderSummary? current, SequencedEvent evt)
     {
         // Build read model from events
+        return current;
     }
 }
 ```

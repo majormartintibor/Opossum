@@ -15,6 +15,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `PackageProjectUrl` in `Opossum.csproj` updated to point to the documentation site.
 
 ### Fixed
+- **`mediator.md` — complete rewrite:** removed fabricated `IMessageHandler<TMessage, TResponse>` generic interface (does not exist in the library). Documentation now correctly describes the convention-based handler discovery (class name ending with `Handler` or `[MessageHandler]` attribute), method-parameter DI injection, `CommandResult` return type, and the `ExecuteDecisionAsync` / `BuildDecisionModelAsync` patterns used in the sample app.
+- **`mediator.md`:** replaced MVC controller dispatch example with minimal API endpoint pattern matching the sample app.
+- **`mediator.md`:** added correct query handler example using `IProjectionStore<T>` via method parameters.
+- **`quick-start.md`:** fixed `StudentRegisteredEvent` constructor from `(Guid, string, string)` to actual `(Guid, string, string, string)` with `FirstName`/`LastName`/`Email` parameters.
+- **`quick-start.md`:** fixed `StudentView` projection record to use `FirstName`/`LastName` matching the actual event type.
+- **`quick-start.md`:** updated Step 6 (DCB example) to use `CommandResult` return type and `AppendCondition` pattern matching the actual `RegisterStudentCommandHandler`.
+- **`quick-start.md`:** fixed `AddProjections` registration to show chained call pattern.
+- **`event-store.md`:** replaced raw `NewEvent { Event = new DomainEvent { ... } }` append example with the fluent builder pattern (`ToDomainEvent().WithTag().WithTimestamp()`) that's actually used in the codebase.
+- **`event-store.md`:** added convenience extension method examples for `ReadAsync` and single-event `AppendAsync`.
+- **`installation.md`:** corrected `IEventStoreAdmin` description from "Administrative operations (tag migration, etc.)" to "Destructive admin operations (`DeleteStoreAsync`)" — tag migration is on `IEventStoreMaintenance`.
+- **`installation.md`:** updated DI registration example to show chained `.AddOpossum().AddMediator().AddProjections()` pattern.
+- **`configuration.md`:** replaced `Contexts` array with `StoreName` string in appsettings.json example and options table — the multi-context model was removed in favour of single-store per instance.
+- **`configuration-validation.md`:** replaced all `Contexts` references with `StoreName` in examples, error messages, and validation rules table.
+- **`use-cases.md`:** fixed all projection `Apply` method signatures from `Apply(TState?, IEvent)` to the correct `Apply(TState?, SequencedEvent)` with `evt.Event.Event switch` pattern matching.
+- **`use-cases.md`:** replaced `new Tag { Key = "...", Value = "..." }` object initializer syntax with `new Tag("key", "value")` positional record constructor throughout.
+- **`use-cases.md`:** fixed `QueryByTagsAsync(new[] { ... })` calls to use collection expression syntax.
+- **`use-cases.md`:** fixed `ReadAsync` calls to use correct parameter names and `Query.FromTags` syntax.
+- **`use-cases.md`:** added missing `ProjectionName`, `EventTypes`, and `KeySelector` members to projection examples.
+- **Source docs synced:** applied identical fixes to `docs/configuration-guide.md`, `docs/configuration-validation.md`, and `docs/guides/use-cases.md` (source files for the docfx copies).
 - `installation.md`: corrected target framework claim from `.NET 8` to `.NET 10`.
 - `installation.md`: split "What gets registered" table by extension method (`AddOpossum`, `AddProjections`, `AddMediator`) and corrected `IProjectionStore` to its actual generic form `IProjectionStore<TState>`.
 - `quick-start.md`: fixed two append calls where `DomainEventBuilder` was incorrectly wrapped in `new NewEvent { Event = ... }` — the builder carries an implicit conversion to `NewEvent` and must be used directly.
