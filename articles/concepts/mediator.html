@@ -107,7 +107,7 @@ builder.Services.AddMediator();
 <p>To scan additional assemblies:</p>
 <pre><code class="lang-csharp">builder.Services.AddMediator(options =&gt;
 {
-    options.ScanAssembly(typeof(MyHandler).Assembly);
+    options.Assemblies.Add(typeof(MyHandler).Assembly);
 });
 </code></pre>
 <hr>
@@ -134,8 +134,9 @@ public class RegisterStudentHandler(IEventStore eventStore)
             .WithTag(&quot;studentId&quot;, studentId.ToString())
             .WithTag(&quot;studentEmail&quot;, command.Email);
 
+        // DomainEventBuilder implicitly converts to NewEvent
         await eventStore.AppendAsync(
-            [new NewEvent { Event = evt }],
+            [evt],
             condition: null,
             cancellationToken);
 
@@ -165,13 +166,13 @@ public class RegisterStudentHandler(IEventStore eventStore)
 <pre><code class="lang-csharp">public record GetStudentQuery(Guid StudentId);
 
 [MessageHandler]
-public class GetStudentHandler(IProjectionStore store)
+public class GetStudentHandler(IProjectionStore&lt;StudentView&gt; store)
     : IMessageHandler&lt;GetStudentQuery, StudentView?&gt;
 {
     public async Task&lt;StudentView?&gt; HandleAsync(
         GetStudentQuery query,
         CancellationToken cancellationToken) =&gt;
-        await store.GetAsync&lt;StudentView&gt;(&quot;StudentView&quot;, query.StudentId.ToString());
+        await store.GetAsync(query.StudentId.ToString());
 }
 </code></pre>
 <pre><code class="lang-csharp">// Usage
@@ -183,7 +184,7 @@ var student = await mediator.InvokeAsync&lt;StudentView?&gt;(new GetStudentQuery
 <li>The handler class <strong>must</strong> be decorated with <code>[MessageHandler]</code>.</li>
 <li>The handler class <strong>must</strong> implement <code>IMessageHandler&lt;TMessage, TResponse&gt;</code>.</li>
 <li>Exactly <strong>one handler per message type</strong> is supported.</li>
-<li>Handlers are registered as <strong>transient</strong> services.</li>
+<li>Handlers are discovered by reflection at startup and stored in the mediator's internal handler map. They are <strong>not registered as DI services</strong>; they are resolved and invoked directly by the mediator.</li>
 </ul>
 <hr>
 <h2 id="timeout-support">Timeout Support</h2>

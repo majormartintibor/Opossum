@@ -89,7 +89,7 @@
 
 <h2 id="prerequisites">Prerequisites</h2>
 <ul>
-<li><strong>.NET 8 or later</strong> — Opossum targets <code>net8.0</code> and above. .NET 10 is recommended.</li>
+<li><strong>.NET 10</strong> — Opossum targets <code>net10.0</code>.</li>
 <li>A writable directory on a local or network drive for event storage.</li>
 </ul>
 <h2 id="install-via-nuget">Install via NuGet</h2>
@@ -133,6 +133,7 @@ var app = builder.Build();
 app.Run();
 </code></pre>
 <h3 id="what-gets-registered">What gets registered</h3>
+<p><strong><code>AddOpossum()</code></strong></p>
 <table>
 <thead>
 <tr>
@@ -157,6 +158,18 @@ app.Run();
 <td>Singleton</td>
 <td>Maintenance operations (add tags retroactively)</td>
 </tr>
+</tbody>
+</table>
+<p><strong><code>AddProjections()</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Lifetime</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>IProjectionManager</code></td>
 <td>Singleton</td>
@@ -168,10 +181,22 @@ app.Run();
 <td>Orchestrates projection rebuilds</td>
 </tr>
 <tr>
-<td><code>IProjectionStore</code></td>
+<td><code>IProjectionStore&lt;TState&gt;</code></td>
 <td>Singleton</td>
-<td>Reads projection state</td>
+<td>Reads projection state — one registration per projection type, created automatically during assembly scan</td>
 </tr>
+</tbody>
+</table>
+<p><strong><code>AddMediator()</code></strong></p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Lifetime</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>IMediator</code></td>
 <td>Singleton</td>

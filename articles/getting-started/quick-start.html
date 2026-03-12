@@ -151,7 +151,8 @@ public class StudentService(IEventStore eventStore)
             .WithTag(&quot;studentId&quot;, studentId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        await eventStore.AppendAsync([new NewEvent { Event = evt }], condition: null);
+        // DomainEventBuilder implicitly converts to NewEvent
+        await eventStore.AppendAsync([evt], condition: null);
 
         return studentId;
     }
@@ -209,13 +210,13 @@ public class StudentViewProjection : IProjectionDefinition&lt;StudentView&gt;
         };
 }
 </code></pre>
-<p>Query the projection via <code>IProjectionStore</code>:</p>
+<p>Query the projection via <code>IProjectionStore&lt;T&gt;</code>:</p>
 <pre><code class="lang-csharp">using Opossum.Projections;
 
-public class StudentController(IProjectionStore store)
+public class StudentController(IProjectionStore&lt;StudentView&gt; store)
 {
     public async Task&lt;StudentView?&gt; GetStudentAsync(Guid studentId) =&gt;
-        await store.GetAsync&lt;StudentView&gt;(&quot;StudentView&quot;, studentId.ToString());
+        await store.GetAsync(studentId.ToString());
 }
 </code></pre>
 <hr>
@@ -253,7 +254,8 @@ public class StudentController(IProjectionStore store)
 
     try
     {
-        await eventStore.AppendAsync([new NewEvent { Event = evt }], condition);
+        // DomainEventBuilder implicitly converts to NewEvent
+        await eventStore.AppendAsync([evt], condition);
     }
     catch (AppendConditionFailedException)
     {
