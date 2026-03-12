@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class DomainEventBuilder | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class DomainEventBuilder | Opossum — File System Event Store ">
+      
+      <meta name="description" content="Fluent builder for constructing SequencedEvent instances from domain events">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/new/master/docs/docfx/api/new?filename=Opossum_Extensions_DomainEventBuilder.md&amp;value=---%0Auid%3A%20Opossum.Extensions.DomainEventBuilder%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Opossum.Extensions.DomainEventBuilder">
+
+
+
+  <h1 id="Opossum_Extensions_DomainEventBuilder" data-uid="Opossum.Extensions.DomainEventBuilder" class="text-break">
+Class DomainEventBuilder  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L25"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Opossum.html">Opossum</a>.<a class="xref" href="Opossum.Extensions.html">Extensions</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Opossum.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Fluent builder for constructing SequencedEvent instances from domain events</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class DomainEventBuilder</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">DomainEventBuilder</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_Build_" data-uid="Opossum.Extensions.DomainEventBuilder.Build*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_Build" data-uid="Opossum.Extensions.DomainEventBuilder.Build">
+  Build()
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L140"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Builds the final <a class="xref" href="Opossum.Core.NewEvent.html">NewEvent</a> ready to be passed to
+<a class="xref" href="Opossum.IEventStore.html#Opossum_IEventStore_AppendAsync_Opossum_Core_NewEvent___Opossum_Core_AppendCondition_System_Threading_CancellationToken_">AppendAsync(NewEvent[], AppendCondition?, CancellationToken)</a>.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public NewEvent Build()</code></pre>
+  </div>
+
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Core.NewEvent.html">NewEvent</a></dt>
+    <dd><p>A <a class="xref" href="Opossum.Core.NewEvent.html">NewEvent</a> ready to be appended to the event store</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithCausationId_" data-uid="Opossum.Extensions.DomainEventBuilder.WithCausationId*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithCausationId_System_Guid_" data-uid="Opossum.Extensions.DomainEventBuilder.WithCausationId(System.Guid)">
+  WithCausationId(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L92"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets the causation ID in the metadata</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithCausationId(Guid causationId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>causationId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>Causation ID for tracking what caused this event</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithCorrelationId_" data-uid="Opossum.Extensions.DomainEventBuilder.WithCorrelationId*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithCorrelationId_System_Guid_" data-uid="Opossum.Extensions.DomainEventBuilder.WithCorrelationId(System.Guid)">
+  WithCorrelationId(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L80"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets the correlation ID in the metadata</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithCorrelationId(Guid correlationId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>correlationId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>Correlation ID for tracking related operations</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithMetadata_" data-uid="Opossum.Extensions.DomainEventBuilder.WithMetadata*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithMetadata_Opossum_Core_Metadata_" data-uid="Opossum.Extensions.DomainEventBuilder.WithMetadata(Opossum.Core.Metadata)">
+  WithMetadata(Metadata)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L68"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets the metadata for the event</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithMetadata(Metadata metadata)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>metadata</code> <a class="xref" href="Opossum.Core.Metadata.html">Metadata</a></dt>
+    <dd><p>Metadata to attach</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithOperationId_" data-uid="Opossum.Extensions.DomainEventBuilder.WithOperationId*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithOperationId_System_Guid_" data-uid="Opossum.Extensions.DomainEventBuilder.WithOperationId(System.Guid)">
+  WithOperationId(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L104"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets the operation ID in the metadata</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithOperationId(Guid operationId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>operationId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>Operation ID for tracking the operation</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithTag_" data-uid="Opossum.Extensions.DomainEventBuilder.WithTag*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithTag_System_String_System_String_" data-uid="Opossum.Extensions.DomainEventBuilder.WithTag(System.String,System.String)">
+  WithTag(string, string)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L42"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adds a single tag to the event</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithTag(string key, string value)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>Tag key</p>
+</dd>
+    <dt><code>value</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>Tag value</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithTags_" data-uid="Opossum.Extensions.DomainEventBuilder.WithTags*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithTags_Opossum_Core_Tag___" data-uid="Opossum.Extensions.DomainEventBuilder.WithTags(Opossum.Core.Tag[])">
+  WithTags(params Tag[])
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L56"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Adds multiple tags to the event</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithTags(params Tag[] tags)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>tags</code> <a class="xref" href="Opossum.Core.Tag.html">Tag</a>[]</dt>
+    <dd><p>Tags to add</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithTimestamp_" data-uid="Opossum.Extensions.DomainEventBuilder.WithTimestamp*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithTimestamp_System_DateTimeOffset_" data-uid="Opossum.Extensions.DomainEventBuilder.WithTimestamp(System.DateTimeOffset)">
+  WithTimestamp(DateTimeOffset)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L128"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets a custom timestamp in the metadata (defaults to UtcNow if not set)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithTimestamp(DateTimeOffset timestamp)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>timestamp</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.datetimeoffset">DateTimeOffset</a></dt>
+    <dd><p>Custom timestamp for the event</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_WithUserId_" data-uid="Opossum.Extensions.DomainEventBuilder.WithUserId*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_WithUserId_System_Guid_" data-uid="Opossum.Extensions.DomainEventBuilder.WithUserId(System.Guid)">
+  WithUserId(Guid)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L116"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Sets the user ID in the metadata</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public DomainEventBuilder WithUserId(Guid userId)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>userId</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.guid">Guid</a></dt>
+    <dd><p>User ID who triggered the event</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd><p>This builder for fluent chaining</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="operators">Operators
+</h2>
+
+
+  <a id="Opossum_Extensions_DomainEventBuilder_op_Implicit_" data-uid="Opossum.Extensions.DomainEventBuilder.op_Implicit*"></a>
+
+  <h3 id="Opossum_Extensions_DomainEventBuilder_op_Implicit_Opossum_Extensions_DomainEventBuilder__Opossum_Core_NewEvent" data-uid="Opossum.Extensions.DomainEventBuilder.op_Implicit(Opossum.Extensions.DomainEventBuilder)~Opossum.Core.NewEvent">
+  implicit operator NewEvent(DomainEventBuilder)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L161"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Implicit conversion to <a class="xref" href="Opossum.Core.NewEvent.html">NewEvent</a> for convenience</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static implicit operator NewEvent(DomainEventBuilder builder)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>builder</code> <a class="xref" href="Opossum.Extensions.DomainEventBuilder.html">DomainEventBuilder</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Core.NewEvent.html">NewEvent</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Extensions/EventStoreExtensions.cs/#L25" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

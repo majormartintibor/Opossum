@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface IProjectionStore&lt;TState&gt; | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface IProjectionStore&lt;TState&gt; | Opossum — File System Event Store ">
+      
+      <meta name="description" content="Storage interface for reading projection state">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/new/master/docs/docfx/api/new?filename=Opossum_Projections_IProjectionStore_1.md&amp;value=---%0Auid%3A%20Opossum.Projections.IProjectionStore%601%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Opossum.Projections.IProjectionStore`1">
+
+
+
+  <h1 id="Opossum_Projections_IProjectionStore_1" data-uid="Opossum.Projections.IProjectionStore`1" class="text-break">
+Interface IProjectionStore&lt;TState&gt;  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L9"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Opossum.html">Opossum</a>.<a class="xref" href="Opossum.Projections.html">Projections</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Opossum.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Storage interface for reading projection state</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IProjectionStore&lt;TState&gt; where TState : class</code></pre>
+  </div>
+
+
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TState</code></dt>
+    <dd><p>The projection state type</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_DeleteAsync_" data-uid="Opossum.Projections.IProjectionStore`1.DeleteAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_DeleteAsync_System_String_System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.DeleteAsync(System.String,System.Threading.CancellationToken)">
+  DeleteAsync(string, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L63"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Deletes a projection instance (internal use by ProjectionManager)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task DeleteAsync(string key, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_GetAllAsync_" data-uid="Opossum.Projections.IProjectionStore`1.GetAllAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_GetAllAsync_System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.GetAllAsync(System.Threading.CancellationToken)">
+  GetAllAsync(CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L24"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Retrieves all projection instances</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;IReadOnlyList&lt;TState&gt;&gt; GetAllAsync(CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;TState&gt;&gt;</dt>
+    <dd><p>List of all projection instances</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_GetAsync_" data-uid="Opossum.Projections.IProjectionStore`1.GetAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_GetAsync_System_String_System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.GetAsync(System.String,System.Threading.CancellationToken)">
+  GetAsync(string, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L17"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Retrieves a single projection instance by key</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;TState?&gt; GetAsync(string key, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd><p>The projection instance key</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;TState&gt;</dt>
+    <dd><p>The projection state, or null if not found</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_QueryAsync_" data-uid="Opossum.Projections.IProjectionStore`1.QueryAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_QueryAsync_System_Func__0_System_Boolean__System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.QueryAsync(System.Func{`0,System.Boolean},System.Threading.CancellationToken)">
+  QueryAsync(Func&lt;TState, bool&gt;, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L32"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Queries projection instances with a predicate filter</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;IReadOnlyList&lt;TState&gt;&gt; QueryAsync(Func&lt;TState, bool&gt; predicate, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>predicate</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.func-2">Func</a>&lt;TState, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.boolean">bool</a>&gt;</dt>
+    <dd><p>Filter predicate</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;TState&gt;&gt;</dt>
+    <dd><p>Filtered list of projection instances</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_QueryByTagAsync_" data-uid="Opossum.Projections.IProjectionStore`1.QueryByTagAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_QueryByTagAsync_Opossum_Core_Tag_System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.QueryByTagAsync(Opossum.Core.Tag,System.Threading.CancellationToken)">
+  QueryByTagAsync(Tag, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L42"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Queries projection instances by a single tag using the tag index.
+Much more efficient than GetAllAsync when projections have tag providers configured.
+Returns empty list if tag index doesn't exist.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;IReadOnlyList&lt;TState&gt;&gt; QueryByTagAsync(Tag tag, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>tag</code> <a class="xref" href="Opossum.Core.Tag.html">Tag</a></dt>
+    <dd><p>The tag to query (case-insensitive comparison)</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;TState&gt;&gt;</dt>
+    <dd><p>List of projection instances matching the tag</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_QueryByTagsAsync_" data-uid="Opossum.Projections.IProjectionStore`1.QueryByTagsAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_QueryByTagsAsync_System_Collections_Generic_IEnumerable_Opossum_Core_Tag__System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.QueryByTagsAsync(System.Collections.Generic.IEnumerable{Opossum.Core.Tag},System.Threading.CancellationToken)">
+  QueryByTagsAsync(IEnumerable&lt;Tag&gt;, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L53"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Queries projection instances by multiple tags using tag indices (AND logic).
+Returns only projections that match ALL specified tags.
+Much more efficient than GetAllAsync when projections have tag providers configured.
+Returns empty list if any tag index doesn't exist.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;IReadOnlyList&lt;TState&gt;&gt; QueryByTagsAsync(IEnumerable&lt;Tag&gt; tags, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>tags</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ienumerable-1">IEnumerable</a>&lt;<a class="xref" href="Opossum.Core.Tag.html">Tag</a>&gt;</dt>
+    <dd><p>The tags to query (all must match, case-insensitive comparison)</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;TState&gt;&gt;</dt>
+    <dd><p>List of projection instances matching all tags</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_Projections_IProjectionStore_1_SaveAsync_" data-uid="Opossum.Projections.IProjectionStore`1.SaveAsync*"></a>
+
+  <h3 id="Opossum_Projections_IProjectionStore_1_SaveAsync_System_String__0_System_Threading_CancellationToken_" data-uid="Opossum.Projections.IProjectionStore`1.SaveAsync(System.String,`0,System.Threading.CancellationToken)">
+  SaveAsync(string, TState, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L58"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Saves or updates a projection instance (internal use by ProjectionManager)</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task SaveAsync(string key, TState state, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>key</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.string">string</a></dt>
+    <dd></dd>
+    <dt><code>state</code> <span class="xref">TState</span></dt>
+    <dd></dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Projections/IProjectionStore.cs/#L9" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

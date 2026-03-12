@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Mediator Pattern in Opossum | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Mediator Pattern in Opossum | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/concepts/mediator.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="mediator-pattern-in-opossum">Mediator Pattern in Opossum</h1>
+
+<p>Opossum ships a lightweight mediator that dispatches commands and queries to registered handlers, discovered automatically via dependency injection.</p>
+<hr>
+<h2 id="why-a-mediator">Why a Mediator?</h2>
+<p>The mediator pattern decouples the <strong>sender</strong> of a request from its <strong>handler</strong>. In a CQRS/event-sourcing context this means:</p>
+<ul>
+<li>Controllers and API endpoints send a command/query object — they don't know which class handles it.</li>
+<li>Handlers are registered in DI and discovered at startup — no manual wiring.</li>
+<li>Business logic stays in focused, testable handler classes rather than leaking into controllers.</li>
+</ul>
+<hr>
+<h2 id="setup">Setup</h2>
+<pre><code class="lang-csharp">using Opossum.Mediator;
+
+// In Program.cs / Startup
+builder.Services.AddMediator();
+</code></pre>
+<p><code>AddMediator()</code> scans the entry assembly for all classes decorated with <code>[MessageHandler]</code> and registers them automatically.</p>
+<p>To scan additional assemblies:</p>
+<pre><code class="lang-csharp">builder.Services.AddMediator(options =&gt;
+{
+    options.ScanAssembly(typeof(MyHandler).Assembly);
+});
+</code></pre>
+<hr>
+<h2 id="defining-a-handler">Defining a Handler</h2>
+<p>Implement <code>IMessageHandler&lt;TMessage, TResponse&gt;</code> and decorate with <code>[MessageHandler]</code>:</p>
+<pre><code class="lang-csharp">using Opossum.Mediator;
+
+// Command / request message
+public record RegisterStudentCommand(string Name, string Email);
+
+// Handler
+[MessageHandler]
+public class RegisterStudentHandler(IEventStore eventStore)
+    : IMessageHandler&lt;RegisterStudentCommand, Guid&gt;
+{
+    public async Task&lt;Guid&gt; HandleAsync(
+        RegisterStudentCommand command,
+        CancellationToken cancellationToken)
+    {
+        var studentId = Guid.NewGuid();
+
+        var evt = new StudentRegisteredEvent(studentId, command.Name, command.Email)
+            .ToDomainEvent()
+            .WithTag(&quot;studentId&quot;, studentId.ToString())
+            .WithTag(&quot;studentEmail&quot;, command.Email);
+
+        await eventStore.AppendAsync(
+            [new NewEvent { Event = evt }],
+            condition: null,
+            cancellationToken);
+
+        return studentId;
+    }
+}
+</code></pre>
+<hr>
+<h2 id="dispatching-via-imediator">Dispatching via <code>IMediator</code></h2>
+<p>Inject <code>IMediator</code> and call <code>InvokeAsync&lt;TResponse&gt;</code>:</p>
+<pre><code class="lang-csharp">public class StudentController(IMediator mediator)
+{
+    [HttpPost]
+    public async Task&lt;IActionResult&gt; Register([FromBody] RegisterStudentRequest request)
+    {
+        var studentId = await mediator.InvokeAsync&lt;Guid&gt;(
+            new RegisterStudentCommand(request.Name, request.Email));
+
+        return Ok(studentId);
+    }
+}
+</code></pre>
+<p>The mediator resolves the correct handler from DI, executes it, and returns the result.</p>
+<hr>
+<h2 id="query-handlers">Query Handlers</h2>
+<p>The same pattern works for queries:</p>
+<pre><code class="lang-csharp">public record GetStudentQuery(Guid StudentId);
+
+[MessageHandler]
+public class GetStudentHandler(IProjectionStore store)
+    : IMessageHandler&lt;GetStudentQuery, StudentView?&gt;
+{
+    public async Task&lt;StudentView?&gt; HandleAsync(
+        GetStudentQuery query,
+        CancellationToken cancellationToken) =&gt;
+        await store.GetAsync&lt;StudentView&gt;(&quot;StudentView&quot;, query.StudentId.ToString());
+}
+</code></pre>
+<pre><code class="lang-csharp">// Usage
+var student = await mediator.InvokeAsync&lt;StudentView?&gt;(new GetStudentQuery(studentId));
+</code></pre>
+<hr>
+<h2 id="handler-discovery-rules">Handler Discovery Rules</h2>
+<ul>
+<li>The handler class <strong>must</strong> be decorated with <code>[MessageHandler]</code>.</li>
+<li>The handler class <strong>must</strong> implement <code>IMessageHandler&lt;TMessage, TResponse&gt;</code>.</li>
+<li>Exactly <strong>one handler per message type</strong> is supported.</li>
+<li>Handlers are registered as <strong>transient</strong> services.</li>
+</ul>
+<hr>
+<h2 id="timeout-support">Timeout Support</h2>
+<p><code>InvokeAsync</code> accepts an optional <code>timeout</code> parameter:</p>
+<pre><code class="lang-csharp">var result = await mediator.InvokeAsync&lt;Guid&gt;(
+    command,
+    cancellationToken: cts.Token,
+    timeout: TimeSpan.FromSeconds(5));
+</code></pre>
+<p>If the handler does not complete within the timeout, an <code>OperationCanceledException</code> is thrown.</p>
+<hr>
+<h2 id="api-reference">API Reference</h2>
+<p>See the generated API docs for full details:</p>
+<ul>
+<li><a href="../../api/Opossum.Mediator.IMediator.html"><code>IMediator</code></a></li>
+<li><a href="../../api/Opossum.Mediator.IMessageHandler.html"><code>IMessageHandler&lt;TMessage, TResponse&gt;</code></a></li>
+<li><a href="../../api/Opossum.Mediator.MessageHandlerAttribute.html"><code>MessageHandlerAttribute</code></a></li>
+<li><a href="../../api/Opossum.Mediator.MediatorServiceExtensions.html"><code>MediatorServiceExtensions</code></a></li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/concepts/mediator.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

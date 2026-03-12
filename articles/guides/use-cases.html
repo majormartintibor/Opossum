@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Opossum Use Cases: When File System Event Store is the Right Choice | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Opossum Use Cases: When File System Event Store is the Right Choice | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/guides/use-cases.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="opossum-use-cases-when-file-system-event-store-is-the-right-choice">Opossum Use Cases: When File System Event Store is the Right Choice</h1>
+<!-- source: docs/guides/use-cases.md � keep in sync -->
+
+<h2 id="executive-summary">Executive Summary</h2>
+<p>Opossum is a file system-based event store designed for scenarios where <strong>simplicity, offline operation, and local data sovereignty</strong> are more important than cloud scalability. This document identifies proven use cases where Opossum's architecture provides <strong>superior value</strong> compared to cloud-based or database-backed alternatives.</p>
+<h2 id="real-world-production-use-cases">Real-World Production Use Cases</h2>
+<h3 id="1-automotive-retail-sales--commission-tracking--production-validated">1. Automotive Retail Sales &amp; Commission Tracking ⭐ <strong>Production Validated</strong></h3>
+<p><strong>Industry:</strong> Car Dealership / Automotive Retail<br>
+<strong>Environment:</strong> On-Premises Installation<br>
+<strong>Scale:</strong> Single dealership or small chain (&lt; 20 locations)</p>
+<h4 id="business-problem">Business Problem</h4>
+<p>Car dealerships need to:</p>
+<ul>
+<li>Track all vehicle sales transactions</li>
+<li>Calculate complex commission structures for sales staff</li>
+<li>Maintain complete audit trail for accounting</li>
+<li>Generate monthly commission reports</li>
+<li>Comply with tax reporting requirements</li>
+<li>Function reliably even during internet outages</li>
+</ul>
+<h4 id="why-file-system-event-store-is-superior">Why File System Event Store is Superior</h4>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Opossum Solution</th>
+<th>Cloud Alternative Issue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Offline Operation</strong></td>
+<td>Works completely offline</td>
+<td>Sales halt during internet outages</td>
+</tr>
+<tr>
+<td><strong>Audit Trail</strong></td>
+<td>Immutable event log on local server</td>
+<td>Dependent on cloud availability</td>
+</tr>
+<tr>
+<td><strong>Commission Calculations</strong></td>
+<td>Replay events to recalculate anytime</td>
+<td>Complex with distributed systems</td>
+</tr>
+<tr>
+<td><strong>Tax Compliance</strong></td>
+<td>Local storage meets legal requirements</td>
+<td>Data residency concerns</td>
+</tr>
+<tr>
+<td><strong>Cost</strong></td>
+<td>One-time server cost</td>
+<td>Recurring cloud fees</td>
+</tr>
+<tr>
+<td><strong>Simplicity</strong></td>
+<td>IT staff can manage files</td>
+<td>Requires cloud expertise</td>
+</tr>
+</tbody>
+</table>
+<h4 id="architecture">Architecture</h4>
+<pre><code>Car Dealership Event Store
+├── Server: On-Premise Windows Server
+├── Storage: D:\DealershipData\EventStore\
+│
+├── Events (Domain Events):
+│   ├── VehicleSold
+│   │   - VehicleId, CustomerId, SalespersonId
+│   │   - SalePrice, TradeInValue, FinancingDetails
+│   │   - Timestamp, CommissionRate
+│   ├── CommissionAdjusted
+│   │   - Reason (e.g., customer returned vehicle)
+│   │   - OriginalSaleId, NewCommissionAmount
+│   ├── TradeInProcessed
+│   │   - TradeInId, AppraisalValue, ActualSalePrice
+│   └── FinancingArranged
+│       - LoanAmount, CommissionEarned
+│
+├── Projections (Read Models):
+│   ├── MonthlySalesReport
+│   │   - Total sales, Revenue, Vehicles sold
+│   ├── SalespersonCommissionSummary
+│   │   - YTD commissions, Monthly breakdown
+│   │   - Pending vs. paid commissions
+│   ├── InventorySnapshot
+│   │   - Current available vehicles
+│   │   - Days on lot
+│   └── AuditLog
+│       - All financial transactions
+│       - Commission calculations with justification
+│
+└── Tag Indexing (for efficient queries):
+    ├── Tags: SalespersonId, Month, Year, VehicleType
+    └── Query: &quot;All sales by John Doe in January 2024&quot;
+</code></pre>
+<h4 id="business-benefits">Business Benefits</h4>
+<p>✅ <strong>Compliance:</strong> Complete audit trail for tax authorities<br>
+✅ <strong>Transparency:</strong> Sales staff can verify commission calculations<br>
+✅ <strong>Reliability:</strong> No dependency on cloud availability<br>
+✅ <strong>Simplicity:</strong> Dealer's existing IT can manage (just files)<br>
+✅ <strong>Cost:</strong> No monthly SaaS fees, one-time server cost<br>
+✅ <strong>Data Ownership:</strong> All sales data stays on dealer's premises</p>
+<h4 id="technical-implementation">Technical Implementation</h4>
+<pre><code class="lang-csharp">// Event: Vehicle sale transaction
+public record VehicleSoldEvent : IEvent
+{
+    public Guid VehicleId { get; init; }
+    public Guid SalespersonId { get; init; }
+    public decimal SalePrice { get; init; }
+    public decimal CommissionRate { get; init; }
+    public DateTime SaleDate { get; init; }
+}
+
+// Projection: Calculate total commission for a salesperson
+[ProjectionDefinition(&quot;SalespersonCommissions&quot;)]
+[ProjectionTags(typeof(CommissionTagProvider))]
+public class SalespersonCommissionProjection : IProjectionDefinition&lt;CommissionSummary&gt;
+{
+    public CommissionSummary? Apply(CommissionSummary? current, IEvent evt)
+    {
+        return evt switch
+        {
+            VehicleSoldEvent sold =&gt; current with
+            {
+                TotalCommission = current.TotalCommission + 
+                    (sold.SalePrice * sold.CommissionRate),
+                SalesCount = current.SalesCount + 1
+            },
+            CommissionAdjusted adjusted =&gt; current with
+            {
+                TotalCommission = adjusted.NewCommissionAmount,
+                Adjustments = current.Adjustments.Add(adjusted)
+            },
+            _ =&gt; current
+        };
+    }
+}
+
+// Tag Provider: Index by salesperson and date
+public class CommissionTagProvider : IProjectionTagProvider&lt;CommissionSummary&gt;
+{
+    public IEnumerable&lt;Tag&gt; GetTags(CommissionSummary state)
+    {
+        yield return new Tag { Key = &quot;SalespersonId&quot;, Value = state.SalespersonId.ToString() };
+        yield return new Tag { Key = &quot;Month&quot;, Value = state.Month.ToString(&quot;yyyy-MM&quot;) };
+        yield return new Tag { Key = &quot;Year&quot;, Value = state.Year.ToString() };
+    }
+}
+
+// Query: Get all commissions for a salesperson in a specific month
+var commissions = await projectionStore.QueryByTagsAsync(new[]
+{
+    new Tag { Key = &quot;SalespersonId&quot;, Value = johnDoeId.ToString() },
+    new Tag { Key = &quot;Month&quot;, Value = &quot;2024-01&quot; }
+});
+</code></pre>
+<h4 id="migration-from-existing-system">Migration from Existing System</h4>
+<p>Many dealerships use Excel spreadsheets or simple databases. Migration path:</p>
+<ol>
+<li><strong>Import historical data</strong> as events (one-time import)</li>
+<li><strong>Rebuild projections</strong> to verify commission calculations match legacy</li>
+<li><strong>Cutover</strong> - new sales go through Opossum</li>
+<li><strong>Archive</strong> old system for reference</li>
+</ol>
+<hr>
+<h3 id="2-factory-assembly-line---robot-communication-system--production-validated">2. Factory Assembly Line - Robot Communication System ⭐ <strong>Production Validated</strong></h3>
+<p><strong>Industry:</strong> Manufacturing / Industrial Automation<br>
+<strong>Environment:</strong> Factory Floor Operating Computer<br>
+<strong>Scale:</strong> Single factory, 10-50 robotic workstations<br>
+<strong>Critical Constraint:</strong> <strong>Company policy explicitly prohibits database installation</strong></p>
+<h4 id="business-problem-1">Business Problem</h4>
+<p>Factory assembly line needs to:</p>
+<ul>
+<li>Coordinate multiple robots on production line</li>
+<li>Track each unit through assembly stages</li>
+<li>Record quality control checkpoints</li>
+<li>Log all robot commands for troubleshooting</li>
+<li>Generate shift production reports</li>
+<li><strong>Operate without a database</strong> (company IT policy)</li>
+</ul>
+<h4 id="why-file-system-event-store-is-the-only-viable-solution">Why File System Event Store is the Only Viable Solution</h4>
+<table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Opossum Solution</th>
+<th>Database Alternative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No Database Policy</strong></td>
+<td>✅ Just files, no DB needed</td>
+<td>❌ <strong>Violates company policy</strong></td>
+</tr>
+<tr>
+<td><strong>Robot Communication</strong></td>
+<td>Events = commands/responses</td>
+<td>Complex distributed locking</td>
+</tr>
+<tr>
+<td><strong>Offline Operation</strong></td>
+<td>Always works locally</td>
+<td>Network dependency</td>
+</tr>
+<tr>
+<td><strong>Troubleshooting</strong></td>
+<td>Replay event log to debug</td>
+<td>Hard to reconstruct state</td>
+</tr>
+<tr>
+<td><strong>Audit Trail</strong></td>
+<td>Every robot action logged</td>
+<td>Expensive audit logging</td>
+</tr>
+<tr>
+<td><strong>Simplicity</strong></td>
+<td>OT staff can understand</td>
+<td>Requires DBA expertise</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Insight:</strong> Many manufacturing companies have IT policies that <strong>ban databases on OT (Operational Technology) networks</strong> due to:</p>
+<ul>
+<li>Security concerns (SQL injection, database exploits)</li>
+<li>Complexity (no DBAs available on factory floor)</li>
+<li>Licensing costs (Oracle/SQL Server per-core fees)</li>
+<li>Update requirements (databases need patching, unacceptable downtime)</li>
+</ul>
+<h4 id="architecture-1">Architecture</h4>
+<pre><code>Factory Assembly Line Event Store
+├── Computer: Industrial PC (Windows 10 IoT or Linux)
+├── Storage: /data/production/events/
+│
+├── Events (Robot Commands &amp; Sensor Data):
+│   ├── UnitStarted
+│   │   - UnitId (barcode), ProductType
+│   │   - WorkstationId, OperatorId, Timestamp
+│   ├── RobotCommandIssued
+│   │   - RobotId, CommandType (Pick, Place, Weld)
+│   │   - Parameters, ExpectedDuration
+│   ├── QualityCheckPerformed
+│   │   - UnitId, CheckpointId
+│   │   - Result (Pass/Fail), Measurements
+│   │   - InspectorId (human or AI vision system)
+│   ├── StationCompleted
+│   │   - UnitId, WorkstationId, Duration
+│   │   - NextStation, Status
+│   └── DefectDetected
+│       - UnitId, DefectType, Severity
+│       - RobotId, CorrectionRequired
+│
+├── Projections (Real-Time Dashboards):
+│   ├── ProductionLineStatus
+│   │   - Units in progress per station
+│   │   - Current throughput rate
+│   ├── ShiftProductionReport
+│   │   - Units completed, Defect rate
+│   │   - Downtime incidents
+│   ├── RobotHealth
+│   │   - Command success rate
+│   │   - Error frequency
+│   └── QualityMetrics
+│       - Pass/fail rates per checkpoint
+│       - Trending issues
+│
+└── Tag Indexing:
+    ├── Tags: UnitId, ProductType, WorkstationId, Shift
+    └── Queries:
+        - &quot;Find all events for Unit #12345&quot;
+        - &quot;All quality failures in Station 3 this shift&quot;
+</code></pre>
+<h4 id="technical-benefits-for-ot-environment">Technical Benefits for OT Environment</h4>
+<p>✅ <strong>Policy Compliant:</strong> No database = no policy violation<br>
+✅ <strong>Deterministic:</strong> Replay events to reproduce robot behavior<br>
+✅ <strong>Debugging:</strong> Can replay day's production to find intermittent failures<br>
+✅ <strong>Air-Gapped:</strong> Works on isolated OT network (no internet)<br>
+✅ <strong>Robust:</strong> Survives power failures better than in-memory databases<br>
+✅ <strong>Auditable:</strong> Every robot action timestamped and immutable</p>
+<h4 id="robot-coordination-pattern">Robot Coordination Pattern</h4>
+<pre><code class="lang-csharp">// Event: Robot command issued
+public record RobotCommandIssuedEvent : IEvent
+{
+    public string RobotId { get; init; } = string.Empty;
+    public string CommandType { get; init; } = string.Empty; // &quot;Pick&quot;, &quot;Place&quot;, &quot;Weld&quot;
+    public Guid UnitId { get; init; }
+    public Dictionary&lt;string, object&gt; Parameters { get; init; } = new();
+}
+
+// Event: Robot command completed
+public record RobotCommandCompletedEvent : IEvent
+{
+    public string RobotId { get; init; } = string.Empty;
+    public Guid CommandId { get; init; }
+    public bool Success { get; init; }
+    public string? ErrorMessage { get; init; }
+    public TimeSpan Duration { get; init; }
+}
+
+// Projection: Track unit progress through stations
+[ProjectionDefinition(&quot;UnitProgress&quot;)]
+[ProjectionTags(typeof(UnitProgressTagProvider))]
+public class UnitProgressProjection : IProjectionDefinition&lt;UnitProgress&gt;
+{
+    public UnitProgress? Apply(UnitProgress? current, IEvent evt)
+    {
+        return evt switch
+        {
+            UnitStartedEvent started =&gt; new UnitProgress
+            {
+                UnitId = started.UnitId,
+                ProductType = started.ProductType,
+                CurrentStation = &quot;Station1&quot;,
+                Status = &quot;InProgress&quot;,
+                StartTime = started.Timestamp
+            },
+            
+            StationCompletedEvent completed when current != null =&gt; current with
+            {
+                CurrentStation = completed.NextStation,
+                CompletedStations = current.CompletedStations.Add(completed.WorkstationId),
+                LastUpdate = completed.Timestamp
+            },
+            
+            DefectDetectedEvent defect when current != null =&gt; current with
+            {
+                Status = &quot;Failed&quot;,
+                DefectType = defect.DefectType,
+                RequiresRework = defect.Severity &gt; SeverityThreshold.Medium
+            },
+            
+            _ =&gt; current
+        };
+    }
+}
+
+// Tag Provider: Index by unit ID and product type
+public class UnitProgressTagProvider : IProjectionTagProvider&lt;UnitProgress&gt;
+{
+    public IEnumerable&lt;Tag&gt; GetTags(UnitProgress state)
+    {
+        yield return new Tag { Key = &quot;UnitId&quot;, Value = state.UnitId.ToString() };
+        yield return new Tag { Key = &quot;ProductType&quot;, Value = state.ProductType };
+        yield return new Tag { Key = &quot;Status&quot;, Value = state.Status };
+        yield return new Tag { Key = &quot;Shift&quot;, Value = GetShift(state.StartTime) };
+    }
+    
+    private static string GetShift(DateTime time)
+    {
+        // Day shift: 6 AM - 2 PM, Evening: 2 PM - 10 PM, Night: 10 PM - 6 AM
+        return time.Hour switch
+        {
+            &gt;= 6 and &lt; 14 =&gt; &quot;Day&quot;,
+            &gt;= 14 and &lt; 22 =&gt; &quot;Evening&quot;,
+            _ =&gt; &quot;Night&quot;
+        };
+    }
+}
+
+// Query: Find all units that failed quality check in Station 3
+var failedUnits = await projectionStore.QueryByTagsAsync(new[]
+{
+    new Tag { Key = &quot;Status&quot;, Value = &quot;Failed&quot; },
+    new Tag { Key = &quot;CurrentStation&quot;, Value = &quot;Station3&quot; }
+});
+</code></pre>
+<h4 id="troubleshooting-scenario-robot-malfunction">Troubleshooting Scenario: Robot Malfunction</h4>
+<p><strong>Problem:</strong> Robot #7 occasionally drops parts during &quot;Pick&quot; operation.</p>
+<p><strong>Traditional Approach:</strong></p>
+<ul>
+<li>Review logs (if they exist)</li>
+<li>Try to reproduce (may take hours/days)</li>
+<li>Guess at root cause</li>
+</ul>
+<p><strong>With Opossum Event Sourcing:</strong></p>
+<pre><code class="lang-csharp">// Replay all events for Robot #7 in last 24 hours
+var robotEvents = await eventStore.ReadAsync(
+    Query.FromTags(new Tag { Key = &quot;RobotId&quot;, Value = &quot;Robot7&quot; }),
+    startPosition: GetPositionForTimestamp(DateTime.Now.AddDays(-1))
+);
+
+// Analyze pattern
+foreach (var evt in robotEvents)
+{
+    if (evt.Event is RobotCommandCompletedEvent completed &amp;&amp; !completed.Success)
+    {
+        Console.WriteLine($&quot;{completed.Timestamp}: Failed {completed.CommandType}&quot;);
+        Console.WriteLine($&quot;  Duration: {completed.Duration}&quot;);
+        Console.WriteLine($&quot;  Error: {completed.ErrorMessage}&quot;);
+    }
+}
+
+// Result: Every failure happens exactly 2 hours after shift start
+// Root cause: Lubrication system not warming up properly
+// Fix: Add 5-minute warmup period at shift start
+</code></pre>
+<h4 id="integration-with-existing-factory-systems">Integration with Existing Factory Systems</h4>
+<pre><code>Factory Network Topology
+├── Production Event Store (Opossum)
+│   ├── No database required
+│   ├── No cloud connectivity needed
+│   └── Isolated on OT network
+│
+├── SCADA System Integration
+│   ├── Reads Opossum projections via file share
+│   └── Writes sensor data as events
+│
+├── MES (Manufacturing Execution System)
+│   ├── Polls Opossum for shift reports
+│   └── Pushes production targets as events
+│
+└── Quality Management System
+    ├── Reads quality check events
+    └── Triggers rework workflows
+</code></pre>
+<hr>
+<h2 id="additional-proven-use-cases">Additional Proven Use Cases</h2>
+<h3 id="3-medical-clinic-hipaa-compliance-">3. Medical Clinic (HIPAA Compliance) ⭐</h3>
+<p><strong>Scenario:</strong> Small dental clinic, 3 dentists, 500 patients<br>
+<strong>Driver:</strong> Patient data must stay on-premise per HIPAA, can't trust cloud</p>
+<p><strong>Key Events:</strong></p>
+<ul>
+<li><code>AppointmentScheduled</code>, <code>TreatmentPerformed</code></li>
+<li><code>InvoiceGenerated</code>, <code>PaymentReceived</code></li>
+<li><code>InsuranceClaimSubmitted</code></li>
+</ul>
+<p><strong>Why Opossum:</strong></p>
+<ul>
+<li>✅ Data never leaves clinic premises</li>
+<li>✅ Complete audit trail for compliance</li>
+<li>✅ Easy backup to encrypted USB drive</li>
+<li>✅ Works during internet outages</li>
+<li>✅ Simple enough for clinic manager to understand</li>
+</ul>
+<h3 id="4-point-of-sale-retail-store-">4. Point-of-Sale (Retail Store) ⭐</h3>
+<p><strong>Scenario:</strong> Boutique clothing store, 2-3 checkout registers<br>
+<strong>Driver:</strong> Cannot lose sales when internet goes down</p>
+<p><strong>Key Events:</strong></p>
+<ul>
+<li><code>ItemScanned</code>, <code>DiscountApplied</code></li>
+<li><code>PaymentReceived</code>, <code>RefundIssued</code></li>
+<li><code>CashDrawerOpened</code>, <code>DayEndReconciliation</code></li>
+</ul>
+<p><strong>Why Opossum:</strong></p>
+<ul>
+<li>✅ Checkout works 100% offline</li>
+<li>✅ End-of-day reports always available locally</li>
+<li>✅ Complete transaction history for accounting</li>
+<li>✅ No monthly cloud fees</li>
+<li>✅ Sync to corporate HQ when internet available</li>
+</ul>
+<h3 id="5-desktop-creative-software-caddesign">5. Desktop Creative Software (CAD/Design)</h3>
+<p><strong>Scenario:</strong> Architectural design software for professionals<br>
+<strong>Driver:</strong> Users demand offline work, unlimited undo, version control</p>
+<p><strong>Key Events:</strong></p>
+<ul>
+<li><code>WallAdded</code>, <code>WindowPlaced</code>, <code>MaterialChanged</code></li>
+<li><code>DesignBranched</code>, <code>DesignMerged</code></li>
+<li>Every user action can be an event for perfect replay</li>
+</ul>
+<p><strong>Why Opossum:</strong></p>
+<ul>
+<li>✅ Unlimited undo/redo via event replay</li>
+<li>✅ Time-travel: View design at any point in history</li>
+<li>✅ Branching: Try alternative designs without losing original</li>
+<li>✅ Share <code>.opossum</code> project files via USB/email/Git</li>
+<li>✅ No cloud lock-in, works fully offline</li>
+<li>✅ Complete audit trail for client billing</li>
+</ul>
+<h3 id="6-iot-edge-gateway-smart-factory">6. IoT Edge Gateway (Smart Factory)</h3>
+<p><strong>Scenario:</strong> Gateway collecting data from 100+ sensors<br>
+<strong>Driver:</strong> Must buffer data during cloud outages</p>
+<p><strong>Key Events:</strong></p>
+<ul>
+<li><code>TemperatureReading</code>, <code>VibrationDetected</code></li>
+<li><code>MachineStarted</code>, <code>MaintenanceRequired</code></li>
+<li><code>AlarmTriggered</code></li>
+</ul>
+<p><strong>Why Opossum:</strong></p>
+<ul>
+<li>✅ Local persistence during network outages</li>
+<li>✅ Batch sync to cloud when connectivity restored</li>
+<li>✅ No cloud egress fees for millions of sensor events</li>
+<li>✅ Low latency for real-time local decisions</li>
+<li>✅ Data sovereignty (data stays on-prem until approved)</li>
+</ul>
+<hr>
+<h2 id="when-not-to-use-opossum">When NOT to Use Opossum</h2>
+<p>To be clear, file system event stores are <strong>not suitable</strong> for:</p>
+<p>❌ <strong>High-throughput web applications</strong></p>
+<ul>
+<li>Examples: E-commerce, social media, SaaS platforms</li>
+<li>Reason: Need distributed writes, horizontal scaling, multi-region</li>
+</ul>
+<p>❌ <strong>Systems requiring strong ACID across aggregates</strong></p>
+<ul>
+<li>Examples: Banking systems with complex transactions</li>
+<li>Reason: File system doesn't support distributed transactions</li>
+</ul>
+<p>❌ <strong>Real-time collaboration (many concurrent writers)</strong></p>
+<ul>
+<li>Examples: Google Docs, multiplayer games</li>
+<li>Reason: File locking becomes bottleneck</li>
+</ul>
+<p>❌ <strong>Cloud-native microservices</strong></p>
+<ul>
+<li>Examples: Serverless architectures, Kubernetes deployments</li>
+<li>Reason: Shared file system across pods is anti-pattern</li>
+</ul>
+<p>❌ <strong>Global scale applications</strong></p>
+<ul>
+<li>Examples: Netflix, Uber, AWS services</li>
+<li>Reason: Need geographic distribution, failover, CDN</li>
+</ul>
+<hr>
+<h2 id="decision-framework-should-i-use-opossum">Decision Framework: Should I Use Opossum?</h2>
+<h3 id="choose-opossum-if">Choose Opossum If:</h3>
+<p>✅ <strong>Deployment:</strong> Single server or small cluster (&lt; 5 nodes)<br>
+✅ <strong>Network:</strong> Offline operation required or unreliable connectivity<br>
+✅ <strong>Scale:</strong> &lt; 1 million events/day<br>
+✅ <strong>Compliance:</strong> Data residency laws or company policies restrict cloud<br>
+✅ <strong>Team:</strong> Small team, no DBA expertise<br>
+✅ <strong>Cost:</strong> Budget-constrained, can't afford cloud fees<br>
+✅ <strong>Simplicity:</strong> Need system that IT generalist can manage</p>
+<h3 id="choose-cloud-event-store-eventstoredb-kafka-azure-event-hubs-if">Choose Cloud Event Store (EventStoreDB, Kafka, Azure Event Hubs) If:</h3>
+<p>✅ <strong>Deployment:</strong> Multi-region, high availability required<br>
+✅ <strong>Network:</strong> Always-online cloud service<br>
+✅ <strong>Scale:</strong> &gt; 10 million events/day<br>
+✅ <strong>Compliance:</strong> No restrictions on cloud storage<br>
+✅ <strong>Team:</strong> Dedicated DevOps/SRE team<br>
+✅ <strong>Cost:</strong> Budget for cloud services<br>
+✅ <strong>Complexity:</strong> Need advanced features (clustering, streaming, event replay across datacenters)</p>
+<hr>
+<h2 id="architectural-patterns-with-opossum">Architectural Patterns with Opossum</h2>
+<h3 id="pattern-1-hybrid-cloud-edge--cloud">Pattern 1: Hybrid Cloud (Edge + Cloud)</h3>
+<pre><code>Local Factory (Opossum)
+├── Events stored locally for 30 days
+├── Projections built locally for real-time dashboards
+└── Batch sync to cloud nightly for analytics
+
+Cloud (Azure Event Hubs)
+├── Receives batch uploads from all factories
+├── Long-term storage (3+ years)
+└── Cross-factory analytics and ML
+</code></pre>
+<p><strong>Use Case:</strong> Factory floor (Opossum) + Corporate BI (Cloud)</p>
+<h3 id="pattern-2-offline-first-with-eventual-sync">Pattern 2: Offline-First with Eventual Sync</h3>
+<pre><code>Laptop/Desktop App (Opossum)
+├── All events stored locally
+├── Work fully offline for weeks
+└── When online: Push events to central server
+
+Central Server (Opossum or Cloud)
+├── Aggregates events from all users
+└── Resolves conflicts using DCB
+</code></pre>
+<p><strong>Use Case:</strong> Sales reps visiting customer sites offline</p>
+<h3 id="pattern-3-backup--archive">Pattern 3: Backup &amp; Archive</h3>
+<pre><code>Primary System (Any event store)
+└── Archive old events to Opossum
+
+Opossum Archive
+├── File-based storage = easy to backup
+├── Burn to optical media for 10+ year retention
+└── Can restore and replay if needed
+</code></pre>
+<p><strong>Use Case:</strong> Compliance archives, disaster recovery</p>
+<hr>
+<h2 id="migration-guide-from-database-to-opossum">Migration Guide: From Database to Opossum</h2>
+<h3 id="step-1-identify-aggregates">Step 1: Identify Aggregates</h3>
+<p>Map existing database tables to domain aggregates:</p>
+<pre><code>Database Table → Aggregate
+─────────────────────────────
+Orders         → Order Aggregate
+OrderItems     → (part of Order)
+Customers      → Customer Aggregate
+</code></pre>
+<h3 id="step-2-define-events">Step 2: Define Events</h3>
+<p>Convert CRUD operations to domain events:</p>
+<pre><code>SQL INSERT → EntityCreated event
+SQL UPDATE → EntityModified event  
+SQL DELETE → EntityDeleted event
+</code></pre>
+<h3 id="step-3-build-projections">Step 3: Build Projections</h3>
+<p>Create read models from events:</p>
+<pre><code class="lang-csharp">// Projection replaces database view
+[ProjectionDefinition(&quot;OrderSummary&quot;)]
+public class OrderSummaryProjection : IProjectionDefinition&lt;OrderSummary&gt;
+{
+    public OrderSummary? Apply(OrderSummary? current, IEvent evt)
+    {
+        // Build read model from events
+    }
+}
+</code></pre>
+<h3 id="step-4-dual-write-migration">Step 4: Dual-Write Migration</h3>
+<ol>
+<li>Keep existing database running</li>
+<li>Write to both DB and Opossum</li>
+<li>Verify projections match DB data</li>
+<li>Cutover reads to Opossum</li>
+<li>Retire database</li>
+</ol>
+<hr>
+<h2 id="performance-characteristics">Performance Characteristics</h2>
+<h3 id="typical-benchmarks-single-server">Typical Benchmarks (Single Server)</h3>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Throughput</th>
+<th>Latency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Event Append</strong></td>
+<td>5,000 events/sec</td>
+<td>&lt; 5ms (SSD)</td>
+</tr>
+<tr>
+<td><strong>Event Read (Sequential)</strong></td>
+<td>50,000 events/sec</td>
+<td>&lt; 1ms</td>
+</tr>
+<tr>
+<td><strong>Tag Query</strong></td>
+<td>10,000 queries/sec</td>
+<td>&lt; 10ms (with indices)</td>
+</tr>
+<tr>
+<td><strong>Projection Rebuild</strong></td>
+<td>100,000 events/min</td>
+<td>Depends on complexity</td>
+</tr>
+</tbody>
+</table>
+<h3 id="scalability-limits">Scalability Limits</h3>
+<ul>
+<li><strong>Events per day:</strong> Up to 10 million (with proper indexing)</li>
+<li><strong>Total event count:</strong> Billions (file system dependent)</li>
+<li><strong>Concurrent readers:</strong> 100+ (file system cache helps)</li>
+<li><strong>Concurrent writers:</strong> 10-20 (single append bottleneck)</li>
+</ul>
+<h3 id="storage-size-comparison">Storage Size Comparison</h3>
+<p><strong>How does Opossum compare to database event stores?</strong></p>
+<p>For 1 million average-sized events (~450 bytes JSON each):</p>
+<table>
+<thead>
+<tr>
+<th>Event Store</th>
+<th>Storage Size</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EventStoreDB</strong></td>
+<td>280-430 MB</td>
+<td>Binary + indexes (smallest)</td>
+</tr>
+<tr>
+<td><strong>Marten (Postgres)</strong></td>
+<td>790-970 MB</td>
+<td>JSONB + heavy index overhead</td>
+</tr>
+<tr>
+<td><strong>Opossum (uncompressed)</strong></td>
+<td>596 MB</td>
+<td>JSON + simple tag indices</td>
+</tr>
+<tr>
+<td><strong>Opossum (compressed)</strong></td>
+<td><strong>350 MB</strong></td>
+<td><strong>With file system compression</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key Findings:</strong></p>
+<ul>
+<li>✅ Opossum with compression is <strong>competitive with EventStoreDB</strong></li>
+<li>✅ <strong>Much smaller than Postgres</strong> despite using JSON</li>
+<li>✅ Savings come from: No MVCC, simpler indices, no WAL overhead</li>
+<li>✅ JSON compresses 40-60% (vs 20-30% for binary)</li>
+</ul>
+<p><strong>Real-World Example (Car Dealership - 10 Years):</strong></p>
+<ul>
+<li>60,000 vehicle sales events</li>
+<li>EventStoreDB: 28 MB compressed</li>
+<li>Opossum: <strong>32 MB compressed</strong> (14% larger)</li>
+<li>Marten: 71 MB compressed (2.2x larger than Opossum)</li>
+</ul>
+<p><strong>Recommendation:</strong> Enable file system compression for Opossum deployments to maximize efficiency.</p>
+<h3 id="optimization-tips">Optimization Tips</h3>
+<ol>
+<li><strong>Use SSD storage</strong> - 10x faster than HDD</li>
+<li><strong>Enable file system compression</strong> - Reduces storage by 40-60%
+<ul>
+<li>Windows: <code>compact /c /s:D:\EventStore</code></li>
+<li>Linux: Mount with <code>compress=zstd</code> (btrfs)</li>
+</ul>
+</li>
+<li><strong>Enable tag indexing</strong> - Essential for queries</li>
+<li><strong>Partition by date</strong> - Archive old events to separate folders</li>
+<li><strong>Batch writes</strong> - Append multiple events in one transaction</li>
+<li><strong>Projection snapshots</strong> - Cache last state to speed rebuilds</li>
+</ol>
+<hr>
+<h2 id="compliance--regulations">Compliance &amp; Regulations</h2>
+<h3 id="opossum-meets-requirements-for">Opossum Meets Requirements For:</h3>
+<p>✅ <strong>GDPR (Right to Erasure):</strong></p>
+<ul>
+<li>Tag events with <code>UserId</code></li>
+<li>Delete all events for user when requested</li>
+<li>Or: Encrypt events with user-specific key, delete key = unreadable</li>
+</ul>
+<p>✅ <strong>SOX (Sarbanes-Oxley):</strong></p>
+<ul>
+<li>Immutable audit trail</li>
+<li>Append-only file system prevents tampering</li>
+<li>Hash event files for cryptographic verification</li>
+</ul>
+<p>✅ <strong>HIPAA (Healthcare):</strong></p>
+<ul>
+<li>Encrypted at rest (BitLocker, LUKS)</li>
+<li>Access control via file permissions</li>
+<li>On-premise storage satisfies data residency</li>
+</ul>
+<p>✅ <strong>FDA 21 CFR Part 11 (Pharmaceutical):</strong></p>
+<ul>
+<li>Digital signatures on events</li>
+<li>Audit trail of who did what when</li>
+<li>Write-once storage (WORM media)</li>
+</ul>
+<p>✅ <strong>PCI-DSS (Payment Card):</strong></p>
+<ul>
+<li>Encrypt card data in events</li>
+<li>Local storage for offline payment processing</li>
+<li>Meets audit trail requirements</li>
+</ul>
+<hr>
+<h2 id="support--resources">Support &amp; Resources</h2>
+<h3 id="github-repository">GitHub Repository</h3>
+<ul>
+<li><strong>Source Code:</strong> <a href="https://github.com/majormartintibor/Opossum">https://github.com/majormartintibor/Opossum</a></li>
+<li><strong>Issues &amp; Discussions:</strong> Report bugs, request features</li>
+<li><strong>Samples:</strong> CourseManagement sample application</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li><strong><code>/docs/PROJECTION_TAG_INDEXING.md</code></strong> - Performance optimization guide</li>
+<li><strong><code>/docs/QUICK_START_PROJECTION_TAGS.md</code></strong> - Getting started</li>
+<li><strong><code>/Specification/DCB-Specification.md</code></strong> - DCB compliance spec</li>
+</ul>
+<h3 id="getting-help">Getting Help</h3>
+<ol>
+<li>Check sample application code</li>
+<li>Review integration tests for usage patterns</li>
+<li>Open GitHub issue for bugs</li>
+<li>Discussions for architecture questions</li>
+</ol>
+<hr>
+<h2 id="conclusion">Conclusion</h2>
+<p>Opossum is purpose-built for scenarios where <strong>simplicity, offline operation, and data sovereignty</strong> outweigh the need for cloud scalability. The two production use cases (automotive retail and factory automation) validate that file system event stores solve real-world problems that cloud alternatives cannot.</p>
+<p><strong>Key Takeaway:</strong> Don't choose technology based on hype. Choose based on <strong>constraints</strong>. If your constraints include:</p>
+<ul>
+<li>Must work offline</li>
+<li>No database allowed</li>
+<li>Data must stay on-premise</li>
+<li>Small team, no cloud expertise</li>
+<li>Budget-constrained</li>
+</ul>
+<p>...then Opossum is <strong>the right tool for the job</strong>.</p>
+<hr>
+<p><strong>Document Version:</strong> 1.0<br>
+<strong>Last Updated:</strong> 2024<br>
+<strong>Status:</strong> Production Validated<br>
+<strong>Maintained By:</strong> Opossum Project Team</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/guides/use-cases.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>&#129437; Opossum — File System Event Store | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="&#129437; Opossum — File System Event Store | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="favicon.ico">
+      <link rel="stylesheet" href="public/docfx.min.css">
+      <link rel="stylesheet" href="public/main.css">
+      <meta name="docfx:navrel" content="toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/index.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="index.html">
+            <img id="logo" class="svg" src="logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+
+      <div class="content">
+        <div class="actionbar">
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="-opossum--file-system-event-store">🦝 Opossum — File System Event Store</h1>
+
+<p><strong>A .NET library that turns your file system into a fully functional event store.</strong></p>
+<p>Opossum implements the <a href="https://dcb.events">DCB (Dynamic Consistency Boundaries)</a> specification — bringing event sourcing, optimistic concurrency, projections, and the mediator pattern to any .NET application without a database server.</p>
+<p><a href="https://www.nuget.org/packages/Opossum/"><img src="https://img.shields.io/nuget/v/Opossum.svg" alt="NuGet"></a>
+<a href="https://dotnet.microsoft.com/download"><img src="https://img.shields.io/badge/.NET-10.0-blue.svg" alt=".NET"></a>
+<a href="https://github.com/majormartintibor/Opossum/blob/master/LICENSE"><img src="https://img.shields.io/github/license/majormartintibor/Opossum.svg" alt="License"></a>
+<a href="https://majormartintibor.github.io/Opossum/"><img src="https://img.shields.io/badge/docs-gh--pages-blue" alt="Docs"></a></p>
+<hr>
+<h2 id="install">Install</h2>
+<pre><code class="lang-bash">dotnet add package Opossum
+</code></pre>
+<hr>
+<h2 id="30-second-example">30-Second Example</h2>
+<pre><code class="lang-csharp">// Register
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = @&quot;D:\MyData\EventStore&quot;;
+    options.UseStore(&quot;MyApp&quot;);
+});
+
+// Append an event
+await eventStore.AppendAsync(
+    [new NewEvent { Event = new DomainEvent { Event = new OrderPlacedEvent(orderId) } }],
+    condition: null);
+
+// Read events
+var events = await eventStore.ReadAsync(Query.All(), readOptions: null);
+</code></pre>
+<p>No Docker. No database migrations. No cloud dependencies. Just files.</p>
+<hr>
+<h2 id="why-opossum">Why Opossum?</h2>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Why Opossum Fits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Automotive / POS / field-service</strong></td>
+<td>100% offline, complete audit trail, local compliance</td>
+</tr>
+<tr>
+<td><strong>SMB on-premises software</strong></td>
+<td>No recurring cloud fees, IT staff manages files</td>
+</tr>
+<tr>
+<td><strong>Multi-workstation LAN deployments</strong></td>
+<td>Cross-process safety via OS file locking</td>
+</tr>
+<tr>
+<td><strong>Development &amp; testing</strong></td>
+<td>Zero infrastructure — just run the app</td>
+</tr>
+<tr>
+<td><strong>Compliance-heavy industries</strong></td>
+<td>Immutable event log, optional OS-level write protection</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="whats-included">What's Included</h2>
+<ul>
+<li>✅ <strong>Event Store</strong> — Append and read immutable events stored as JSON files</li>
+<li>✅ <strong>Optimistic Concurrency</strong> — DCB <code>AppendCondition</code> prevents lost updates</li>
+<li>✅ <strong>Tag-Based Indexing</strong> — Fast domain-scoped queries without full scans</li>
+<li>✅ <strong>Projections</strong> — Auto-maintained read models that rebuild from events</li>
+<li>✅ <strong>Mediator</strong> — Command/query dispatch with automatic handler discovery via DI</li>
+<li>✅ <strong>Cross-Process Safety</strong> — OS-level file lock serialises appends across machines</li>
+<li>✅ <strong>Durability Guarantees</strong> — Configurable flush-to-disk on every write</li>
+<li>✅ <strong>OpenTelemetry</strong> — Built-in activity source for distributed tracing</li>
+</ul>
+<hr>
+<h2 id="getting-started">Getting Started</h2>
+<p>→ <a href="articles/getting-started/installation.html">Installation</a><br>
+→ <a href="articles/getting-started/quick-start.html">Quick Start</a><br>
+→ <a href="articles/getting-started/configuration.html">Configuration</a></p>
+<h2 id="learn-the-concepts">Learn the Concepts</h2>
+<p>→ <a href="articles/concepts/event-store.html">What is an Event Store?</a><br>
+→ <a href="articles/concepts/dcb.html">DCB Specification</a><br>
+→ <a href="articles/concepts/projections.html">Projections</a><br>
+→ <a href="articles/concepts/mediator.html">Mediator Pattern</a></p>
+<h2 id="explore-the-api">Explore the API</h2>
+<p>→ <a href="api/Opossum.html">API Reference</a></p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/index.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

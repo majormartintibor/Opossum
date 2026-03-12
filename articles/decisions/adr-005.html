@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>ADR-005: Cross-Process Append Safety via Exclusive File Lock | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="ADR-005: Cross-Process Append Safety via Exclusive File Lock | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/decisions/adr-005.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="adr-005-cross-process-append-safety-via-exclusive-file-lock">ADR-005: Cross-Process Append Safety via Exclusive File Lock</h1>
+<!-- source: docs/decisions/005-cross-process-append-safety.md � keep in sync -->
+
+<p><strong>Date:</strong> 2026<br>
+<strong>Status:</strong> ✅ Accepted — Implemented in 0.4.0</p>
+<hr>
+<h2 id="context">Context</h2>
+<h3 id="the-deployment-profile-this-decision-targets">The deployment profile this decision targets</h3>
+<p>Opossum is designed for SMB, dealership, POS, and field-service applications where
+multiple workstations (typically 1–12) run the same application and share one store
+directory on a network drive or a mapped UNC path. This is a core use case — not an
+edge case — and it is currently unsafe.</p>
+<h3 id="the-exact-failure-mode">The exact failure mode</h3>
+<p><code>FileSystemEventStore.AppendAsync</code> uses a <code>SemaphoreSlim(1, 1)</code> to serialise
+concurrent appends. A <code>SemaphoreSlim</code> is a <strong>process-local</strong> primitive. When two
+application instances on separate machines both call <code>AppendAsync</code> simultaneously, each
+acquires its own semaphore independently, and the following race becomes possible:</p>
+<pre><code>PC1  SemaphoreSlim.WaitAsync()        ← acquires PC1-local semaphore
+PC2  SemaphoreSlim.WaitAsync()        ← acquires PC2-local semaphore (independent)
+
+PC1  ReadLedger          → lastPos = 5
+PC2  ReadLedger          → lastPos = 5   ← reads before PC1 writes
+
+PC1  ValidateCondition   → no conflict (index unchanged)
+PC2  ValidateCondition   → no conflict (index unchanged, same snapshot)
+
+PC1  WriteEvent          → file position_6.json
+PC2  WriteEvent          → file position_6.json  ← overwrites; one event silently lost
+
+PC1  UpdateLedger        → 6
+PC2  UpdateLedger        → 6            ← ledger is &quot;correct&quot;, data is gone
+</code></pre>
+<p>The existing retry logic in <code>LedgerManager.AtomicMoveWithRetryAsync</code> and
+<code>GetLastSequencePositionAsync</code> only defends against transient I/O contention — not
+against this logical read-check-write race. Two processes can both successfully complete
+the entire <code>AppendAsync</code> flow and still produce duplicate sequence positions.</p>
+<p>This is not a theoretical concern: it is a certainty any time two PCs submit a form
+within the same ~10ms window (the duration of a single <code>FlushEventsImmediately = true</code>
+append).</p>
+<hr>
+<h2 id="decision">Decision</h2>
+<p>Introduce a <strong>dedicated <code>.store.lock</code> file in the context directory</strong>, opened with
+<code>FileShare.None</code> for the full duration of every append operation. This file acts as
+a cross-process mutual exclusion token.</p>
+<p>The combined lock strategy becomes:</p>
+<pre><code>SemaphoreSlim.WaitAsync()          ← existing; fast within-process gate
+  Acquire .store.lock (FileShare.None) with retry+backoff ← new; cross-process gate
+    ValidateAppendCondition
+    ReadLedger
+    WriteEventFiles
+    UpdateIndexes
+    UpdateLedger
+  Release .store.lock (close FileStream handle)
+SemaphoreSlim.Release()
+</code></pre>
+<p>The <code>SemaphoreSlim</code> is kept because it prevents all threads within the same process
+from simultaneously contesting the OS file lock. Without it, a process with 8 concurrent
+callers would produce 7 redundant <code>IOException</code> / retry cycles against the lock file on
+every append — needless SMB traffic.</p>
+<h3 id="why-this-approach-works-on-windows-smb">Why this approach works on Windows SMB</h3>
+<p>Windows SMB enforces <code>FileShare.None</code> <strong>server-side, across all machines on the network</strong>.
+When PC1 holds the lock file open, the SMB server itself rejects PC2's open attempt with
+<code>ERROR_SHARING_VIOLATION (0x80070020)</code>. This guarantee comes from the SMB server, not
+from PC1's cooperation. It holds even if PC1 is under load, paused in a debugger, or
+handling another request.</p>
+<p>The OS releases all file handles owned by a process when that process terminates — even
+on unclean exit. There is no stale-lock scenario. A process that crashes mid-append
+releases the lock file handle automatically.</p>
+<h3 id="performance-impact">Performance impact</h3>
+<table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Lock overhead</th>
+<th>Total append time</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local drive</td>
+<td>~0.1 ms (one kernel syscall)</td>
+<td>~10 ms</td>
+<td>&lt; 1%</td>
+</tr>
+<tr>
+<td>SMB share (LAN)</td>
+<td>~1–4 ms (one network round-trip)</td>
+<td>~12–14 ms</td>
+<td>~10–30%</td>
+</tr>
+</tbody>
+</table>
+<p>At the actual event rates of the target use cases (&lt; 2 events/sec across all PCs), this
+overhead is completely imperceptible to users. At 12 PCs each submitting a form every
+30 seconds, the peak rate is ~0.4 events/sec — the lock is uncontested in the vast
+majority of appends.</p>
+<hr>
+<h2 id="alternatives-considered-and-rejected">Alternatives Considered and Rejected</h2>
+<h3 id="named-systemthreadingmutex">Named <code>System.Threading.Mutex</code></h3>
+<pre><code class="lang-csharp">new Mutex(false, $&quot;Global\\Opossum_{storeHash}&quot;)
+</code></pre>
+<p>Named mutexes on Windows exist in the local machine's <strong>kernel object namespace</strong>. Two
+machines each create a mutex with the same name but they are two independent kernel
+objects that have no awareness of each other. This would solve same-machine multi-process
+(e.g., IIS worker recycling with overlap) but does nothing for the multi-PC scenario.
+Rejected.</p>
+<h3 id="using-the-ledger-file-itself-as-the-lock">Using the ledger file itself as the lock</h3>
+<p>Hold the ledger file open with <code>FileShare.None</code> for the entire append, eliminating the
+temp-file-rename strategy. Rejected because:</p>
+<ul>
+<li>The temp+rename write path was specifically designed to prevent ledger corruption on
+crash mid-write. Replacing it with a direct exclusive hold removes that guarantee.</li>
+<li>Readers use <code>FileShare.Read</code> on the ledger. Holding it exclusively for the full append
+duration (~10 ms) blocks all concurrent reads, degrading read latency.</li>
+</ul>
+<h3 id="sqlite-as-the-coordination-or-storage-backend">SQLite as the coordination or storage backend</h3>
+<p>SQLite's own documentation explicitly states that file locking is unreliable on network
+file systems (NFS, Samba). On Windows SMB the behaviour is implementation-dependent
+across SMB versions. The dedicated lock file approach uses the same OS primitives that
+SQLite itself would use, but without the surrounding complexity and without changing the
+storage format. Rejected for coordination use; may be re-evaluated separately as a
+full backend option.</p>
+<h3 id="central-coordinator-service">Central coordinator service</h3>
+<p>A single-process coordinator that all PCs submit appends to via HTTP or named pipe.
+This reintroduces the &quot;server to manage&quot; problem that is Opossum's core differentiator.
+Rejected.</p>
+<hr>
+<h2 id="proposed-implementation">Proposed Implementation</h2>
+<h3 id="1-new-class-crossprocesslockmanager">1. New class: <code>CrossProcessLockManager</code></h3>
+<p>New file: <code>src/Opossum/Storage/FileSystem/CrossProcessLockManager.cs</code></p>
+<p>Responsibilities:</p>
+<ul>
+<li>Acquire the <code>.store.lock</code> file with <code>FileShare.None</code></li>
+<li>Retry with exponential backoff on <code>IOException</code> with sharing-violation HResult</li>
+<li>Throw <code>TimeoutException</code> when <code>CrossProcessLockTimeout</code> is exceeded</li>
+<li>Return an <code>IAsyncDisposable</code> handle that releases the lock on disposal</li>
+</ul>
+<pre><code class="lang-csharp">internal sealed class CrossProcessLockManager
+{
+    private const string LockFileName = &quot;.store.lock&quot;;
+    private const int SharingViolationHResult   = unchecked((int)0x80070020); // Windows
+    private const int LockViolationHResult      = unchecked((int)0x80070021); // Windows
+    private readonly TimeSpan _timeout;
+
+    internal CrossProcessLockManager(TimeSpan timeout)
+    {
+        _timeout = timeout;
+    }
+
+    internal async Task&lt;IAsyncDisposable&gt; AcquireAsync(
+        string contextPath,
+        CancellationToken cancellationToken)
+    {
+        var lockPath = Path.Combine(contextPath, LockFileName);
+        var deadline = DateTimeOffset.UtcNow + _timeout;
+        var backoffMs = 10;
+        const int maxBackoffMs = 500;
+
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                var stream = new FileStream(
+                    lockPath,
+                    FileMode.OpenOrCreate,
+                    FileAccess.ReadWrite,
+                    FileShare.None,
+                    bufferSize: 1,
+                    FileOptions.None);
+
+                return new FileLockHandle(stream);
+            }
+            catch (IOException ex) when (IsLockViolation(ex))
+            {
+                if (DateTimeOffset.UtcNow &gt;= deadline)
+                {
+                    throw new TimeoutException(
+                        $&quot;Could not acquire the cross-process store lock at '{lockPath}' &quot; +
+                        $&quot;within {_timeout.TotalSeconds:F1}s. Another process is holding the &quot; +
+                        $&quot;lock. Consider increasing OpossumOptions.CrossProcessLockTimeout.&quot;, ex);
+                }
+
+                var remaining = deadline - DateTimeOffset.UtcNow;
+                var delay = TimeSpan.FromMilliseconds(
+                    Math.Min(backoffMs, remaining.TotalMilliseconds));
+
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                backoffMs = Math.Min(backoffMs * 2, maxBackoffMs);
+            }
+        }
+    }
+
+    private static bool IsLockViolation(IOException ex) =&gt;
+        ex.HResult is SharingViolationHResult or LockViolationHResult;
+
+    private sealed class FileLockHandle : IAsyncDisposable
+    {
+        private readonly FileStream _stream;
+        internal FileLockHandle(FileStream stream) =&gt; _stream = stream;
+        public ValueTask DisposeAsync() =&gt; _stream.DisposeAsync();
+    }
+}
+</code></pre>
+<h3 id="2-changes-to-opossumoptions">2. Changes to <code>OpossumOptions</code></h3>
+<p>Add one new property to <code>src/Opossum/Configuration/OpossumOptions.cs</code>:</p>
+<pre><code class="lang-csharp">/// &lt;summary&gt;
+/// Maximum time to wait when acquiring the cross-process append lock.
+/// When multiple application instances share the same store directory
+/// (e.g. via a UNC path or mapped drive), Opossum serialises appends
+/// across all processes using a file-system lock. If the lock is held
+/// by another process for longer than this timeout, AppendAsync throws
+/// &lt;see cref=&quot;TimeoutException&quot;/&gt;.
+///
+/// Default: 5 seconds — sufficient headroom for any business-operation
+/// event rate; increase only if appends are consistently queued behind
+/// large batch operations on a slow network share.
+/// &lt;/summary&gt;
+public TimeSpan CrossProcessLockTimeout { get; set; } = TimeSpan.FromSeconds(5);
+</code></pre>
+<p>No opt-in flag. The lock acquisition on an uncontested file is a single kernel syscall
+(~0.1 ms) — immeasurable against the ~10 ms append with <code>FlushEventsImmediately = true</code>.
+Making it optional would add a configuration hazard with no compensating benefit.</p>
+<h3 id="3-changes-to-filesystemeventstore">3. Changes to <code>FileSystemEventStore</code></h3>
+<p>In <code>FileSystemEventStore</code>'s constructor, instantiate the lock manager:</p>
+<pre><code class="lang-csharp">private readonly CrossProcessLockManager _crossProcessLockManager;
+
+// In constructor:
+_crossProcessLockManager = new CrossProcessLockManager(options.CrossProcessLockTimeout);
+</code></pre>
+<p>In <code>AppendAsync</code>, wrap the existing semaphore body:</p>
+<pre><code class="lang-csharp">await _appendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+try
+{
+    await using var _ = await _crossProcessLockManager
+        .AcquireAsync(contextPath, cancellationToken)
+        .ConfigureAwait(false);
+
+    // ... existing: ValidateCondition, ReadLedger, WriteEvents, UpdateIndexes, UpdateLedger
+}
+finally
+{
+    _appendLock.Release();
+}
+</code></pre>
+<p>The internal testing constructor also receives a <code>CrossProcessLockManager</code> parameter to
+allow injection in tests that need to simulate a held lock.</p>
+<hr>
+<h2 id="testing-strategy">Testing Strategy</h2>
+<h3 id="unit-tests--opossumunittests">Unit Tests — <code>Opossum.UnitTests</code></h3>
+<p>All unit tests use temporary directories cleaned up after each test. No mocking.</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it verifies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AcquiresLock_WhenFileIsNotHeld</code></td>
+<td><code>AcquireAsync</code> returns a handle; lock file exists on disk</td>
+</tr>
+<tr>
+<td><code>SecondAcquire_Fails_WhenLockIsHeld</code></td>
+<td>Open lock file manually with <code>FileShare.None</code>, then call <code>AcquireAsync</code> — must throw <code>TimeoutException</code> within the configured timeout</td>
+</tr>
+<tr>
+<td><code>ReleasesLock_OnDispose</code></td>
+<td>Acquire → dispose → acquire again — second acquisition must succeed immediately</td>
+</tr>
+<tr>
+<td><code>RespectsCancellationToken</code></td>
+<td>Pass an already-cancelled token — must throw <code>OperationCanceledException</code> immediately, not wait for timeout</td>
+</tr>
+<tr>
+<td><code>CancellationMidWait_Throws</code></td>
+<td>Acquire externally, start <code>AcquireAsync</code> with a CancellationToken, cancel mid-backoff — must throw <code>OperationCanceledException</code></td>
+</tr>
+<tr>
+<td><code>ExponentialBackoff_DoesNotExceedMax</code></td>
+<td>Verify total wait time stays within <code>timeout + maxBackoff</code> tolerance</td>
+</tr>
+</tbody>
+</table>
+<h3 id="integration-tests--opossumintegrationtests">Integration Tests — <code>Opossum.IntegrationTests</code></h3>
+<p><strong>Critical insight for testing cross-process behaviour within a single test process:</strong>
+File locking on Windows is enforced at the file-handle level, not the process level.
+Two <code>FileSystemEventStore</code> instances in the same test process pointing to the same
+directory will genuinely compete for the <code>.store.lock</code> file. This gives us real
+lock-contention behaviour without needing to spawn child processes.</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it verifies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TwoInstances_ConcurrentAppends_ProduceContiguousPositions</code></td>
+<td>Two <code>FileSystemEventStore</code> instances on the same temp directory, 50 concurrent appends each via <code>Task.WhenAll</code>, verify all 100 positions exist with no gaps and no duplicates</td>
+</tr>
+<tr>
+<td><code>TwoInstances_ConcurrentAppends_NoEventOverwrite</code></td>
+<td>Same setup, verify each appended event payload is recoverable in <code>ReadAsync</code> — no overwritten files</td>
+</tr>
+<tr>
+<td><code>TwoInstances_AppendCondition_NoDCBViolation</code></td>
+<td>Both instances perform read→decide→append with an <code>AppendCondition</code>; verify exactly one succeeds and one gets <code>AppendConditionFailedException</code> when they compete on the same query</td>
+</tr>
+<tr>
+<td><code>SingleInstance_PerformanceNotDegraded</code></td>
+<td>Single-instance baseline: append 100 events sequentially, verify median latency is within 5% of the pre-lock baseline from benchmarks</td>
+</tr>
+<tr>
+<td><code>LockTimeout_ThrowsTimeoutException</code></td>
+<td>Configure <code>CrossProcessLockTimeout = 200ms</code>, hold lock file externally with <code>FileShare.None</code>, call <code>AppendAsync</code> — must throw <code>TimeoutException</code> within ~200ms</td>
+</tr>
+</tbody>
+</table>
+<h3 id="what-is-explicitly-not-tested">What is explicitly not tested</h3>
+<p>A true multi-process test (two separate OS processes writing to the same share
+concurrently) is intentionally deferred. The file-handle-level locking guarantee from
+the OS means that the single-process dual-instance tests above provide equivalent
+coverage for the locking primitive. A process-level test would primarily validate
+Windows SMB server behaviour, which is outside the scope of this library's test suite.</p>
+<hr>
+<h2 id="consequences">Consequences</h2>
+<h3 id="what-changes">What changes</h3>
+<ul>
+<li><code>CrossProcessLockManager</code> is a new internal class (~60 lines)</li>
+<li><code>OpossumOptions</code> gains one new property with a safe default</li>
+<li><code>FileSystemEventStore.AppendAsync</code> gains one <code>await using</code> around the existing lock body</li>
+<li>A <code>.store.lock</code> file will appear in every context directory (expected, not a backup artefact)</li>
+<li><code>AppendAsync</code> on a contested SMB share adds 1–4 ms latency per call (acceptable)</li>
+<li><code>TimeoutException</code> is a new exception that can surface from <code>AppendAsync</code> (must be documented in <code>IEventStore</code> XML comments)</li>
+</ul>
+<h3 id="what-does-not-change">What does not change</h3>
+<ul>
+<li>The storage format — events, indexes, ledger are all unchanged</li>
+<li>Read path — <code>ReadAsync</code> is unaffected</li>
+<li>Single-instance local performance — lock acquisition on an uncontested file is &lt; 1 ms</li>
+<li>The DCB <code>AppendCondition</code> guarantees — they are now upheld across processes, not just threads</li>
+<li>Projections, mediator, DI registration — all unaffected</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/decisions/adr-005.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class DecisionModelExtensions | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class DecisionModelExtensions | Opossum — File System Event Store ">
+      
+      <meta name="description" content="Extension methods on  that implement the DCB read → decide → append pattern via Decision Model projections.">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/new/master/docs/docfx/api/new?filename=Opossum_DecisionModel_DecisionModelExtensions.md&amp;value=---%0Auid%3A%20Opossum.DecisionModel.DecisionModelExtensions%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Opossum.DecisionModel.DecisionModelExtensions">
+
+
+
+  <h1 id="Opossum_DecisionModel_DecisionModelExtensions" data-uid="Opossum.DecisionModel.DecisionModelExtensions" class="text-break">
+Class DecisionModelExtensions  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L10"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Opossum.html">Opossum</a>.<a class="xref" href="Opossum.DecisionModel.html">DecisionModel</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Opossum.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Extension methods on <a class="xref" href="Opossum.IEventStore.html">IEventStore</a> that implement the DCB
+read → decide → append pattern via Decision Model projections.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static class DecisionModelExtensions</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">DecisionModelExtensions</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync*"></a>
+
+  <h3 id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__1_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__System_Threading_CancellationToken_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync``1(Opossum.IEventStore,Opossum.DecisionModel.IDecisionProjection{``0},System.Threading.CancellationToken)">
+  BuildDecisionModelAsync&lt;TState&gt;(IEventStore, IDecisionProjection&lt;TState&gt;, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L64"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Builds a Decision Model by reading all events relevant to the given projection
+from the event store, folding them into state, and returning both the state and
+the <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> that guards the decision against concurrent writes.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;DecisionModel&lt;TState&gt;&gt; BuildDecisionModelAsync&lt;TState&gt;(this IEventStore eventStore, IDecisionProjection&lt;TState&gt; projection, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>eventStore</code> <a class="xref" href="Opossum.IEventStore.html">IEventStore</a></dt>
+    <dd><p>The event store to read from.</p>
+</dd>
+    <dt><code>projection</code> <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;TState&gt;</dt>
+    <dd><p>The projection that defines the query, initial state, and fold function.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="Opossum.DecisionModel.DecisionModel-1.html">DecisionModel</a>&lt;TState&gt;&gt;</dt>
+    <dd><p>A <a class="xref" href="Opossum.DecisionModel.DecisionModel-1.html">DecisionModel&lt;TState&gt;</a> containing the folded state and the
+append condition to enforce the Dynamic Consistency Boundary.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TState</code></dt>
+    <dd><p>The decision model state type.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__1_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__System_Threading_CancellationToken__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+This implements the DCB write-side pattern in a single call:
+</p>
+<pre><code class="lang-csharp">var model = await eventStore.BuildDecisionModelAsync(
+    CourseProjections.Capacity(command.CourseId));
+<p>if (model.State.IsFull)
+return CommandResult.Fail(&quot;Course is at capacity.&quot;);</p>
+<p>await eventStore.AppendAsync(newEvent, model.AppendCondition);
+// Throws AppendConditionFailedException if a concurrent write invalidated the model.</p></code></pre>
+<p>
+The <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> is constructed automatically:
+<ul><li>
+      <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_FailIfEventsMatch">FailIfEventsMatch</a> is set to
+      <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html#Opossum_DecisionModel_IDecisionProjection_1_Query">Query</a> — the same query used to read,
+      ensuring only semantically relevant writes can invalidate the decision.
+    </li><li>
+      <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a> is set to the maximum
+      position of all loaded events, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> when the store
+      contained no matching events.
+    </li></ul>
+
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">eventStore</code> or <code class="paramref">projection</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync*"></a>
+
+  <h3 id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__1_Opossum_IEventStore_System_Collections_Generic_IReadOnlyList_Opossum_DecisionModel_IDecisionProjection___0___System_Threading_CancellationToken_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync``1(Opossum.IEventStore,System.Collections.Generic.IReadOnlyList{Opossum.DecisionModel.IDecisionProjection{``0}},System.Threading.CancellationToken)">
+  BuildDecisionModelAsync&lt;TState&gt;(IEventStore, IReadOnlyList&lt;IDecisionProjection&lt;TState&gt;&gt;, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L230"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Builds a Decision Model from a runtime-variable list of homogeneous projections
+using a single event-store read. Returns one state per projection in the same order
+as the input list, plus the <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> spanning all queries.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;(IReadOnlyList&lt;TState&gt; States, AppendCondition Condition)&gt; BuildDecisionModelAsync&lt;TState&gt;(this IEventStore eventStore, IReadOnlyList&lt;IDecisionProjection&lt;TState&gt;&gt; projections, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>eventStore</code> <a class="xref" href="Opossum.IEventStore.html">IEventStore</a></dt>
+    <dd><p>The event store to read from.</p>
+</dd>
+    <dt><code>projections</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;<a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;TState&gt;&gt;</dt>
+    <dd><p>The list of projections to fold. Must not be empty.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;(<a class="xref" href="https://learn.microsoft.com/dotnet/api/system.collections.generic.ireadonlylist-1">IReadOnlyList</a>&lt;TState&gt; <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.collections.generic.ireadonlylist---0-,opossum.core.appendcondition-.states">States</a>, <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple-system.collections.generic.ireadonlylist---0-,opossum.core.appendcondition-.condition">Condition</a>)&gt;</dt>
+    <dd><p>A value tuple of <code>(States, Condition)</code> where <code>States[i]</code> corresponds to
+<code>projections[i]</code> and <code>Condition</code> spans all projection queries.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TState</code></dt>
+    <dd><p>The shared state type for all projections.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__1_Opossum_IEventStore_System_Collections_Generic_IReadOnlyList_Opossum_DecisionModel_IDecisionProjection___0___System_Threading_CancellationToken__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+Enables the DCB runtime-variable-N pattern — useful when the number of projections
+is only known at command handling time (e.g. items in a shopping cart):
+</p>
+<pre><code class="lang-csharp">var projections = command.Items
+    .Select(item =&gt; CourseBookProjections.PriceWithGracePeriod(item.BookId))
+    .ToList();
+<p>var (states, condition) = await eventStore.BuildDecisionModelAsync(projections);</p>
+<p>for (var i = 0; i &lt; projections.Count; i++)
+{
+if (!states[i].IsValidPrice(command.Items[i].DisplayedPrice))
+return CommandResult.Fail($&quot;Price mismatch for book {command.Items[i].BookId}.&quot;);
+}</p>
+<p>await eventStore.AppendAsync(newEvent, condition);</p></code></pre>
+<p>
+One <a class="xref" href="Opossum.IEventStore.html#Opossum_IEventStore_ReadAsync_Opossum_Core_Query_Opossum_Core_ReadOption___System_Nullable_System_Int64__System_Nullable_System_Int32__">ReadAsync(Query, ReadOption[]?, long?, int?)</a> call is made with the union of all queries.
+Each projection then folds only the subset of events that match its own query.
+The single <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> returned spans all projection queries —
+a concurrent write matching any query will invalidate the decision.
+</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when <code class="paramref">eventStore</code> or <code class="paramref">projections</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>Thrown when <code class="paramref">projections</code> is empty.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync*"></a>
+
+  <h3 id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__2_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__Opossum_DecisionModel_IDecisionProjection___1__System_Threading_CancellationToken_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync``2(Opossum.IEventStore,Opossum.DecisionModel.IDecisionProjection{``0},Opossum.DecisionModel.IDecisionProjection{``1},System.Threading.CancellationToken)">
+  BuildDecisionModelAsync&lt;T1, T2&gt;(IEventStore, IDecisionProjection&lt;T1&gt;, IDecisionProjection&lt;T2&gt;, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L122"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Builds a Decision Model from two independent projections using a single read against
+the event store. The combined query is the union of both sub-queries; each projection
+folds only the events that match its own query.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;(T1 First, T2 Second, AppendCondition Condition)&gt; BuildDecisionModelAsync&lt;T1, T2&gt;(this IEventStore eventStore, IDecisionProjection&lt;T1&gt; first, IDecisionProjection&lt;T2&gt; second, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>eventStore</code> <a class="xref" href="Opossum.IEventStore.html">IEventStore</a></dt>
+    <dd></dd>
+    <dt><code>first</code> <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;T1&gt;</dt>
+    <dd></dd>
+    <dt><code>second</code> <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;T2&gt;</dt>
+    <dd></dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;(T1 <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,opossum.core.appendcondition-.first">First</a>, T2 <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,opossum.core.appendcondition-.second">Second</a>, <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,opossum.core.appendcondition-.condition">Condition</a>)&gt;</dt>
+    <dd><p>A value tuple of <code>(First, Second, Condition)</code> where <code>Condition</code> is the
+<a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> spanning both projection queries.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T1</code></dt>
+    <dd></dd>
+    <dt><code>T2</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__2_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__Opossum_DecisionModel_IDecisionProjection___1__System_Threading_CancellationToken__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+One <a class="xref" href="Opossum.IEventStore.html#Opossum_IEventStore_ReadAsync_Opossum_Core_Query_Opossum_Core_ReadOption___System_Nullable_System_Int64__System_Nullable_System_Int32__">ReadAsync(Query, ReadOption[]?, long?, int?)</a> call is made with the union of both queries.
+Each projection then folds only the subset of events it cares about:
+</p>
+<pre><code class="lang-csharp">var (courseCapacity, studentLimit, condition) = await eventStore.BuildDecisionModelAsync(
+    CourseProjections.Capacity(command.CourseId),
+    StudentProjections.EnrollmentLimit(command.StudentId));
+<p>if (courseCapacity.IsFull || studentLimit.IsAtMax)
+return CommandResult.Fail(&quot;...&quot;);</p>
+<p>await eventStore.AppendAsync(newEvent, condition);</p></code></pre>
+<p>
+The single <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> returned spans both projection queries —
+a concurrent write matching either query will invalidate the decision.
+</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when any parameter is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync*"></a>
+
+  <h3 id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__3_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__Opossum_DecisionModel_IDecisionProjection___1__Opossum_DecisionModel_IDecisionProjection___2__System_Threading_CancellationToken_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync``3(Opossum.IEventStore,Opossum.DecisionModel.IDecisionProjection{``0},Opossum.DecisionModel.IDecisionProjection{``1},Opossum.DecisionModel.IDecisionProjection{``2},System.Threading.CancellationToken)">
+  BuildDecisionModelAsync&lt;T1, T2, T3&gt;(IEventStore, IDecisionProjection&lt;T1&gt;, IDecisionProjection&lt;T2&gt;, IDecisionProjection&lt;T3&gt;, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L155"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Builds a Decision Model from three independent projections using a single read
+against the event store. The combined query is the union of all three sub-queries.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;(T1 First, T2 Second, T3 Third, AppendCondition Condition)&gt; BuildDecisionModelAsync&lt;T1, T2, T3&gt;(this IEventStore eventStore, IDecisionProjection&lt;T1&gt; first, IDecisionProjection&lt;T2&gt; second, IDecisionProjection&lt;T3&gt; third, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>eventStore</code> <a class="xref" href="Opossum.IEventStore.html">IEventStore</a></dt>
+    <dd></dd>
+    <dt><code>first</code> <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;T1&gt;</dt>
+    <dd></dd>
+    <dt><code>second</code> <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;T2&gt;</dt>
+    <dd></dd>
+    <dt><code>third</code> <a class="xref" href="Opossum.DecisionModel.IDecisionProjection-1.html">IDecisionProjection</a>&lt;T3&gt;</dt>
+    <dd></dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd></dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;(T1 <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,--2,opossum.core.appendcondition-.first">First</a>, T2 <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,--2,opossum.core.appendcondition-.second">Second</a>, T3 <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,--2,opossum.core.appendcondition-.third">Third</a>, <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.valuetuple---0,--1,--2,opossum.core.appendcondition-.condition">Condition</a>)&gt;</dt>
+    <dd><p>A value tuple of <code>(First, Second, Condition)</code> where <code>Condition</code> is the
+<a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> spanning both projection queries.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>T1</code></dt>
+    <dd></dd>
+    <dt><code>T2</code></dt>
+    <dd></dd>
+    <dt><code>T3</code></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__3_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__Opossum_DecisionModel_IDecisionProjection___1__Opossum_DecisionModel_IDecisionProjection___2__System_Threading_CancellationToken__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+One <a class="xref" href="Opossum.IEventStore.html#Opossum_IEventStore_ReadAsync_Opossum_Core_Query_Opossum_Core_ReadOption___System_Nullable_System_Int64__System_Nullable_System_Int32__">ReadAsync(Query, ReadOption[]?, long?, int?)</a> call is made with the union of both queries.
+Each projection then folds only the subset of events it cares about:
+</p>
+<pre><code class="lang-csharp">var (courseCapacity, studentLimit, condition) = await eventStore.BuildDecisionModelAsync(
+    CourseProjections.Capacity(command.CourseId),
+    StudentProjections.EnrollmentLimit(command.StudentId));
+<p>if (courseCapacity.IsFull || studentLimit.IsAtMax)
+return CommandResult.Fail(&quot;...&quot;);</p>
+<p>await eventStore.AppendAsync(newEvent, condition);</p></code></pre>
+<p>
+The single <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> returned spans both projection queries —
+a concurrent write matching either query will invalidate the decision.
+</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>Thrown when any parameter is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Opossum_DecisionModel_DecisionModelExtensions_ExecuteDecisionAsync_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.ExecuteDecisionAsync*"></a>
+
+  <h3 id="Opossum_DecisionModel_DecisionModelExtensions_ExecuteDecisionAsync__1_Opossum_IEventStore_System_Func_Opossum_IEventStore_System_Threading_CancellationToken_System_Threading_Tasks_Task___0___System_Int32_System_Int32_System_Threading_CancellationToken_" data-uid="Opossum.DecisionModel.DecisionModelExtensions.ExecuteDecisionAsync``1(Opossum.IEventStore,System.Func{Opossum.IEventStore,System.Threading.CancellationToken,System.Threading.Tasks.Task{``0}},System.Int32,System.Int32,System.Threading.CancellationToken)">
+  ExecuteDecisionAsync&lt;TResult&gt;(IEventStore, Func&lt;IEventStore, CancellationToken, Task&lt;TResult&gt;&gt;, int, int, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L305"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Executes the complete DCB read → decide → append cycle with automatic retry on
+optimistic concurrency failures.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public static Task&lt;TResult&gt; ExecuteDecisionAsync&lt;TResult&gt;(this IEventStore eventStore, Func&lt;IEventStore, CancellationToken, Task&lt;TResult&gt;&gt; operation, int maxRetries = 3, int initialDelayMs = 50, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>eventStore</code> <a class="xref" href="Opossum.IEventStore.html">IEventStore</a></dt>
+    <dd><p>The event store to pass into the operation.</p>
+</dd>
+    <dt><code>operation</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.func-3">Func</a>&lt;<a class="xref" href="Opossum.IEventStore.html">IEventStore</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a>, <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;TResult&gt;&gt;</dt>
+    <dd><p>The delegate that performs the read → decide → append cycle. Receives the event store
+and a <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a>.</p>
+</dd>
+    <dt><code>maxRetries</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Total number of attempts. Defaults to <code>3</code>.</p>
+</dd>
+    <dt><code>initialDelayMs</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a></dt>
+    <dd><p>Initial delay in milliseconds for the exponential back-off. Defaults to <code>50</code>.
+Delay after attempt <code>n</code> is <code>initialDelayMs × 2^n</code>.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Cancellation token.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;TResult&gt;</dt>
+    <dd><p>The result produced by <code class="paramref">operation</code>.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Type Parameters</h4>
+  <dl class="parameters">
+    <dt><code>TResult</code></dt>
+    <dd><p>The return type of the operation.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+  <h4 class="section" id="Opossum_DecisionModel_DecisionModelExtensions_ExecuteDecisionAsync__1_Opossum_IEventStore_System_Func_Opossum_IEventStore_System_Threading_CancellationToken_System_Threading_Tasks_Task___0___System_Int32_System_Int32_System_Threading_CancellationToken__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+The <code class="paramref">operation</code> delegate is retried whenever an
+<a class="xref" href="Opossum.Exceptions.AppendConditionFailedException.html">AppendConditionFailedException</a> is thrown (which includes
+<a class="xref" href="Opossum.Exceptions.ConcurrencyException.html">ConcurrencyException</a>, its subclass) — both indicate that another
+writer modified the relevant event stream between the read and the append.
+Retries use exponential back-off.
+</p>
+<pre><code class="lang-csharp">return await eventStore.ExecuteDecisionAsync(async (store, ct) =&gt;
+{
+    var (capacity, condition) = await store.BuildDecisionModelAsync(
+        CourseProjections.Capacity(command.CourseId), ct);
+<pre><code>if (capacity.IsFull)
+    return CommandResult.Fail(&quot;Course is full.&quot;);
+
+await store.AppendAsync(enrollmentEvent, condition);
+return CommandResult.Ok();
+</code></pre>
+<p>});</p></code></pre>
+<p>
+If all <code class="paramref">maxRetries</code> attempts fail, the last exception is re-thrown
+so the caller can decide how to handle an exhausted retry budget.
+</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Exceptions.AppendConditionFailedException.html">AppendConditionFailedException</a></dt>
+    <dd><p>Re-thrown when max retries are exhausted due to append-condition failures
+(including <a class="xref" href="Opossum.Exceptions.ConcurrencyException.html">ConcurrencyException</a> subclass instances).</p>
+</dd>
+  </dl>
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/DecisionModel/DecisionModelExtensions.cs/#L10" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

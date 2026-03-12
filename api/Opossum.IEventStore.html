@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Interface IEventStore | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Interface IEventStore | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/new/master/docs/docfx/api/new?filename=Opossum_IEventStore.md&amp;value=---%0Auid%3A%20Opossum.IEventStore%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Opossum.IEventStore">
+
+
+
+  <h1 id="Opossum_IEventStore" data-uid="Opossum.IEventStore" class="text-break">
+Interface IEventStore  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/IEventStore.cs/#L5"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Opossum.html">Opossum</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Opossum.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"></div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public interface IEventStore</code></pre>
+  </div>
+
+
+
+
+
+
+
+
+  <dl class="typelist extensionMethods">
+    <dt>Extension Methods</dt>
+    <dd>
+  <div>
+      <a class="xref" href="Opossum.DecisionModel.DecisionModelExtensions.html#Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__1_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__System_Threading_CancellationToken_">DecisionModelExtensions.BuildDecisionModelAsync&lt;TState&gt;(IEventStore, IDecisionProjection&lt;TState&gt;, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.DecisionModel.DecisionModelExtensions.html#Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__1_Opossum_IEventStore_System_Collections_Generic_IReadOnlyList_Opossum_DecisionModel_IDecisionProjection___0___System_Threading_CancellationToken_">DecisionModelExtensions.BuildDecisionModelAsync&lt;TState&gt;(IEventStore, IReadOnlyList&lt;IDecisionProjection&lt;TState&gt;&gt;, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.DecisionModel.DecisionModelExtensions.html#Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__2_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__Opossum_DecisionModel_IDecisionProjection___1__System_Threading_CancellationToken_">DecisionModelExtensions.BuildDecisionModelAsync&lt;T1, T2&gt;(IEventStore, IDecisionProjection&lt;T1&gt;, IDecisionProjection&lt;T2&gt;, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.DecisionModel.DecisionModelExtensions.html#Opossum_DecisionModel_DecisionModelExtensions_BuildDecisionModelAsync__3_Opossum_IEventStore_Opossum_DecisionModel_IDecisionProjection___0__Opossum_DecisionModel_IDecisionProjection___1__Opossum_DecisionModel_IDecisionProjection___2__System_Threading_CancellationToken_">DecisionModelExtensions.BuildDecisionModelAsync&lt;T1, T2, T3&gt;(IEventStore, IDecisionProjection&lt;T1&gt;, IDecisionProjection&lt;T2&gt;, IDecisionProjection&lt;T3&gt;, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.DecisionModel.DecisionModelExtensions.html#Opossum_DecisionModel_DecisionModelExtensions_ExecuteDecisionAsync__1_Opossum_IEventStore_System_Func_Opossum_IEventStore_System_Threading_CancellationToken_System_Threading_Tasks_Task___0___System_Int32_System_Int32_System_Threading_CancellationToken_">DecisionModelExtensions.ExecuteDecisionAsync&lt;TResult&gt;(IEventStore, Func&lt;IEventStore, CancellationToken, Task&lt;TResult&gt;&gt;, int, int, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_AppendAsync_Opossum_IEventStore_Opossum_Core_NewEvent_Opossum_Core_AppendCondition_System_Threading_CancellationToken_">EventStoreExtensions.AppendAsync(IEventStore, NewEvent, AppendCondition?, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_AppendAsync_Opossum_IEventStore_Opossum_Core_NewEvent___System_Threading_CancellationToken_">EventStoreExtensions.AppendAsync(IEventStore, NewEvent[], CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_AppendEventAsync_Opossum_IEventStore_Opossum_IEvent_System_Collections_Generic_IEnumerable_Opossum_Core_Tag__Opossum_Core_Metadata_Opossum_Core_AppendCondition_System_Threading_CancellationToken_">EventStoreExtensions.AppendEventAsync(IEventStore, IEvent, IEnumerable&lt;Tag&gt;?, Metadata?, AppendCondition?, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_AppendEventsAsync_Opossum_IEventStore_Opossum_IEvent___System_Collections_Generic_IEnumerable_Opossum_Core_Tag__Opossum_Core_Metadata_Opossum_Core_AppendCondition_System_Threading_CancellationToken_">EventStoreExtensions.AppendEventsAsync(IEventStore, IEvent[], IEnumerable&lt;Tag&gt;?, Metadata?, AppendCondition?, CancellationToken)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_ReadAsync_Opossum_IEventStore_Opossum_Core_Query_">EventStoreExtensions.ReadAsync(IEventStore, Query)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_ReadAsync_Opossum_IEventStore_Opossum_Core_Query_Opossum_Core_ReadOption_">EventStoreExtensions.ReadAsync(IEventStore, Query, ReadOption)</a>
+  </div>
+  <div>
+      <a class="xref" href="Opossum.Extensions.EventStoreExtensions.html#Opossum_Extensions_EventStoreExtensions_ReadAsync_Opossum_IEventStore_Opossum_Core_Query_System_Int64_">EventStoreExtensions.ReadAsync(IEventStore, Query, long)</a>
+  </div>
+  </dd></dl>
+
+
+
+
+
+  <h2 class="section" id="methods">Methods
+</h2>
+
+
+  <a id="Opossum_IEventStore_AppendAsync_" data-uid="Opossum.IEventStore.AppendAsync*"></a>
+
+  <h3 id="Opossum_IEventStore_AppendAsync_Opossum_Core_NewEvent___Opossum_Core_AppendCondition_System_Threading_CancellationToken_" data-uid="Opossum.IEventStore.AppendAsync(Opossum.Core.NewEvent[],Opossum.Core.AppendCondition,System.Threading.CancellationToken)">
+  AppendAsync(NewEvent[], AppendCondition?, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/IEventStore.cs/#L39"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Atomically appends one or more events to the event store,
+optionally enforcing a concurrency guard.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>events</code> <a class="xref" href="Opossum.Core.NewEvent.html">NewEvent</a>[]</dt>
+    <dd><p>One or more events to append. The array must not be empty and every
+<a class="xref" href="Opossum.Core.NewEvent.html#Opossum_Core_NewEvent_Event">Event</a> must have a non-empty
+<a class="xref" href="Opossum.Core.DomainEvent.html#Opossum_Core_DomainEvent_EventType">EventType</a>.</p>
+</dd>
+    <dt><code>condition</code> <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a></dt>
+    <dd><p>Optional <a class="xref" href="Opossum.Core.AppendCondition.html">AppendCondition</a> that guards the append against
+concurrent writes. Pass <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> for an unconditional append.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Token to cancel the operation. When cancelled, the semaphore wait is aborted and
+no events are written.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task">Task</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Exceptions.AppendConditionFailedException.html">AppendConditionFailedException</a></dt>
+    <dd><p>Thrown when <code class="paramref">condition</code> is set and a conflicting event was
+appended between the caller's read and this append. Catch this exception and
+retry the full read → decide → append cycle.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>When <code class="paramref">events</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentexception">ArgumentException</a></dt>
+    <dd><p>When <code class="paramref">events</code> is empty or contains an event with a null/empty <a class="xref" href="Opossum.Core.DomainEvent.html#Opossum_Core_DomainEvent_EventType">EventType</a>.</p>
+</dd>
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.timeoutexception">TimeoutException</a></dt>
+    <dd><p>Thrown when the cross-process append lock cannot be acquired within
+<a class="xref" href="Opossum.Configuration.OpossumOptions.html#Opossum_Configuration_OpossumOptions_CrossProcessLockTimeout">CrossProcessLockTimeout</a>. This can occur
+when multiple application instances share the same store directory and one instance
+holds the lock for an unusually long time. Increase
+<a class="xref" href="Opossum.Configuration.OpossumOptions.html#Opossum_Configuration_OpossumOptions_CrossProcessLockTimeout">CrossProcessLockTimeout</a> if this occurs
+regularly, or investigate the process that is holding the lock.</p>
+</dd>
+  </dl>
+
+
+
+  <a id="Opossum_IEventStore_ReadAsync_" data-uid="Opossum.IEventStore.ReadAsync*"></a>
+
+  <h3 id="Opossum_IEventStore_ReadAsync_Opossum_Core_Query_Opossum_Core_ReadOption___System_Nullable_System_Int64__System_Nullable_System_Int32__" data-uid="Opossum.IEventStore.ReadAsync(Opossum.Core.Query,Opossum.Core.ReadOption[],System.Nullable{System.Int64},System.Nullable{System.Int32})">
+  ReadAsync(Query, ReadOption[]?, long?, int?)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/IEventStore.cs/#L57"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Reads events matching <code class="paramref">query</code> from the event store.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;SequencedEvent[]&gt; ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>query</code> <a class="xref" href="Opossum.Core.Query.html">Query</a></dt>
+    <dd><p>Filter — use <a class="xref" href="Opossum.Core.Query.html#Opossum_Core_Query_All">All()</a> to read every event.</p>
+</dd>
+    <dt><code>readOptions</code> <a class="xref" href="Opossum.Core.ReadOption.html">ReadOption</a>[]</dt>
+    <dd><p>Optional read options (e.g. <a class="xref" href="Opossum.Core.ReadOption.html#Opossum_Core_ReadOption_Descending">Descending</a>).</p>
+</dd>
+    <dt><code>fromPosition</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd><p>When provided, only events with <code>Position &gt; fromPosition</code> are returned.
+Pass the highest position already processed to resume reading from a known checkpoint.
+When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> (the default) all matching events are returned.</p>
+</dd>
+    <dt><code>maxCount</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int32">int</a>?</dt>
+    <dd><p>When provided, at most this many events are returned.
+Combine with <code class="paramref">fromPosition</code> to page through large result sets without
+loading all events into memory at once.
+When <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> (the default) all matching events are returned.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="Opossum.Core.SequencedEvent.html">SequencedEvent</a>[]&gt;</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+
+
+
+
+
+
+
+  <a id="Opossum_IEventStore_ReadLastAsync_" data-uid="Opossum.IEventStore.ReadLastAsync*"></a>
+
+  <h3 id="Opossum_IEventStore_ReadLastAsync_Opossum_Core_Query_System_Threading_CancellationToken_" data-uid="Opossum.IEventStore.ReadLastAsync(Opossum.Core.Query,System.Threading.CancellationToken)">
+  ReadLastAsync(Query, CancellationToken)
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/IEventStore.cs/#L102"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>Returns the event with the highest sequence position that matches <code class="paramref">query</code>,
+or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> when the store contains no matching events.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">Task&lt;SequencedEvent?&gt; ReadLastAsync(Query query, CancellationToken cancellationToken = default)</code></pre>
+  </div>
+
+  <h4 class="section">Parameters</h4>
+  <dl class="parameters">
+    <dt><code>query</code> <a class="xref" href="Opossum.Core.Query.html">Query</a></dt>
+    <dd><p>Filter — use <a class="xref" href="Opossum.Core.Query.html#Opossum_Core_Query_All">All()</a> to find the globally last event.</p>
+</dd>
+    <dt><code>cancellationToken</code> <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.cancellationtoken">CancellationToken</a></dt>
+    <dd><p>Token to cancel the operation.</p>
+</dd>
+  </dl>
+
+  <h4 class="section">Returns</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.tasks.task-1">Task</a>&lt;<a class="xref" href="Opossum.Core.SequencedEvent.html">SequencedEvent</a>&gt;</dt>
+    <dd><p>The matching event with the highest sequence position, or <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a> when
+no events in the store match <code class="paramref">query</code>.</p>
+</dd>
+  </dl>
+
+
+
+
+
+
+
+  <h4 class="section" id="Opossum_IEventStore_ReadLastAsync_Opossum_Core_Query_System_Threading_CancellationToken__remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+This is the efficient read step for DCB patterns that require knowledge of only the most
+recent event of a given type — for example, reading the last <code>InvoiceCreatedEvent</code>
+to determine the next invoice number in an unbroken monotonic sequence.
+</p>
+<p>
+<b>Typical DCB pattern for consecutive sequences:</b>
+<pre><code class="lang-csharp">// Step 1 — Read: find the last invoice event
+var query = Query.FromEventTypes(nameof(InvoiceCreatedEvent));
+var last = await eventStore.ReadLastAsync(query);
+<p>// Step 2 — Decide: derive the next number
+var nextNumber = last is null ? 1 : ((InvoiceCreatedEvent)last.Event.Event).InvoiceNumber + 1;</p>
+<p>// Step 3 — Append with a guard that fails if any new invoice appeared in the meantime
+var condition = new AppendCondition
+{
+FailIfEventsMatch     = query,
+AfterSequencePosition = last?.Position   // null → reject if ANY invoice already exists
+};
+await eventStore.AppendAsync([new NewEvent { Event = new InvoiceCreatedEvent(nextNumber) }], condition);
+// Throws AppendConditionFailedException on conflict — retry the full cycle.</p></code></pre>
+
+<p>
+Only one event file is read from storage regardless of how many total events match
+the query, making this significantly more efficient than
+<code>ReadAsync(..., [ReadOption.Descending])[0]</code> for large event streams.
+</p>
+</div>
+
+  <h4 class="section">Exceptions</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.argumentnullexception">ArgumentNullException</a></dt>
+    <dd><p>When <code class="paramref">query</code> is <a href="https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/null">null</a>.</p>
+</dd>
+  </dl>
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/IEventStore.cs/#L5" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

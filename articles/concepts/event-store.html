@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>What is an Event Store? | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="What is an Event Store? | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/concepts/event-store.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="what-is-an-event-store">What is an Event Store?</h1>
+
+<h2 id="the-core-idea">The Core Idea</h2>
+<p>Traditional applications store <strong>current state</strong> — a <code>Students</code> table holds one row per student, updated in place when something changes. You can see where things are now, but not how they got there.</p>
+<p>An <strong>event store</strong> flips this: it stores <strong>what happened</strong> as an immutable, append-only sequence of facts. The current state is always derivable by replaying events from the beginning. Nothing is ever updated or deleted; the history is the source of truth.</p>
+<pre><code>Traditional DB:         Event Store:
+┌─────────────────┐     ┌──────────────────────────────────────┐
+│ students         │     │ position 1 │ StudentRegisteredEvent  │
+│ id | name | ...  │     │ position 2 │ StudentEnrolledEvent    │
+│ 42 | Alice | ... │     │ position 3 │ CourseCreatedEvent      │
+└─────────────────┘     │ position 4 │ StudentEnrolledEvent    │
+                         └──────────────────────────────────────┘
+</code></pre>
+<hr>
+<h2 id="how-opossum-stores-events">How Opossum Stores Events</h2>
+<p>Opossum stores events as <strong>individual JSON files</strong> in a structured directory hierarchy — one file per event, named by their monotonically increasing sequence position:</p>
+<pre><code>EventStore\
+  MyApp\
+    events\
+      position_1.json      ← {&quot;eventType&quot;:&quot;StudentRegisteredEvent&quot;, &quot;data&quot;:{...}, &quot;tags&quot;:[...]}
+      position_2.json
+      position_3.json
+    index\
+      event-types\
+        StudentRegisteredEvent.idx   ← list of positions
+        CourseCreatedEvent.idx
+      tags\
+        studentId_abc123.idx         ← positions for tag &quot;studentId:abc123&quot;
+    ledger.json                      ← tracks last committed position
+    projections\
+      StudentView\
+        abc123.json                  ← current state for key &quot;abc123&quot;
+</code></pre>
+<h3 id="why-files">Why files?</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Benefit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Plain JSON</strong></td>
+<td>Human-readable, inspectable with any text editor</td>
+</tr>
+<tr>
+<td><strong>No database server</strong></td>
+<td>Zero infrastructure to install, configure, or maintain</td>
+</tr>
+<tr>
+<td><strong>Offline-first</strong></td>
+<td>Works without any network connectivity</td>
+</tr>
+<tr>
+<td><strong>Backup = copy</strong></td>
+<td>A simple <code>xcopy</code> or <code>rsync</code> is a complete backup</td>
+</tr>
+<tr>
+<td><strong>Audit-friendly</strong></td>
+<td>OS timestamps and optional read-only protection</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="the-three-core-operations">The Three Core Operations</h2>
+<h3 id="1-append">1. Append</h3>
+<p>Add one or more events atomically. An optional <code>AppendCondition</code> enforces optimistic concurrency (the DCB pattern):</p>
+<pre><code class="lang-csharp">await eventStore.AppendAsync(
+    events: [new NewEvent { Event = new DomainEvent { Event = myEvent } }],
+    condition: null); // or an AppendCondition for concurrency control
+</code></pre>
+<p>Each appended batch is assigned a globally unique, monotonically increasing <strong>sequence position</strong>.</p>
+<h3 id="2-read">2. Read</h3>
+<p>Query events by event type, tags, or both:</p>
+<pre><code class="lang-csharp">// All events
+var all = await eventStore.ReadAsync(Query.All(), readOptions: null);
+
+// Events of a specific type
+var typed = await eventStore.ReadAsync(
+    Query.FromEventTypes(nameof(StudentRegisteredEvent)), readOptions: null);
+
+// Events matching a tag
+var tagged = await eventStore.ReadAsync(
+    Query.FromItems(new QueryItem { Tags = [new Tag(&quot;studentId&quot;, id)] }),
+    readOptions: null);
+</code></pre>
+<h3 id="3-readlast">3. ReadLast</h3>
+<p>Efficiently read only the most recent event matching a query — key for DCB consecutive-sequence patterns like invoice numbering:</p>
+<pre><code class="lang-csharp">var last = await eventStore.ReadLastAsync(
+    Query.FromEventTypes(nameof(InvoiceCreatedEvent)));
+// last?.Position is the AfterSequencePosition for your AppendCondition
+</code></pre>
+<hr>
+<h2 id="sequence-positions">Sequence Positions</h2>
+<p>Every committed event has a <strong>position</strong> — a 1-based, globally ordered integer within its store:</p>
+<ul>
+<li>Positions are <strong>unique</strong> — no two events share the same position.</li>
+<li>Positions are <strong>monotonically increasing</strong> — a newer event always has a higher position than any older event.</li>
+<li>Positions <strong>may have gaps</strong> — e.g., after a failed append attempt that was partially written.</li>
+</ul>
+<p>The position is the key concept enabling DCB's optimistic concurrency: you read up to position N, build your decision model, then append with a guard that says &quot;fail if any new events matching this query appeared after position N&quot;.</p>
+<hr>
+<h2 id="tags--domain-scoped-indexing">Tags — Domain-Scoped Indexing</h2>
+<p>Tags are key/value pairs attached to events at append time. They are stored in a separate index that allows fast retrieval without scanning all events:</p>
+<pre><code class="lang-csharp">// Tag conventions: &quot;entityType&quot;, &quot;entityId&quot;, or combined &quot;entityType_entityId&quot;
+.WithTag(&quot;studentId&quot;, studentId.ToString())
+.WithTag(&quot;courseId&quot;, courseId.ToString())
+.WithTag(&quot;month&quot;, &quot;2024-01&quot;)
+</code></pre>
+<p>A query using tags touches only the indexed positions for those tags — not the full event log.</p>
+<blockquote>
+<p>Tags are immutable once committed. Use <code>IEventStoreMaintenance.AddTagsAsync</code> to retroactively add tags to existing events.</p>
+</blockquote>
+<hr>
+<h2 id="the-append-condition--dcb-concurrency-control">The Append Condition — DCB Concurrency Control</h2>
+<p>The <code>AppendCondition</code> is how Opossum implements DCB's consistency guarantee. It has two parts:</p>
+<ul>
+<li><strong><code>FailIfEventsMatch</code></strong> — a query describing what events would invalidate your decision.</li>
+<li><strong><code>AfterSequencePosition</code></strong> — the highest position you were aware of when you made your decision.</li>
+</ul>
+<p>The event store checks atomically: &quot;are there any events matching <code>FailIfEventsMatch</code> with position &gt; <code>AfterSequencePosition</code>?&quot; If yes, it throws <code>AppendConditionFailedException</code>. The caller retries the full read → decide → append cycle.</p>
+<p>This replaces aggregate-level locking with a <strong>query-scoped lock</strong> that spans exactly the events relevant to one business decision — nothing more.</p>
+<hr>
+<h2 id="durability">Durability</h2>
+<p>By default, Opossum calls <code>FileStream.Flush(flushToDisk: true)</code> after every append. This guarantees that events survive a power failure — they are physically on disk before <code>AppendAsync</code> returns.</p>
+<p>For testing or development, set <code>FlushEventsImmediately = false</code> for a 2–3× throughput increase. See <a href="../guides/durability.html">Durability Guarantees</a> for details.</p>
+<hr>
+<h2 id="next-steps">Next Steps</h2>
+<p>→ <a href="dcb.html">DCB Specification</a> — the full spec Opossum implements<br>
+→ <a href="projections.html">Projections</a> — building read models from events<br>
+→ <a href="../../api/Opossum.html">API Reference</a> — <code>IEventStore</code>, <code>AppendCondition</code>, <code>Query</code>, and more</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/concepts/event-store.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

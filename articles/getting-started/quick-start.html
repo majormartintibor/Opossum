@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Quick Start | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Quick Start | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/getting-started/quick-start.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="quick-start">Quick Start</h1>
+
+<p>Build your first event-sourced feature with Opossum in 5 minutes.</p>
+<h2 id="what-well-build">What We'll Build</h2>
+<p>A minimal student registration system that:</p>
+<ol>
+<li>Defines domain events</li>
+<li>Appends events to the store</li>
+<li>Reads events back</li>
+<li>Maintains a projection (read model)</li>
+<li>Enforces a business rule with DCB concurrency control</li>
+</ol>
+<hr>
+<h2 id="step-1--install-and-configure">Step 1 — Install and Configure</h2>
+<pre><code class="lang-bash">dotnet add package Opossum
+</code></pre>
+<pre><code class="lang-csharp">using Opossum.DependencyInjection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = @&quot;D:\MyData\EventStore&quot;;
+    options.UseStore(&quot;QuickStart&quot;);
+});
+
+builder.Services.AddProjections(options =&gt;
+{
+    options.ScanAssembly(typeof(Program).Assembly);
+});
+
+var app = builder.Build();
+app.Run();
+</code></pre>
+<hr>
+<h2 id="step-2--define-your-events">Step 2 — Define Your Events</h2>
+<p>Events are immutable records implementing <code>IEvent</code>:</p>
+<pre><code class="lang-csharp">using Opossum;
+
+public record StudentRegisteredEvent(
+    Guid StudentId,
+    string Name,
+    string Email) : IEvent;
+
+public record StudentEnrolledToCourseEvent(
+    Guid StudentId,
+    Guid CourseId) : IEvent;
+</code></pre>
+<hr>
+<h2 id="step-3--append-events">Step 3 — Append Events</h2>
+<p>Inject <code>IEventStore</code> and append events using <code>NewEvent</code> + <code>DomainEvent</code>:</p>
+<pre><code class="lang-csharp">using Opossum;
+using Opossum.Core;
+using Opossum.Extensions;
+
+public class StudentService(IEventStore eventStore)
+{
+    public async Task&lt;Guid&gt; RegisterAsync(string name, string email)
+    {
+        var studentId = Guid.NewGuid();
+
+        var evt = new StudentRegisteredEvent(studentId, name, email)
+            .ToDomainEvent()
+            .WithTag(&quot;studentId&quot;, studentId.ToString())
+            .WithTimestamp(DateTimeOffset.UtcNow);
+
+        await eventStore.AppendAsync([new NewEvent { Event = evt }], condition: null);
+
+        return studentId;
+    }
+}
+</code></pre>
+<blockquote>
+<p><code>ToDomainEvent()</code> and <code>WithTag()</code> are extension methods from <code>Opossum.Extensions</code>.</p>
+</blockquote>
+<hr>
+<h2 id="step-4--read-events">Step 4 — Read Events</h2>
+<pre><code class="lang-csharp">using Opossum.Core;
+
+// Read all events for a specific student
+var query = Query.FromItems(new QueryItem
+{
+    Tags = [new Tag(&quot;studentId&quot;, studentId.ToString())]
+});
+
+var events = await eventStore.ReadAsync(query, readOptions: null);
+
+foreach (var e in events)
+{
+    Console.WriteLine($&quot;[{e.Position}] {e.Event.EventType}&quot;);
+}
+</code></pre>
+<hr>
+<h2 id="step-5--create-a-projection">Step 5 — Create a Projection</h2>
+<p>Projections are materialized views maintained automatically by <code>IProjectionManager</code>:</p>
+<pre><code class="lang-csharp">using Opossum.Core;
+using Opossum.Projections;
+
+public record StudentView(Guid StudentId, string Name, string Email, int EnrolledCourses);
+
+[ProjectionDefinition(&quot;StudentView&quot;)]
+public class StudentViewProjection : IProjectionDefinition&lt;StudentView&gt;
+{
+    public string ProjectionName =&gt; &quot;StudentView&quot;;
+
+    public string[] EventTypes =&gt;
+    [
+        nameof(StudentRegisteredEvent),
+        nameof(StudentEnrolledToCourseEvent)
+    ];
+
+    public string KeySelector(SequencedEvent evt) =&gt;
+        evt.Event.Tags.First(t =&gt; t.Key == &quot;studentId&quot;).Value;
+
+    public StudentView? Apply(StudentView? current, SequencedEvent evt) =&gt;
+        evt.Event.Event switch
+        {
+            StudentRegisteredEvent r =&gt; new StudentView(r.StudentId, r.Name, r.Email, 0),
+            StudentEnrolledToCourseEvent when current is not null =&gt;
+                current with { EnrolledCourses = current.EnrolledCourses + 1 },
+            _ =&gt; current
+        };
+}
+</code></pre>
+<p>Query the projection via <code>IProjectionStore</code>:</p>
+<pre><code class="lang-csharp">using Opossum.Projections;
+
+public class StudentController(IProjectionStore store)
+{
+    public async Task&lt;StudentView?&gt; GetStudentAsync(Guid studentId) =&gt;
+        await store.GetAsync&lt;StudentView&gt;(&quot;StudentView&quot;, studentId.ToString());
+}
+</code></pre>
+<hr>
+<h2 id="step-6--enforce-a-business-rule-with-dcb">Step 6 — Enforce a Business Rule with DCB</h2>
+<p>Use <code>AppendCondition</code> to prevent duplicate registrations — the DCB read → decide → append pattern:</p>
+<pre><code class="lang-csharp">public async Task&lt;Guid&gt; RegisterUniqueAsync(string email)
+{
+    // 1. READ — find any existing registration for this email
+    var query = Query.FromItems(new QueryItem
+    {
+        EventTypes = [nameof(StudentRegisteredEvent)],
+        Tags = [new Tag(&quot;studentEmail&quot;, email)]
+    });
+
+    var existing = await eventStore.ReadAsync(query, readOptions: null);
+
+    // 2. DECIDE — enforce the &quot;no duplicate email&quot; invariant
+    if (existing.Length &gt; 0)
+        throw new InvalidOperationException($&quot;Email {email} is already registered.&quot;);
+
+    var highestPosition = existing.Length &gt; 0 ? existing[^1].Position : (long?)null;
+
+    // 3. APPEND — with a guard: fail if a conflicting event appeared since our read
+    var studentId = Guid.NewGuid();
+    var condition = new AppendCondition
+    {
+        FailIfEventsMatch = query,
+        AfterSequencePosition = highestPosition
+    };
+
+    var evt = new StudentRegisteredEvent(studentId, &quot;New Student&quot;, email)
+        .ToDomainEvent()
+        .WithTag(&quot;studentId&quot;, studentId.ToString())
+        .WithTag(&quot;studentEmail&quot;, email);
+
+    try
+    {
+        await eventStore.AppendAsync([new NewEvent { Event = evt }], condition);
+    }
+    catch (AppendConditionFailedException)
+    {
+        // A concurrent writer registered the same email — retry or surface error
+        throw new InvalidOperationException(&quot;Concurrent registration detected. Please retry.&quot;);
+    }
+
+    return studentId;
+}
+</code></pre>
+<hr>
+<h2 id="what-happens-on-disk">What Happens on Disk</h2>
+<p>After running the above, your event store directory looks like:</p>
+<pre><code>D:\MyData\EventStore\
+  QuickStart\
+    events\
+      position_1.json
+      position_2.json
+    index\
+      event-types\
+        StudentRegisteredEvent.idx
+      tags\
+        studentId_&lt;guid&gt;.idx
+    ledger.json
+    projections\
+      StudentView\
+        &lt;student-guid&gt;.json
+</code></pre>
+<p>Every event is a plain JSON file. Projections are JSON files too. No binary formats, no proprietary encodings — you can inspect everything with any text editor.</p>
+<hr>
+<h2 id="next-steps">Next Steps</h2>
+<p>→ <a href="configuration.html">Configuration</a> — tune flush, auto-rebuild, polling interval<br>
+→ <a href="../concepts/event-store.html">Concepts: Event Store</a> — understand the storage model<br>
+→ <a href="../concepts/dcb.html">Concepts: DCB</a> — deep dive on the specification<br>
+→ <a href="../concepts/projections.html">Concepts: Projections</a> — advanced projection patterns<br>
+→ <a href="../guides/use-cases.html">Use Cases</a> — see Opossum in real-world scenarios</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/getting-started/quick-start.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

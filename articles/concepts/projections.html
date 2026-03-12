@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>DCB Projections Specification | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="DCB Projections Specification | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/concepts/projections.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="dcb-projections-specification">DCB Projections Specification</h1>
+<!-- source: docs/specifications/dcb-projections.md — keep in sync -->
+
+<blockquote>
+<p>Extracted from <a href="https://dcb.events/topics/projections/">dcb.events/topics/projections/</a></p>
+</blockquote>
+<p>In software architecture, how we view and handle data often comes down to two fundamental perspectives: <strong>event-based</strong> and <strong>state-based</strong>. The state-based view focuses on the current snapshot of data. It's straightforward and efficient for querying, reporting, and displaying data to users. In contrast, the event-based view captures every change over time, providing a complete history of how the state evolved.</p>
+<p>Depending on your use case, one view may serve better than the other â€” or you might need both. That's where projections come in: they translate an event-based history into a state-based model tailored to specific needs.</p>
+<p>The result is commonly used for persistent <strong>Read Models</strong> <em>(representation of data tailored for specific read operations, often denormalized for performance)</em>. In Event Sourcing, however, projections are also used to build the <strong>Decision Model</strong> <em>(representation of the system's current state, used to enforce integrity constraints before moving the system to a new state)</em> needed to enforce consistency constraints.</p>
+<p>This specification focuses on this latter kind of projection since DCB primarily focuses on ensuring the consistency of the Event Store during write operations.</p>
+<hr>
+<h2 id="what-is-a-projection">What is a Projection</h2>
+<p>In 2013 Greg Young posted the following minimal definition of a projection:</p>
+<blockquote>
+<p>left fold of previous facts</p>
+</blockquote>
+<p>In TypeScript the equivalent type definition would be:</p>
+<pre><code class="lang-typescript">type Projection&lt;S, E&gt; = (state: S, event: E) =&gt; S
+</code></pre>
+<p>A projection is a pure function that takes the current state and an event, and returns a new state. Applied repeatedly via a fold/reduce over a sequence of events, it builds up a derived state from history.</p>
+<hr>
+<h2 id="implementation">Implementation</h2>
+<p>A typical DCB projection looks like this:</p>
+<pre><code class="lang-js">{
+  initialState: null,
+  handlers: {
+    CourseDefined: (state, event) =&gt; event.data.title,
+    CourseRenamed: (state, event) =&gt; event.data.newTitle,
+  },
+  tags: [`course:${courseId}`],
+}
+</code></pre>
+<h3 id="basic-functionality">Basic Functionality</h3>
+<p>A projection is defined by:</p>
+<ul>
+<li><strong><code>initialState</code></strong> â€“ the starting value before any events are applied</li>
+<li><strong><code>handlers</code></strong> â€“ a map of event type names to reducer functions <code>(state, event) =&gt; state</code></li>
+</ul>
+<p>JavaScript's <code>Array.reduce</code> (or equivalent in any language) aggregates all events into a single state, starting from <code>initialState</code>:</p>
+<pre><code class="lang-js">const projection = (state, event) =&gt; {
+  switch (event) {
+    case 'CourseDefined':
+      return state + 1;
+    case 'CourseArchived':
+      return state - 1;
+    default:
+      return state;
+  }
+}
+const initialState = 0
+const numberOfActiveCourses = events.reduce(projection, initialState)
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> A projection function must be <strong>pure</strong> (free of side effects) to produce deterministic results. When replaying a projection for the same events, the resulting state must be identical every time.</p>
+</blockquote>
+<hr>
+<h2 id="query-only-relevant-events">Query Only Relevant Events</h2>
+<p>In a real application events are not stored in memory and there can be many of them. They should be filtered <strong>before</strong> being read from the Event Store.</p>
+<p>In the context of DCB, projections are typically used to reconstruct the minimal model required to validate constraints â€” usually in response to a command. It is therefore paramount to minimize the time needed to rebuild the Decision Model by loading only the events that are relevant to validating the received command.</p>
+<h3 id="filter-events-by-type">Filter Events by Type</h3>
+<p>The event type is the primary filter criterion. By defining handlers declaratively (as a map keyed by event type name), the handled types can be derived automatically from the projection definition:</p>
+<pre><code class="lang-js">const projection = {
+  initialState: 0,
+  handlers: {
+    CourseDefined: (state, event) =&gt; state + 1,
+    CourseArchived: (state, event) =&gt; state - 1,
+  }
+}
+
+// Only load events whose type is a key in projection.handlers
+const relevantEvents = events.filter((event) =&gt; event in projection.handlers)
+</code></pre>
+<h3 id="filter-events-by-tags">Filter Events by Tags</h3>
+<p>Decision Models are usually only concerned with single entities. For example, to determine whether a course with a specific id exists, only <code>CourseDefined</code> events tagged for <strong>that course</strong> should be loaded â€” not all <code>CourseDefined</code> events globally.</p>
+<p>In DCB there is no concept of multiple streams. Events are stored in a <strong>single global sequence</strong>. Instead, events can be associated with entities using <strong>Tags</strong>, and a compliant DCB Event Store allows filtering events by their tags in addition to their type.</p>
+<p>A projection extended with a <code>tagFilter</code>:</p>
+<pre><code class="lang-js">const projection = {
+  initialState: false,
+  handlers: {
+    CourseDefined:  (state, event) =&gt; true,
+    CourseArchived: (state, event) =&gt; false,
+  },
+  tagFilter: [`course:c1`]
+}
+
+// Filter: event type must be handled AND event must carry all required tags
+const relevantEvents = events.filter((event) =&gt;
+    event.type in projection.handlers &amp;&amp;
+    projection.tagFilter.every((tag) =&gt; event.tags.includes(tag))
+)
+</code></pre>
+<p>Because the <code>tagFilter</code> is the most dynamic part of a projection (it depends on the specific entity instance), it is best expressed via a <strong>factory function</strong> that accepts the relevant dynamic parameters:</p>
+<pre><code class="lang-js">const CourseExistsProjection = (courseId) =&gt; ({
+  initialState: false,
+  handlers: {
+    CourseDefined:  (state, event) =&gt; true,
+    CourseArchived: (state, event) =&gt; false,
+  },
+  tagFilter: [`course:${courseId}`]
+})
+</code></pre>
+<h3 id="projection-object-shape-library">Projection Object Shape (Library)</h3>
+<p>The <code>createProjection</code> helper function wraps the raw projection definition and returns a richer object:</p>
+<pre><code class="lang-typescript">type Projection&lt;S&gt; = {
+  get initialState(): S
+  apply(state: S, event: SequencedEvent): S
+  get query(): Query
+}
+</code></pre>
+<ul>
+<li><strong><code>initialState</code></strong> â€“ the starting state value</li>
+<li><strong><code>apply(state, event)</code></strong> â€“ applies a single event to the current state</li>
+<li><strong><code>query</code></strong> â€“ a <code>Query</code> value that can be used to filter events (manually or translated to an Event Store query)</li>
+</ul>
+<p>Usage:</p>
+<pre><code class="lang-js">const CourseExistsProjection = (courseId) =&gt;
+  createProjection({
+    initialState: false,
+    handlers: {
+      CourseDefined:  (state, event) =&gt; true,
+      CourseArchived: (state, event) =&gt; false,
+    },
+    tagFilter: [`course:${courseId}`],
+  })
+
+const projection = CourseExistsProjection(&quot;c1&quot;)
+
+const state = events
+  .filter((event) =&gt; projection.query.matchesEvent(event))
+  .reduce(
+    (state, event) =&gt; projection.apply(state, event),
+    projection.initialState
+  )
+</code></pre>
+<hr>
+<h2 id="composing-projections">Composing Projections</h2>
+<p>Usually there are <strong>multiple</strong> hard constraints to enforce simultaneously. For example, to change a course's capacity, the system must ensure that:</p>
+<ul>
+<li>the course exists</li>
+<li>the specified new capacity differs from the current capacity</li>
+</ul>
+<p>It is tempting to write a single &quot;fat&quot; projection that answers both questions. However, this has drawbacks:</p>
+<ul>
+<li>It increases complexity and makes the projection harder to reason about.</li>
+<li>It makes the projection more &quot;greedy&quot; â€” if only part of the state is needed for a given decision, it still loads more events than necessary, widening the consistency boundary needlessly.</li>
+</ul>
+<p>Instead, <strong>compose multiple small projections</strong> into one using <code>composeProjections</code>:</p>
+<pre><code class="lang-js">const compositeProjection = composeProjections({
+  courseExists: CourseExistsProjection(&quot;c1&quot;),
+  courseTitle:  CourseTitleProjection(&quot;c1&quot;),
+})
+
+const state = events
+  .filter((event) =&gt; compositeProjection.query.matchesEvent(event))
+  .reduce(compositeProjection.apply, compositeProjection.initialState)
+
+// state =&gt; { courseExists: true, courseTitle: &quot;Course 1 renamed&quot; }
+</code></pre>
+<p>The state of the composite projection is an object keyed by each sub-projection name. The resulting query matches only events that are relevant to <strong>at least one</strong> of the composed projections â€” no more, no less.</p>
+<hr>
+<h2 id="how-to-use-this-with-dcb">How to Use This with DCB</h2>
+<p>In the context of DCB, composite projections are particularly useful for building Decision Models that require strong consistency.</p>
+<p>A lightweight translation layer extracts a query that efficiently loads only the events relevant to the composed projections. The <code>buildDecisionModel</code> function handles this:</p>
+<pre><code class="lang-js">const { state, appendCondition } = buildDecisionModel(eventStore, {
+  courseExists: CourseExistsProjection(&quot;c1&quot;),
+  courseTitle:  CourseTitleProjection(&quot;c1&quot;),
+})
+</code></pre>
+<ul>
+<li><strong><code>state</code></strong> â€“ contains the composed state of all projections</li>
+<li><strong><code>appendCondition</code></strong> â€“ can be passed to the Event Store's <code>append()</code> method to enforce consistency (see <a href="dcb.html">DCB Specification</a> for details)</li>
+</ul>
+<p>The <code>appendCondition</code> ties the decision model to a specific position in the event stream. If any relevant event is appended by a concurrent operation between reading and writing, the append will be rejected â€” enforcing the <strong>Dynamic Consistency Boundary</strong>.</p>
+<hr>
+<h2 id="summary">Summary</h2>
+<table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Projection</strong></td>
+<td>Pure function <code>(state, event) =&gt; state</code> folded over an event sequence</td>
+</tr>
+<tr>
+<td><strong><code>initialState</code></strong></td>
+<td>Starting value before any events are applied</td>
+</tr>
+<tr>
+<td><strong><code>handlers</code></strong></td>
+<td>Map of event type â†’ reducer; also defines which event types to load</td>
+</tr>
+<tr>
+<td><strong><code>tagFilter</code></strong></td>
+<td>Limits events to those tagged with specific entity identifiers</td>
+</tr>
+<tr>
+<td><strong>Factory function</strong></td>
+<td>Wraps a projection definition to inject dynamic parameters (e.g. entity id)</td>
+</tr>
+<tr>
+<td><strong><code>composeProjections</code></strong></td>
+<td>Combines multiple small projections; resulting query is the union of all sub-queries</td>
+</tr>
+<tr>
+<td><strong><code>buildDecisionModel</code></strong></td>
+<td>Reads the event store using the composed query and returns <code>state</code> + <code>appendCondition</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="conclusion">Conclusion</h2>
+<p>Projections play a fundamental role in DCB and Event Sourcing as a whole. The ability to combine multiple simple projections into more complex ones â€” tailored to specific use cases â€” unlocks a range of possibilities that can influence application design. Keeping projections small and single-purpose is key: it keeps the consistency boundary as narrow as possible and the code easy to reason about.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/concepts/projections.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

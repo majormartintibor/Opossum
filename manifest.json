@@ -1,0 +1,1222 @@
+{
+  "source_base_path": "/home/runner/work/Opossum/Opossum/docs/docfx",
+  "xrefmap": "xrefmap.yml",
+  "files": [
+    {
+      "type": "Resource",
+      "output": {
+        "resource": {
+          "relative_path": "index.json"
+        }
+      }
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Configuration.OpossumOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Configuration.OpossumOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Configuration.OpossumOptions",
+      "Summary": "<p sourcefile=\"api/Opossum.Configuration.OpossumOptions.yml\" sourcestartlinenumber=\"1\">Configuration options for the Opossum event store</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Configuration.OpossumOptionsValidator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Configuration.OpossumOptionsValidator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Configuration.OpossumOptionsValidator",
+      "Summary": "<p sourcefile=\"api/Opossum.Configuration.OpossumOptionsValidator.yml\" sourcestartlinenumber=\"1\">Validates OpossumOptions configuration using IValidateOptions pattern.\nThis runs at startup when options are first accessed.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Configuration.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Configuration.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Configuration",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.AppendCondition.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.AppendCondition.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.AppendCondition",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.AppendCondition.yml\" sourcestartlinenumber=\"1\">Specifies an optimistic concurrency guard evaluated atomically during <xref href=\"Opossum.IEventStore.AppendAsync(Opossum.Core.NewEvent%5b%5d%2cOpossum.Core.AppendCondition%2cSystem.Threading.CancellationToken)\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.CommandResult-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.CommandResult-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.CommandResult<T>",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.CommandResult-1.yml\" sourcestartlinenumber=\"1\">Represents the result of a command operation with a return value</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.CommandResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.CommandResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.CommandResult",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.CommandResult.yml\" sourcestartlinenumber=\"1\">Represents the result of a command operation without a return value</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.DomainEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.DomainEvent.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.DomainEvent",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.DomainEvent.yml\" sourcestartlinenumber=\"1\">Envelope that carries a domain event payload (<xref href=\"Opossum.Core.DomainEvent.Event\" data-throw-if-not-resolved=\"false\"></xref>) together with\nits indexing metadata (<xref href=\"Opossum.Core.DomainEvent.EventType\" data-throw-if-not-resolved=\"false\"></xref> and <xref href=\"Opossum.Core.DomainEvent.Tags\" data-throw-if-not-resolved=\"false\"></xref>).</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.Metadata.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.Metadata.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.Metadata",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.Metadata.yml\" sourcestartlinenumber=\"1\">Infrastructure metadata attached to an event at append time.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.NewEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.NewEvent.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.NewEvent",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.NewEvent.yml\" sourcestartlinenumber=\"1\">Represents an event to be appended to the event store.\nThe sequence position is unknown at this stage and will be assigned by the event store.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.Query.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.Query.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.Query",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.Query.yml\" sourcestartlinenumber=\"1\">Represents a query for filtering events from the event store.\nMultiple QueryItems are combined with OR logic.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.QueryItem.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.QueryItem.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.QueryItem",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.QueryItem.yml\" sourcestartlinenumber=\"1\">A single filter clause within a <xref href=\"Opossum.Core.Query\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.ReadOption.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.ReadOption.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.ReadOption",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.ReadOption.yml\" sourcestartlinenumber=\"1\">Options for reading events from the event store</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.SequencedEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.SequencedEvent.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.SequencedEvent",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.SequencedEvent.yml\" sourcestartlinenumber=\"1\">An event that has been committed to the event store and assigned a sequence position.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.Tag.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.Tag.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.Tag",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.Tag.yml\" sourcestartlinenumber=\"1\">A key-value label attached to an event that enables tag-based querying.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.TagMigrationResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.TagMigrationResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core.TagMigrationResult",
+      "Summary": "<p sourcefile=\"api/Opossum.Core.TagMigrationResult.yml\" sourcestartlinenumber=\"1\">Result of an <xref href=\"Opossum.IEventStoreMaintenance.AddTagsAsync(System.String%2cSystem.Func%7bOpossum.Core.SequencedEvent%2cSystem.Collections.Generic.IReadOnlyList%7bOpossum.Core.Tag%7d%7d%2cSystem.Threading.CancellationToken)\" data-throw-if-not-resolved=\"false\"></xref> operation.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Core.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Core.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Core",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DecisionModel.DecisionModel-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DecisionModel.DecisionModel-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DecisionModel.DecisionModel<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.DecisionModel.DecisionModel-1.yml\" sourcestartlinenumber=\"1\">The result of building a Decision Model via\n<xref href=\"Opossum.DecisionModel.DecisionModelExtensions.BuildDecisionModelAsync%60%601(Opossum.IEventStore%2cOpossum.DecisionModel.IDecisionProjection%7b%60%600%7d%2cSystem.Threading.CancellationToken)\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DecisionModel.DecisionModelExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DecisionModel.DecisionModelExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DecisionModel.DecisionModelExtensions",
+      "Summary": "<p sourcefile=\"api/Opossum.DecisionModel.DecisionModelExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods on <xref href=\"Opossum.IEventStore\" data-throw-if-not-resolved=\"false\"></xref> that implement the DCB\nread → decide → append pattern via Decision Model projections.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DecisionModel.DecisionProjection-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DecisionModel.DecisionProjection-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DecisionModel.DecisionProjection<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.DecisionModel.DecisionProjection-1.yml\" sourcestartlinenumber=\"1\">Delegate-based implementation of <xref href=\"Opossum.DecisionModel.IDecisionProjection%601\" data-throw-if-not-resolved=\"false\"></xref>.\nProvides a concise way to define decision model projections via lambda expressions,\nenabling the factory function pattern recommended by the DCB Projections specification.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DecisionModel.IDecisionProjection-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DecisionModel.IDecisionProjection-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DecisionModel.IDecisionProjection<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.DecisionModel.IDecisionProjection-1.yml\" sourcestartlinenumber=\"1\">Defines an in-memory, ephemeral projection used to build a Decision Model for enforcing\nconsistency during command handling — the DCB write-side pattern.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DecisionModel.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DecisionModel.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DecisionModel",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DependencyInjection.ServiceCollectionExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DependencyInjection.ServiceCollectionExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DependencyInjection.ServiceCollectionExtensions",
+      "Summary": "<p sourcefile=\"api/Opossum.DependencyInjection.ServiceCollectionExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods for configuring Opossum services</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.DependencyInjection.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.DependencyInjection.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.DependencyInjection",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.AppendConditionFailedException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.AppendConditionFailedException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions.AppendConditionFailedException",
+      "Summary": "<p sourcefile=\"api/Opossum.Exceptions.AppendConditionFailedException.yml\" sourcestartlinenumber=\"1\">Exception thrown when an append condition fails during event appending.\nThis is the single exception type that represents an optimistic concurrency conflict\nas defined by the DCB specification.</p>\n<p>\n<xref href=\"Opossum.Exceptions.ConcurrencyException\" data-throw-if-not-resolved=\"false\"></xref> is a subclass of this exception and is thrown by\nthe file-system layer for internal ledger-level races. Callers should always catch\n<xref href=\"Opossum.Exceptions.AppendConditionFailedException\" data-throw-if-not-resolved=\"false\"></xref> — this covers both cases.\n</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.ConcurrencyException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.ConcurrencyException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions.ConcurrencyException",
+      "Summary": "<p sourcefile=\"api/Opossum.Exceptions.ConcurrencyException.yml\" sourcestartlinenumber=\"1\">Exception thrown by the file-system event store for internal ledger-level concurrency\nconflicts (e.g. a stale <xref href=\"Opossum.Core.AppendCondition.AfterSequencePosition\" data-throw-if-not-resolved=\"false\"></xref> check).</p>\n<p>\nThis is a subclass of <xref href=\"Opossum.Exceptions.AppendConditionFailedException\" data-throw-if-not-resolved=\"false\"></xref>. Callers should\ncatch <xref href=\"Opossum.Exceptions.AppendConditionFailedException\" data-throw-if-not-resolved=\"false\"></xref> rather than this type directly, \nunless they need to inspect the <xref href=\"Opossum.Exceptions.ConcurrencyException.ExpectedSequence\" data-throw-if-not-resolved=\"false\"></xref> / <xref href=\"Opossum.Exceptions.ConcurrencyException.ActualSequence\" data-throw-if-not-resolved=\"false\"></xref>\nproperties for diagnostic purposes.\n</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.ContextNotFoundException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.ContextNotFoundException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions.ContextNotFoundException",
+      "Summary": "<p sourcefile=\"api/Opossum.Exceptions.ContextNotFoundException.yml\" sourcestartlinenumber=\"1\">Exception thrown when attempting to access a bounded context that doesn't exist or hasn't been configured</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.EventNotFoundException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.EventNotFoundException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions.EventNotFoundException",
+      "Summary": "<p sourcefile=\"api/Opossum.Exceptions.EventNotFoundException.yml\" sourcestartlinenumber=\"1\">Exception thrown when expected events cannot be found in the event store</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.EventStoreException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.EventStoreException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions.EventStoreException",
+      "Summary": "<p sourcefile=\"api/Opossum.Exceptions.EventStoreException.yml\" sourcestartlinenumber=\"1\">Base exception class for all Opossum Event Store exceptions</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.InvalidQueryException.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.InvalidQueryException.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions.InvalidQueryException",
+      "Summary": "<p sourcefile=\"api/Opossum.Exceptions.InvalidQueryException.yml\" sourcestartlinenumber=\"1\">Exception thrown when a query is invalid or malformed</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Exceptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Exceptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Exceptions",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Extensions.DomainEventBuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Extensions.DomainEventBuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Extensions.DomainEventBuilder",
+      "Summary": "<p sourcefile=\"api/Opossum.Extensions.DomainEventBuilder.yml\" sourcestartlinenumber=\"1\">Fluent builder for constructing SequencedEvent instances from domain events</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Extensions.EventExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Extensions.EventExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Extensions.EventExtensions",
+      "Summary": "<p sourcefile=\"api/Opossum.Extensions.EventExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods for IEvent to provide fluent API for building domain events</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Extensions.EventStoreExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Extensions.EventStoreExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Extensions.EventStoreExtensions",
+      "Summary": "<p sourcefile=\"api/Opossum.Extensions.EventStoreExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods for IEventStore to provide convenient overloads and helpers</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Extensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Extensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Extensions",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.IEvent.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.IEvent.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.IEvent",
+      "Summary": "<p sourcefile=\"api/Opossum.IEvent.yml\" sourcestartlinenumber=\"1\">Marker interface for domain event payloads.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.IEventStore.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.IEventStore.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.IEventStore",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.IEventStoreAdmin.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.IEventStoreAdmin.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.IEventStoreAdmin",
+      "Summary": "<p sourcefile=\"api/Opossum.IEventStoreAdmin.yml\" sourcestartlinenumber=\"1\">Destructive administrative operations for the event store.\nUnlike <xref href=\"Opossum.IEventStoreMaintenance\" data-throw-if-not-resolved=\"false\"></xref>, these operations permanently remove data\nand transparently bypass write-protection on files.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.IEventStoreMaintenance.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.IEventStoreMaintenance.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.IEventStoreMaintenance",
+      "Summary": "<p sourcefile=\"api/Opossum.IEventStoreMaintenance.yml\" sourcestartlinenumber=\"1\">Additive-only maintenance operations for the event store.\nAll operations are strictly additive — no existing data can be modified or removed.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.HandlerDiscoveryService.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.HandlerDiscoveryService.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.HandlerDiscoveryService",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.HandlerDiscoveryService.yml\" sourcestartlinenumber=\"1\">Service for discovering message handlers using reflection</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.IMediator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.IMediator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.IMediator",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.IMediator.yml\" sourcestartlinenumber=\"1\">Entry point for processing messages with the mediator pattern</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.IMessageHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.IMessageHandler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.IMessageHandler",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.IMessageHandler.yml\" sourcestartlinenumber=\"1\">Interface for generated/compiled message handlers</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.Mediator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.Mediator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.Mediator",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.Mediator.yml\" sourcestartlinenumber=\"1\">Default implementation of the mediator pattern</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.MediatorOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.MediatorOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.MediatorOptions",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.MediatorOptions.yml\" sourcestartlinenumber=\"1\">Configuration options for the mediator</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.MediatorServiceExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.MediatorServiceExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.MediatorServiceExtensions",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.MediatorServiceExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods for registering the mediator with dependency injection</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.MessageHandlerAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.MessageHandlerAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.MessageHandlerAttribute",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.MessageHandlerAttribute.yml\" sourcestartlinenumber=\"1\">Marks a class as a message handler for explicit discovery</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.ReflectionMessageHandler.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.ReflectionMessageHandler.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator.ReflectionMessageHandler",
+      "Summary": "<p sourcefile=\"api/Opossum.Mediator.ReflectionMessageHandler.yml\" sourcestartlinenumber=\"1\">Reflection-based message handler implementation</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Mediator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Mediator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Mediator",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.AutoRebuildMode.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.AutoRebuildMode.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.AutoRebuildMode",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.AutoRebuildMode.yml\" sourcestartlinenumber=\"1\">Controls how the projection daemon handles missing or stale projections at startup.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.IProjectionDefinition-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.IProjectionDefinition-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.IProjectionDefinition<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.IProjectionDefinition-1.yml\" sourcestartlinenumber=\"1\">Defines how events are projected into a materialized view state</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.IProjectionManager.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.IProjectionManager.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.IProjectionManager",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.IProjectionManager.yml\" sourcestartlinenumber=\"1\">Manages projection lifecycle, registration, and updates</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.IProjectionRebuilder.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.IProjectionRebuilder.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.IProjectionRebuilder",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.IProjectionRebuilder.yml\" sourcestartlinenumber=\"1\">Manages projection rebuild operations, including full rebuilds, selective rebuilds,\nand crash recovery. This interface is the single entry point for all rebuild-related\nfunctionality, cleanly separated from the live event processing managed by\n<xref href=\"Opossum.Projections.IProjectionManager\" data-throw-if-not-resolved=\"false\"></xref>.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.IProjectionStore-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.IProjectionStore-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.IProjectionStore<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.IProjectionStore-1.yml\" sourcestartlinenumber=\"1\">Storage interface for reading projection state</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.IProjectionTagProvider-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.IProjectionTagProvider-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.IProjectionTagProvider<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.IProjectionTagProvider-1.yml\" sourcestartlinenumber=\"1\">Defines how to extract indexable tags from a projection state.\nTag providers enable efficient querying of projections without loading all data into memory.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.IProjectionWithRelatedEvents-1.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.IProjectionWithRelatedEvents-1.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.IProjectionWithRelatedEvents<TState>",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.IProjectionWithRelatedEvents-1.yml\" sourcestartlinenumber=\"1\">Defines a projection that fetches related events from the event store\nto build its state. The framework will automatically load related events\nbefore calling Apply.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionDefinitionAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionDefinitionAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionDefinitionAttribute",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionDefinitionAttribute.yml\" sourcestartlinenumber=\"1\">Marks a class as a projection definition for automatic discovery</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionInitializationService.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionInitializationService.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionInitializationService",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionInitializationService.yml\" sourcestartlinenumber=\"1\">Background service that initializes projections on startup</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionMetadata.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionMetadata.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionMetadata",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionMetadata.yml\" sourcestartlinenumber=\"1\">Metadata tracked for each projection instance.\nEnables intelligent features like cache warming, retention policies, and archiving.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionOptions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionOptions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionOptions",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionOptions.yml\" sourcestartlinenumber=\"1\">Configuration options for the projection system</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionOptionsValidator.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionOptionsValidator.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionOptionsValidator",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionOptionsValidator.yml\" sourcestartlinenumber=\"1\">Validates ProjectionOptions configuration using IValidateOptions pattern.\nThis runs at startup when options are first accessed.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionRebuildDetail.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionRebuildDetail.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionRebuildDetail",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionRebuildDetail.yml\" sourcestartlinenumber=\"1\">Details of a single projection rebuild.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionRebuildResult.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionRebuildResult.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionRebuildResult",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionRebuildResult.yml\" sourcestartlinenumber=\"1\">Result of a projection rebuild operation.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionRebuildStatus.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionRebuildStatus.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionRebuildStatus",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionRebuildStatus.yml\" sourcestartlinenumber=\"1\">Current status of projection rebuilding.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionServiceCollectionExtensions.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionServiceCollectionExtensions.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionServiceCollectionExtensions",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionServiceCollectionExtensions.yml\" sourcestartlinenumber=\"1\">Extension methods for configuring projection services</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.ProjectionTagsAttribute.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.ProjectionTagsAttribute.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections.ProjectionTagsAttribute",
+      "Summary": "<p sourcefile=\"api/Opossum.Projections.ProjectionTagsAttribute.yml\" sourcestartlinenumber=\"1\">Specifies the tag provider for a projection, enabling tag-based indexing and efficient queries.\nThe tag provider will be automatically discovered and registered during assembly scanning.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Projections.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Projections.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Projections",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Telemetry.OpossumTelemetry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Telemetry.OpossumTelemetry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Telemetry.OpossumTelemetry",
+      "Summary": "<p sourcefile=\"api/Opossum.Telemetry.OpossumTelemetry.yml\" sourcestartlinenumber=\"1\">Provides the <xref href=\"System.Diagnostics.ActivitySource\" data-throw-if-not-resolved=\"false\"></xref> name used by Opossum for distributed tracing.</p>\n"
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.Telemetry.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.Telemetry.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum.Telemetry",
+      "Summary": null
+    },
+    {
+      "type": "ManagedReference",
+      "source_relative_path": "api/Opossum.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/Opossum.html"
+        }
+      },
+      "version": "",
+      "Uid": null,
+      "IsMRef": true,
+      "Title": "Opossum",
+      "Summary": null
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "api/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "api/toc.html"
+        },
+        ".json": {
+          "relative_path": "api/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/concepts/dcb.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/concepts/dcb.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/concepts/event-store.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/concepts/event-store.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/concepts/mediator.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/concepts/mediator.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/concepts/projections.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/concepts/projections.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "articles/concepts/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "articles/concepts/toc.html"
+        },
+        ".json": {
+          "relative_path": "articles/concepts/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/decisions/adr-001.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/decisions/adr-001.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/decisions/adr-003.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/decisions/adr-003.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/decisions/adr-004.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/decisions/adr-004.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/decisions/adr-005.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/decisions/adr-005.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "articles/decisions/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "articles/decisions/toc.html"
+        },
+        ".json": {
+          "relative_path": "articles/decisions/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/getting-started/configuration.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/getting-started/configuration.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/getting-started/installation.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/getting-started/installation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/getting-started/quick-start.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/getting-started/quick-start.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "articles/getting-started/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "articles/getting-started/toc.html"
+        },
+        ".json": {
+          "relative_path": "articles/getting-started/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/guides/configuration-validation.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/guides/configuration-validation.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/guides/durability.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/guides/durability.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "articles/guides/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "articles/guides/toc.html"
+        },
+        ".json": {
+          "relative_path": "articles/guides/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "articles/guides/use-cases.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/guides/use-cases.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "articles/toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "articles/toc.html"
+        },
+        ".json": {
+          "relative_path": "articles/toc.json"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Resource",
+      "source_relative_path": "images/opossum.png",
+      "output": {
+        "resource": {
+          "relative_path": "images/opossum.png"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
+      "source_relative_path": "index.md",
+      "output": {
+        ".html": {
+          "relative_path": "index.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Toc",
+      "source_relative_path": "toc.yml",
+      "output": {
+        ".html": {
+          "relative_path": "toc.html"
+        },
+        ".json": {
+          "relative_path": "toc.json"
+        }
+      },
+      "version": ""
+    }
+  ],
+  "groups": [
+    {
+      "xrefmap": "xrefmap.yml"
+    }
+  ]
+}

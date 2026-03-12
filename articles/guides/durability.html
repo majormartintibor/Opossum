@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Quick Reference: Durability Configuration | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Quick Reference: Durability Configuration | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/guides/durability.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="quick-reference-durability-configuration">Quick Reference: Durability Configuration</h1>
+<!-- source: docs/guides/durability-quick-reference.md � keep in sync -->
+
+<h2 id="tldr-">TL;DR 🎯</h2>
+<p><strong>Production:</strong> Keep default (flush = true)<br>
+<strong>Testing:</strong> Set <code>FlushEventsImmediately = false</code> for speed</p>
+<hr>
+<h2 id="configuration">Configuration</h2>
+<pre><code class="lang-csharp">// Production (default) - Maximum safety
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = &quot;D:\\Database&quot;;
+    options.UseStore(&quot;Production&quot;);
+    // FlushEventsImmediately = true (default)
+});
+
+// Testing - Skip flush for speed
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = &quot;TestData&quot;;
+    options.UseStore(&quot;TestContext&quot;);
+    options.FlushEventsImmediately = false; // ← 2-3x faster tests
+});
+</code></pre>
+<hr>
+<h2 id="what-gets-flushed">What Gets Flushed?</h2>
+<table>
+<thead>
+<tr>
+<th>Data Type</th>
+<th>Flush?</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Events</td>
+<td>✅ YES</td>
+<td>Source of truth</td>
+</tr>
+<tr>
+<td>Ledger</td>
+<td>✅ YES</td>
+<td>Sequence integrity</td>
+</tr>
+<tr>
+<td>Projections</td>
+<td>❌ NO</td>
+<td>Rebuildable</td>
+</tr>
+<tr>
+<td>Indices</td>
+<td>❌ NO</td>
+<td>Rebuildable</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="performance-impact">Performance Impact</h2>
+<p><strong>With Flush (Production):</strong></p>
+<ul>
+<li>Event append: ~1-5ms</li>
+<li>Throughput: ~200-1000 events/sec (NVMe SSD)</li>
+<li><strong>Guaranteed durability</strong> ✅</li>
+</ul>
+<p><strong>Without Flush (Testing):</strong></p>
+<ul>
+<li>Event append: ~0.1-0.5ms</li>
+<li>Throughput: ~2000-10000 events/sec</li>
+<li><strong>Risk of data loss</strong> ⚠️</li>
+</ul>
+<hr>
+<h2 id="decision-tree">Decision Tree</h2>
+<pre><code>Do you need guaranteed durability?
+├─ YES (production) → Keep default (flush = true)
+├─ NO (testing) → Set FlushEventsImmediately = false
+└─ UNSURE → Use default (safe choice)
+</code></pre>
+<hr>
+<h2 id="when-to-disable-flush">When to Disable Flush</h2>
+<p>✅ <strong>Safe to disable:</strong></p>
+<ul>
+<li>Unit tests</li>
+<li>Integration tests</li>
+<li>Local development</li>
+<li>Throwaway data</li>
+</ul>
+<p>❌ <strong>NEVER disable in:</strong></p>
+<ul>
+<li>Production</li>
+<li>Staging (if mirrors production)</li>
+<li>Any environment with important data</li>
+</ul>
+<hr>
+<h2 id="example-test-configuration">Example: Test Configuration</h2>
+<pre><code class="lang-csharp">public class TestFixture
+{
+    private readonly IEventStore _eventStore;
+    
+    public TestFixture()
+    {
+        var options = new OpossumOptions
+        {
+            RootPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString()),
+            FlushEventsImmediately = false // ← Faster tests
+        };
+        options.UseStore(&quot;TestContext&quot;);
+        
+        _eventStore = new FileSystemEventStore(options);
+    }
+}
+</code></pre>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="tests-slower-after-upgrade">Tests Slower After Upgrade?</h3>
+<pre><code class="lang-csharp">// Add this to test setup
+options.FlushEventsImmediately = false;
+</code></pre>
+<h3 id="production-data-loss">Production Data Loss?</h3>
+<pre><code class="lang-csharp">// Verify production config
+options.FlushEventsImmediately = true; // ← Must be true!
+</code></pre>
+<h3 id="performance-issues">Performance Issues?</h3>
+<ul>
+<li>Check storage type (HDD vs SSD)</li>
+<li>Consider Phase 3 features (batch flushing, WAL)</li>
+<li>Monitor with metrics (future feature)</li>
+</ul>
+<hr>
+<p>For full details, see the <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/implementation/durability-guarantees.md">implementation notes on GitHub</a>.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/guides/durability.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

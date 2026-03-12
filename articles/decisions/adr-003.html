@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>ADR-003: Decision Not to Implement IAsyncEnumerable&lt;SequencedEvent&gt; on IEventStore.ReadAsync | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="ADR-003: Decision Not to Implement IAsyncEnumerable&lt;SequencedEvent&gt; on IEventStore.ReadAsync | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/decisions/adr-003.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="adr-003-decision-not-to-implement-iasyncenumerablesequencedevent-on-ieventstorereadasync">ADR-003: Decision Not to Implement <code>IAsyncEnumerable&lt;SequencedEvent&gt;</code> on <code>IEventStore.ReadAsync</code></h1>
+<!-- source: docs/decisions/003-iasyncenumerable-not-implemented.md � keep in sync -->
+
+<p><strong>Date:</strong> 2026-03-01
+<strong>Status:</strong> ❌ Closed — Will Not Implement (may be re-evaluated if deployment profile changes)</p>
+<hr>
+<h2 id="context">Context</h2>
+<p>Item 2 of the 0.3.0-preview.1 roadmap proposed changing <code>IEventStore.ReadAsync</code> from
+returning <code>Task&lt;SequencedEvent[]&gt;</code> to <code>IAsyncEnumerable&lt;SequencedEvent&gt;</code>, motivated by:</p>
+<ul>
+<li><strong>Memory pressure</strong> on large reads — 134,000 events × ~7 KB/event ≈ 938 MB heap during a full rebuild</li>
+<li><strong>Latency to first event</strong> — projection rebuilds cannot start processing until all events are deserialised</li>
+<li><strong>DCB specification language</strong> — the spec SHOULD clause recommends &quot;some form of iterable or reactive stream&quot;</li>
+</ul>
+<p>The proposal seemed straightforward on paper. When evaluated against the actual codebase and
+deployment profile, the trade-offs did not support the change.</p>
+<hr>
+<h2 id="what-the-roadmap-got-wrong">What the Roadmap Got Wrong</h2>
+<p>The roadmap's implementation note assumed a sequential accumulator was the bottleneck:</p>
+<blockquote>
+<p><code>EventFileManager.ReadEventsAsync</code> reads each event file in a loop and collects results
+into a <code>List&lt;SequencedEvent&gt;</code> before converting to an array.</p>
+</blockquote>
+<p><strong>This was already fixed.</strong> The actual production implementation uses <code>Parallel.ForEachAsync</code>
+for batches of 10 or more events:</p>
+<pre><code class="lang-csharp">// EventFileManager.ReadEventsAsync — current implementation
+await Parallel.ForEachAsync(
+    Enumerable.Range(0, positions.Length),
+    new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+    async (i, ct) =&gt;
+    {
+        parallelEvents[i] = await ReadEventAsync(eventsPath, positions[i]).ConfigureAwait(false);
+    }).ConfigureAwait(false);
+</code></pre>
+<p>The comment in that code is explicit: <em>&quot;2x CPU count for I/O-bound work to keep SSD saturated —
+benchmark results show 2x is optimal.&quot;</em> This parallel I/O strategy is the primary driver of
+the real-world improvement from <strong>3 hours to 18 minutes</strong> when rebuilding 52,000 projections
+from 134,000 events.</p>
+<hr>
+<h2 id="the-core-trade-off">The Core Trade-off</h2>
+<p>A naive <code>IAsyncEnumerable</code> implementation replaces <code>Parallel.ForEachAsync</code> with sequential reads:</p>
+<pre><code class="lang-csharp">// Naive streaming — loses all parallel I/O benefit
+foreach (var position in positions)
+    yield return await ReadEventAsync(eventsPath, position).ConfigureAwait(false);
+</code></pre>
+<p>For the known real-world workload (134,000 events, 18-minute rebuild), this regression would
+likely take rebuild time from 18 minutes back toward the original 3 hours.</p>
+<h3 id="can-the-parallelism-be-preserved-in-a-streaming-model">Can the parallelism be preserved in a streaming model?</h3>
+<p>Yes, via a <code>Channel&lt;T&gt;</code>-based prefetcher that reads ahead in parallel while the caller
+processes the current event. But this approach has significant problems:</p>
+<ol>
+<li><p><strong>Ordering.</strong> <code>Parallel.ForEachAsync</code> completes tasks in arbitrary order. Projection
+rebuilds require strictly ascending position order. A parallel prefetcher produces
+out-of-order events that must be buffered and reordered before yielding — adding a
+sorting/reordering stage that grows with parallelism degree and event payload size.</p>
+</li>
+<li><p><strong>Complexity.</strong> A correct, backpressure-aware, ordered parallel prefetcher is
+non-trivial to implement and test. It requires bounded channels, reorder buffers,
+and careful cancellation handling. This complexity is disproportionate to the benefit
+for Opossum's target deployment scale.</p>
+</li>
+<li><p><strong>It's still a breaking API change.</strong> Every caller — <code>DecisionModelExtensions</code>,
+<code>ProjectionManager</code>, <code>ProjectionDaemon</code>, all tests — would need to be migrated.</p>
+</li>
+</ol>
+<hr>
+<h2 id="how-other-net-event-sourcing-frameworks-approach-this">How Other .NET Event Sourcing Frameworks Approach This</h2>
+<table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Read return type</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>EventStoreDB client</strong></td>
+<td><code>IAsyncEnumerable&lt;ResolvedEvent&gt;</code></td>
+<td>Data arrives over gRPC — inherently a network stream; no array to pre-build</td>
+</tr>
+<tr>
+<td><strong>Marten</strong> (PostgreSQL)</td>
+<td><code>IReadOnlyList&lt;IEvent&gt;</code></td>
+<td>PostgreSQL result sets are materialised; streaming exists on the query side, not event reads</td>
+</tr>
+<tr>
+<td><strong>NEventStore</strong></td>
+<td><code>IEnumerable&lt;ICommit&gt;</code></td>
+<td>Synchronous, materialised; backed by SQL/MongoDB</td>
+</tr>
+<tr>
+<td><strong>SqlStreamStore</strong></td>
+<td>Page-based: array per page + cursor</td>
+<td>Explicitly paginated; callers request the next page</td>
+</tr>
+</tbody>
+</table>
+<p>The pattern is clear: frameworks that use <code>IAsyncEnumerable</code> do so because their data
+source is an inherently incremental network stream (gRPC, database cursor over a socket).
+For Opossum, data is on the <strong>local file system</strong> and the parallel I/O model is the right
+fit for that transport.</p>
+<hr>
+<h2 id="opossums-deployment-profile-does-not-require-streaming">Opossum's Deployment Profile Does Not Require Streaming</h2>
+<p>The README is explicit about target use cases:</p>
+<blockquote>
+<p>Perfect for scenarios where simplicity, offline operation, and local data sovereignty
+matter more than cloud scalability.</p>
+<p>✅ Single server/small deployment (&lt; 100k events/day)
+✅ Offline-first requirements
+✅ POS systems, field service, SMB ERP</p>
+</blockquote>
+<p>In this profile:</p>
+<ul>
+<li><strong>Full projection rebuilds are rare</strong> — they happen at startup after a crash, during
+schema migrations, or during development. They are not on the hot path.</li>
+<li><strong>Incremental updates are the hot path</strong> — 10–11 µs/event, already excellent.</li>
+<li><strong>938 MB during a rare cold rebuild is acceptable</strong> on any modern POS machine or
+SMB server (typically 8–32 GB RAM).</li>
+<li><strong>There is no backpressure producer</strong> — data is already on the local disk, not
+arriving over a network where flow control matters.</li>
+</ul>
+<hr>
+<h2 id="what-to-do-if-memory-does-become-a-concern">What to Do If Memory Does Become a Concern</h2>
+<p>If a future deployment profile genuinely requires bounded memory during projection rebuilds
+(e.g. very large stores on constrained hardware), the correct fix is <strong>chunked reading
+inside <code>ProjectionManager.RebuildAsync</code></strong>, not a change to <code>IEventStore</code>:</p>
+<pre><code class="lang-csharp">// ProjectionManager.RebuildAsync — chunked approach (not yet implemented)
+long checkpoint = 0;
+do {
+    var chunk = await _eventStore.ReadAsync(Query.All(), null, fromPosition: checkpoint);
+    if (chunk.Length == 0) break;
+    foreach (var evt in chunk)
+        await registration.ApplyAsync(evt, ct);
+    checkpoint = chunk[^1].Position;
+} while (chunk.Length == _projectionOptions.RebuildChunkSize);
+</code></pre>
+<p>This gives bounded memory with:</p>
+<ul>
+<li>Zero public API change on <code>IEventStore</code></li>
+<li>Full preservation of <code>Parallel.ForEachAsync</code> within each chunk</li>
+<li>A configurable <code>RebuildChunkSize</code> on <code>ProjectionOptions</code></li>
+</ul>
+<p>This approach should be revisited as a backlog item if real-world memory pressure is
+reported by users.</p>
+<hr>
+<h2 id="decision">Decision</h2>
+<p><strong><code>IEventStore.ReadAsync</code> keeps the <code>Task&lt;SequencedEvent[]&gt;</code> return type.</strong></p>
+<p>Reasons:</p>
+<ol>
+<li>The parallel I/O optimisation that drives the 3h → 18min rebuild improvement is
+incompatible with a naive sequential streaming model.</li>
+<li>A correct parallel-streaming implementation (ordered <code>Channel&lt;T&gt;</code> prefetcher) is
+disproportionately complex for Opossum's deployment scale.</li>
+<li>All other .NET event sourcing frameworks that use <code>IAsyncEnumerable</code> do so because
+their transport is an inherently streaming network source — not applicable here.</li>
+<li>Opossum's target users (POS, SMB, offline-first) do not encounter the memory
+scenarios that motivated the original proposal.</li>
+<li>If memory pressure does appear, chunked reads inside <code>ProjectionManager</code> solve it
+without any public API change.</li>
+</ol>
+<p><strong>This decision is closed and is not on any future roadmap.</strong> It may be re-opened only
+if a concrete real-world memory constraint is reported against a deployment that cannot
+be addressed by chunked rebuilds.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/decisions/adr-003.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

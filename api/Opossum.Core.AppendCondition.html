@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Class AppendCondition | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Class AppendCondition | Opossum — File System Event Store ">
+      
+      <meta name="description" content="Specifies an optimistic concurrency guard evaluated atomically during .">
+      <link rel="icon" href="../favicon.ico">
+      <link rel="stylesheet" href="../public/docfx.min.css">
+      <link rel="stylesheet" href="../public/main.css">
+      <meta name="docfx:navrel" content="../toc.html">
+      <meta name="docfx:tocrel" content="toc.html">
+      
+      <meta name="docfx:rel" content="../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/new/master/docs/docfx/api/new?filename=Opossum_Core_AppendCondition.md&amp;value=---%0Auid%3A%20Opossum.Core.AppendCondition%0Asummary%3A%20&#39;*You%20can%20override%20summary%20for%20the%20API%20here%20using%20*MARKDOWN*%20syntax&#39;%0A---%0A%0A*Please%20type%20below%20more%20information%20about%20this%20API%3A*%0A%0A">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="ManagedReference">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../index.html">
+            <img id="logo" class="svg" src="../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="Opossum.Core.AppendCondition">
+
+
+
+  <h1 id="Opossum_Core_AppendCondition" data-uid="Opossum.Core.AppendCondition" class="text-break">
+Class AppendCondition  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Core/AppendCondition.cs/#L83"><i class="bi bi-code-slash"></i></a>
+  </h1>
+
+  <div class="facts text-secondary">
+    <dl><dt>Namespace</dt><dd><a class="xref" href="Opossum.html">Opossum</a>.<a class="xref" href="Opossum.Core.html">Core</a></dd></dl>
+  <dl><dt>Assembly</dt><dd>Opossum.dll</dd></dl>
+  </div>
+
+  <div class="markdown summary"><p>Specifies an optimistic concurrency guard evaluated atomically during <a class="xref" href="Opossum.IEventStore.html#Opossum_IEventStore_AppendAsync_Opossum_Core_NewEvent___Opossum_Core_AppendCondition_System_Threading_CancellationToken_">AppendAsync(NewEvent[], AppendCondition?, CancellationToken)</a>.</p>
+</div>
+  <div class="markdown conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public class AppendCondition</code></pre>
+  </div>
+
+
+
+
+  <dl class="typelist inheritance">
+    <dt>Inheritance</dt>
+    <dd>
+      <div><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object">object</a></div>
+      <div><span class="xref">AppendCondition</span></div>
+    </dd>
+  </dl>
+
+
+
+  <dl class="typelist inheritedMembers">
+    <dt>Inherited Members</dt>
+    <dd>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object)">object.Equals(object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.equals#system-object-equals(system-object-system-object)">object.Equals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gethashcode">object.GetHashCode()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.gettype">object.GetType()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.memberwiseclone">object.MemberwiseClone()</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.referenceequals">object.ReferenceEquals(object, object)</a>
+    </div>
+    <div>
+      <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.object.tostring">object.ToString()</a>
+    </div>
+  </dd></dl>
+
+
+
+
+  <h2 id="Opossum_Core_AppendCondition_remarks">Remarks</h2>
+  <div class="markdown level0 remarks"><p>
+<b>Purpose — preventing the lost-update problem</b><br>
+In an event-sourced system multiple writers can read the same events, build independent
+decision models and then try to append new events. Without a guard, the second writer
+silently overwrites a state that was already changed by the first writer (a classic
+Time-Of-Check / Time-Of-Use race). <code>AppendCondition</code> closes this gap by letting the
+writer declare <em>which events would have invalidated its decision</em>; the event store
+enforces the check atomically and throws <a class="xref" href="Opossum.Exceptions.ConcurrencyException.html">ConcurrencyException</a> when
+a conflict is detected.
+</p>
+<p>
+<b>The DCB read → decide → append pattern</b><br>
+Dynamic Consistency Boundaries (DCB) replace the traditional single-aggregate lock with a
+query-scoped lock that spans exactly the events relevant to one business decision —
+nothing more, nothing less.  The pattern has three steps:
+<ol><li>
+      <b>Read</b> – query the event store for all events relevant to the decision (e.g.
+      all events for a specific course and student). Record the highest
+      <a class="xref" href="Opossum.Core.SequencedEvent.html#Opossum_Core_SequencedEvent_Position">Position</a> seen; that becomes
+      <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a>.
+    </li><li>
+      <b>Decide</b> – fold the events into a decision model, validate business invariants
+      (capacity, duplicate enrollments, etc.) and produce the events to append.
+    </li><li>
+      <b>Append</b> – call <a class="xref" href="Opossum.IEventStore.html#Opossum_IEventStore_AppendAsync_Opossum_Core_NewEvent___Opossum_Core_AppendCondition_System_Threading_CancellationToken_">AppendAsync(NewEvent[], AppendCondition?, CancellationToken)</a> with an
+      <code>AppendCondition</code> whose <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_FailIfEventsMatch">FailIfEventsMatch</a> is the <em>same</em>
+      query used in step 1. The event store atomically re-runs the query restricted to
+      positions &gt; <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a> and aborts with
+      <a class="xref" href="Opossum.Exceptions.ConcurrencyException.html">ConcurrencyException</a> if any such events exist, because the
+      decision model would have been different had those events been visible.
+    </li></ol>
+
+<p>
+<b>Example — enrol a student in a course</b>
+<pre><code class="lang-csharp">// Step 1 – Read
+var query = Query.FromItems(
+    new QueryItem
+    {
+        EventTypes = [nameof(CourseCreatedEvent), nameof(StudentEnrolledToCourseEvent)],
+        Tags       = [new Tag("courseId", courseId.ToString())]
+    },
+    new QueryItem
+    {
+        EventTypes = [nameof(StudentRegisteredEvent)],
+        Tags       = [new Tag("studentId", studentId.ToString())]
+    });
+<p>var events      = await eventStore.ReadAsync(query, ReadOption.None);
+var lastKnownPosition = events.Length &gt; 0 ? events.Max(e =&gt; e.Position) : (long?)null;</p>
+<p>// Step 2 – Decide (apply business rules, build aggregate, etc.)</p>
+<p>// Step 3 – Append
+var condition = new AppendCondition
+{
+FailIfEventsMatch    = query,            // same query as step 1
+AfterSequencePosition = lastKnownPosition // watermark from step 1
+};
+await eventStore.AppendAsync([enrollmentEvent], condition);
+// Throws ConcurrencyException if any matching event appeared after lastKnownPosition.</p></code></pre>
+
+</div>
+
+
+  <h2 class="section" id="properties">Properties
+</h2>
+
+
+  <a id="Opossum_Core_AppendCondition_AfterSequencePosition_" data-uid="Opossum.Core.AppendCondition.AfterSequencePosition*"></a>
+
+  <h3 id="Opossum_Core_AppendCondition_AfterSequencePosition" data-uid="Opossum.Core.AppendCondition.AfterSequencePosition">
+  AfterSequencePosition
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Core/AppendCondition.cs/#L180"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>The highest sequence position the client was aware of when building the decision model,
+or <code>null</code> if no events were observed.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public long? AfterSequencePosition { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="https://learn.microsoft.com/dotnet/api/system.int64">long</a>?</dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Opossum_Core_AppendCondition_AfterSequencePosition_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+The event store uses this value as an exclusive lower bound: events at positions
+<em>less than or equal to</em> this number are invisible to the conflict check.
+Only events stored <em>after</em> this position are tested against
+<a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_FailIfEventsMatch">FailIfEventsMatch</a>.
+</p>
+<p>
+<b>Important:</b> this value is the watermark over <em>all</em> events returned by
+the read query, not just the last event of a specific type. It may therefore be higher
+than the position of the most recent event that directly affected the decision.
+</p>
+<p>
+<b>Two distinct behaviours:</b>
+<ul><li>
+      <b>Populated</b> — the append is rejected only when a <em>new</em> conflicting
+      event appeared since the read. Concurrent writes that do not touch the same
+      query domain are allowed through, keeping the consistency boundary as narrow as
+      possible. This guarantee only holds when <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_FailIfEventsMatch">FailIfEventsMatch</a> carries
+      a scoped query — see the warning below.
+    </li><li>
+      <b><code>null</code></b> — no events have ever been seen for this query; the append is
+      rejected if <em>any</em> matching event exists anywhere in the store. Use this
+      when appending the very first event for a new entity to guarantee uniqueness.
+    </li></ul>
+
+<p>
+<b>Warning — do not combine with <code>Query.All()</code></b><br>
+When <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_FailIfEventsMatch">FailIfEventsMatch</a> has no query items (i.e. <code>Query.All()</code>),
+the query itself is bypassed entirely. The check degenerates to a raw ledger-position
+comparison: the append fails if <em>any</em> event at all was written by anyone since
+the watermark, regardless of type or tags. This creates an implicit global write lock
+and defeats the entire purpose of DCB. There is no valid domain use case for this
+combination; if you need global write serialization, use an infrastructure-level
+primitive (a <a class="xref" href="https://learn.microsoft.com/dotnet/api/system.threading.semaphoreslim">SemaphoreSlim</a>, a file lock, etc.) instead.
+</p>
+</div>
+
+
+
+
+  <a id="Opossum_Core_AppendCondition_FailIfEventsMatch_" data-uid="Opossum.Core.AppendCondition.FailIfEventsMatch*"></a>
+
+  <h3 id="Opossum_Core_AppendCondition_FailIfEventsMatch" data-uid="Opossum.Core.AppendCondition.FailIfEventsMatch">
+  FailIfEventsMatch
+  <a class="header-action link-secondary" title="View source" href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Core/AppendCondition.cs/#L130"><i class="bi bi-code-slash"></i></a>
+  </h3>
+
+  <div class="markdown level1 summary"><p>The query that identifies events which would invalidate the current decision model.</p>
+</div>
+  <div class="markdown level1 conceptual"></div>
+
+  <div class="codewrapper">
+    <pre><code class="lang-csharp hljs">public required Query FailIfEventsMatch { get; set; }</code></pre>
+  </div>
+
+
+
+
+
+  <h4 class="section">Property Value</h4>
+  <dl class="parameters">
+    <dt><a class="xref" href="Opossum.Core.Query.html">Query</a></dt>
+    <dd></dd>
+  </dl>
+
+
+
+
+  <h4 class="section" id="Opossum_Core_AppendCondition_FailIfEventsMatch_remarks">Remarks</h4>
+  <div class="markdown level1 remarks"><p>
+This should be the <b>same <a class="xref" href="Opossum.Core.Query.html">Query</a> that was used to read events when
+building the decision model</b>. By reusing it, you guarantee that the decision model
+is still valid at the moment of the append: if any event matching this query appeared
+since you last read, your decision could be wrong and the append is aborted.
+</p>
+<p>
+<b>The conflict check is the conjunction of both properties</b><br>
+A conflict is only raised when an event satisfies <em>both</em> conditions at once:
+<ol><li>its position is &gt; <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a>, <em>and</em></li><li>it matches this query.</li></ol>
+<p>This is the key difference between DCB and naive position-based optimistic concurrency
+control. A <code>CourseRenamedEvent</code> or a <code>StudentAddressChangedEvent</code> that was
+appended after <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a> will <em>not</em> cause a conflict,
+because it does not match the enrollment query. The consistency boundary is defined
+entirely by what this query selects — only events that are <em>semantically relevant</em>
+to the decision can invalidate it. Unrelated writes are allowed through, keeping the
+boundary as narrow as the business decision requires.</p>
+
+<p>
+<b>Scope of the check depends on <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a>:</b>
+<ul><li>
+      When <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a> is set, only events stored
+      <em>after</em> that position are checked. This is the standard DCB pattern.
+    </li><li>
+      When <a class="xref" href="Opossum.Core.AppendCondition.html#Opossum_Core_AppendCondition_AfterSequencePosition">AfterSequencePosition</a> is <code>null</code>, <em>all</em> events in
+      the store are checked. This is useful for bootstrapping uniqueness invariants,
+      e.g. "this <code>StudentRegistered</code> event must be the very first event for this
+      student id — reject if any already exists".
+    </li></ul>
+
+</div>
+
+
+
+
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/src/Opossum/Core/AppendCondition.cs/#L83" class="edit-link">Edit this page</a>
+        </div>
+
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

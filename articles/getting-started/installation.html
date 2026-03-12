@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Installation | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Installation | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/getting-started/installation.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="installation">Installation</h1>
+
+<h2 id="prerequisites">Prerequisites</h2>
+<ul>
+<li><strong>.NET 8 or later</strong> — Opossum targets <code>net8.0</code> and above. .NET 10 is recommended.</li>
+<li>A writable directory on a local or network drive for event storage.</li>
+</ul>
+<h2 id="install-via-nuget">Install via NuGet</h2>
+<h3 id="net-cli">.NET CLI</h3>
+<pre><code class="lang-bash">dotnet add package Opossum
+</code></pre>
+<h3 id="package-manager-console-visual-studio">Package Manager Console (Visual Studio)</h3>
+<pre><code class="lang-powershell">Install-Package Opossum
+</code></pre>
+<h3 id="packagereference-csproj">PackageReference (<code>.csproj</code>)</h3>
+<pre><code class="lang-xml">&lt;PackageReference Include=&quot;Opossum&quot; Version=&quot;*&quot; /&gt;
+</code></pre>
+<blockquote>
+<p>Check <a href="https://www.nuget.org/packages/Opossum/">NuGet</a> for the latest stable version.</p>
+</blockquote>
+<hr>
+<h2 id="register-with-dependency-injection">Register with Dependency Injection</h2>
+<p>Opossum integrates with Microsoft's standard <code>IServiceCollection</code>:</p>
+<pre><code class="lang-csharp">using Opossum.DependencyInjection;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Core event store
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = @&quot;D:\MyAppData\EventStore&quot;; // where events are stored
+    options.UseStore(&quot;MyApp&quot;);                      // store/context name
+    options.FlushEventsImmediately = true;          // durability (recommended for production)
+});
+
+// Projection system (optional — for read models)
+builder.Services.AddProjections(options =&gt;
+{
+    options.ScanAssembly(typeof(Program).Assembly); // auto-discover IProjectionDefinition&lt;T&gt;
+});
+
+// Mediator (optional — for command/query handling)
+builder.Services.AddMediator();
+
+var app = builder.Build();
+app.Run();
+</code></pre>
+<h3 id="what-gets-registered">What gets registered</h3>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Lifetime</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IEventStore</code></td>
+<td>Singleton</td>
+<td>Core append/read interface</td>
+</tr>
+<tr>
+<td><code>IEventStoreAdmin</code></td>
+<td>Singleton</td>
+<td>Administrative operations (tag migration, etc.)</td>
+</tr>
+<tr>
+<td><code>IEventStoreMaintenance</code></td>
+<td>Singleton</td>
+<td>Maintenance operations (add tags retroactively)</td>
+</tr>
+<tr>
+<td><code>IProjectionManager</code></td>
+<td>Singleton</td>
+<td>Manages projection state and updates</td>
+</tr>
+<tr>
+<td><code>IProjectionRebuilder</code></td>
+<td>Singleton</td>
+<td>Orchestrates projection rebuilds</td>
+</tr>
+<tr>
+<td><code>IProjectionStore</code></td>
+<td>Singleton</td>
+<td>Reads projection state</td>
+</tr>
+<tr>
+<td><code>IMediator</code></td>
+<td>Singleton</td>
+<td>Message dispatch</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="minimum-configuration">Minimum Configuration</h2>
+<p>The only required configuration is a <code>RootPath</code> and a store name:</p>
+<pre><code class="lang-csharp">builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = @&quot;D:\MyData&quot;;
+    options.UseStore(&quot;MyApp&quot;);
+});
+</code></pre>
+<p>Opossum creates the directory structure automatically on first startup.</p>
+<hr>
+<h2 id="next-steps">Next Steps</h2>
+<p>→ <a href="quick-start.html">Quick Start</a> — build your first event-sourced feature in 5 minutes<br>
+→ <a href="configuration.html">Configuration</a> — full reference for all options</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/getting-started/installation.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>Configuration Guide | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="Configuration Guide | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/getting-started/configuration.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="configuration-guide">Configuration Guide</h1>
+<!-- source: docs/configuration-guide.md � keep in sync -->
+
+<h2 id="overview">Overview</h2>
+<p>The Opossum Sample Application uses <strong>appsettings.json</strong> for all configuration. This provides:</p>
+<ul>
+<li>✅ Clear, centralized configuration</li>
+<li>✅ Environment-specific overrides (Development, Testing, Production)</li>
+<li>✅ Easy test isolation without code changes</li>
+<li>✅ Standard .NET configuration patterns</li>
+</ul>
+<hr>
+<h2 id="configuration-files">Configuration Files</h2>
+<h3 id="appsettingsjson-default">appsettings.json (Default)</h3>
+<p>Used for normal development and production:</p>
+<pre><code class="lang-json">{
+  &quot;Opossum&quot;: {
+    &quot;RootPath&quot;: &quot;D:\\Database&quot;,
+    &quot;Contexts&quot;: [
+      &quot;OpossumSampleApp&quot;
+    ],
+    &quot;FlushEventsImmediately&quot;: true
+  },
+
+  &quot;Projections&quot;: {
+    &quot;AutoRebuild&quot;: &quot;MissingCheckpointsOnly&quot;,
+    &quot;MaxConcurrentRebuilds&quot;: 4,
+    &quot;PollingInterval&quot;: &quot;00:00:01&quot;,
+    &quot;BatchSize&quot;: 50,
+    &quot;RebuildFlushInterval&quot;: 10000
+  }
+}
+</code></pre>
+<h3 id="appsettingstestingjson-test-environment">appsettings.Testing.json (Test Environment)</h3>
+<p>Automatically loaded when <code>ASPNETCORE_ENVIRONMENT=Testing</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Projections&quot;: {
+    &quot;AutoRebuild&quot;: &quot;None&quot;
+  }
+}
+</code></pre>
+<p><strong>Why disable auto-rebuild in tests?</strong></p>
+<ul>
+<li>Prevents lock conflicts between daemon and test-initiated rebuilds</li>
+<li>Tests control when rebuilds happen</li>
+<li>Faster test startup (no automatic rebuilding)</li>
+</ul>
+<hr>
+<h2 id="configuration-options">Configuration Options</h2>
+<h3 id="opossum-section">Opossum Section</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RootPath</code></td>
+<td>string</td>
+<td><code>&quot;OpossumStore&quot;</code></td>
+<td>Root directory for event store data</td>
+</tr>
+<tr>
+<td><code>Contexts</code></td>
+<td>string[]</td>
+<td><code>[]</code></td>
+<td>List of bounded context names</td>
+</tr>
+<tr>
+<td><code>FlushEventsImmediately</code></td>
+<td>bool</td>
+<td><code>true</code></td>
+<td>Force disk flush after writes (durability)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projections-section">Projections Section</h3>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AutoRebuild</code></td>
+<td><code>AutoRebuildMode</code></td>
+<td><code>MissingCheckpointsOnly</code></td>
+<td>Controls startup rebuild behaviour: <code>None</code>, <code>MissingCheckpointsOnly</code>, or <code>ForceFullRebuild</code></td>
+</tr>
+<tr>
+<td><code>MaxConcurrentRebuilds</code></td>
+<td>int</td>
+<td><code>4</code></td>
+<td>Max projections to rebuild in parallel</td>
+</tr>
+<tr>
+<td><code>PollingInterval</code></td>
+<td>TimeSpan</td>
+<td><code>&quot;00:00:05&quot;</code></td>
+<td>How often to poll for new events</td>
+</tr>
+<tr>
+<td><code>BatchSize</code></td>
+<td>int</td>
+<td><code>1000</code></td>
+<td>Events to process per batch</td>
+</tr>
+<tr>
+<td><code>RebuildBatchSize</code></td>
+<td>int</td>
+<td><code>5000</code></td>
+<td>Events to load per batch during a projection rebuild. Lower values reduce peak memory; higher values reduce I/O round-trips</td>
+</tr>
+<tr>
+<td><code>RebuildFlushInterval</code></td>
+<td>int</td>
+<td><code>10000</code></td>
+<td>Events processed between rebuild journal flushes. Controls the maximum re-work on crash recovery. Lower = more durable but more I/O; higher = less overhead but more re-work on recovery. Range: 100–1,000,000</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="environment-specific-configuration">Environment-Specific Configuration</h2>
+<h3 id="development-default">Development (Default)</h3>
+<pre><code class="lang-bash"># Just run the app
+dotnet run
+</code></pre>
+<p>Uses: <code>appsettings.json</code></p>
+<ul>
+<li>Database: <code>D:\Database</code></li>
+<li>Auto-rebuild: <code>true</code></li>
+</ul>
+<h3 id="testing-integration-tests">Testing (Integration Tests)</h3>
+<pre><code class="lang-bash"># Tests automatically use Testing environment
+dotnet test
+</code></pre>
+<p>Uses: <code>appsettings.json</code> + <code>appsettings.Testing.json</code></p>
+<ul>
+<li>Database: Unique temp folder per test run</li>
+<li>Auto-rebuild: <code>false</code> (from appsettings.Testing.json)</li>
+</ul>
+<h3 id="production">Production</h3>
+<pre><code class="lang-bash"># Set environment variable
+$env:ASPNETCORE_ENVIRONMENT=&quot;Production&quot;
+dotnet run
+</code></pre>
+<p>Create <code>appsettings.Production.json</code>:</p>
+<pre><code class="lang-json">{
+  &quot;Opossum&quot;: {
+    &quot;RootPath&quot;: &quot;/var/opossum/data&quot;
+  },
+  &quot;Projections&quot;: {
+    &quot;AutoRebuild&quot;: &quot;None&quot;,
+    &quot;MaxConcurrentRebuilds&quot;: 8
+  }
+}
+</code></pre>
+<hr>
+<h2 id="overriding-configuration">Overriding Configuration</h2>
+<h3 id="1-environment-variables-highest-priority">1. Environment Variables (Highest Priority)</h3>
+<pre><code class="lang-bash"># Windows PowerShell
+$env:Opossum__RootPath=&quot;C:\CustomPath&quot;
+$env:Projections__AutoRebuild=&quot;None&quot;
+dotnet run
+
+# Linux/Mac
+export Opossum__RootPath=&quot;/custom/path&quot;
+export Projections__AutoRebuild=&quot;None&quot;
+dotnet run
+</code></pre>
+<p><strong>Note:</strong> Use double underscores <code>__</code> to separate sections in environment variables.</p>
+<h3 id="2-user-secrets-development-only">2. User Secrets (Development Only)</h3>
+<pre><code class="lang-bash">dotnet user-secrets set &quot;Opossum:RootPath&quot; &quot;C:\MyDevDatabase&quot;
+</code></pre>
+<h3 id="3-command-line-arguments">3. Command Line Arguments</h3>
+<pre><code class="lang-bash">dotnet run --Opossum:RootPath=&quot;C:\TempDatabase&quot;
+</code></pre>
+<hr>
+<h2 id="test-configuration">Test Configuration</h2>
+<h3 id="how-tests-override-database-path">How Tests Override Database Path</h3>
+<pre><code class="lang-csharp">// In IntegrationTestFixture.cs
+builder.UseEnvironment(&quot;Testing&quot;);  // Loads appsettings.Testing.json
+
+builder.ConfigureAppConfiguration((context, config) =&gt;
+{
+    config.AddInMemoryCollection(new Dictionary&lt;string, string?&gt;
+    {
+        [&quot;Opossum:RootPath&quot;] = _testDatabasePath  // Unique temp path
+    });
+});
+</code></pre>
+<p><strong>Result:</strong></p>
+<ol>
+<li><code>appsettings.json</code> loads with defaults</li>
+<li><code>appsettings.Testing.json</code> overlays (sets <code>AutoRebuild=None</code>)</li>
+<li>In-memory config overlays (sets <code>RootPath</code> to temp folder)</li>
+</ol>
+<hr>
+<h2 id="configuration-priority-lowest-to-highest">Configuration Priority (Lowest to Highest)</h2>
+<ol>
+<li><strong>appsettings.json</strong> - Base configuration</li>
+<li><strong>appsettings.{Environment}.json</strong> - Environment overrides</li>
+<li><strong>User Secrets</strong> - Development secrets</li>
+<li><strong>Environment Variables</strong> - Deployment configuration</li>
+<li><strong>Command Line</strong> - Runtime overrides</li>
+<li><strong>In-Memory (Tests)</strong> - Test-specific overrides</li>
+</ol>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="problem-tests-still-using-production-database">Problem: Tests still using production database</h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li><code>appsettings.Testing.json</code> exists in sample app project</li>
+<li><code>IntegrationTestFixture</code> calls <code>builder.UseEnvironment(&quot;Testing&quot;)</code></li>
+<li>Test output shows temp path: <code>C:\Users\...\Temp\OpossumTests_&lt;guid&gt;</code></li>
+</ol>
+<p><strong>Verify:</strong></p>
+<pre><code class="lang-csharp">// Add logging in Program.cs
+var config = builder.Configuration.GetSection(&quot;Opossum&quot;).Get&lt;OpossumOptions&gt;();
+Console.WriteLine($&quot;Using RootPath: {config.RootPath}&quot;);
+</code></pre>
+<h3 id="problem-configuration-not-loading">Problem: Configuration not loading</h3>
+<p><strong>Check:</strong></p>
+<ol>
+<li>JSON files are marked as &quot;Content&quot; and &quot;Copy if newer&quot; in .csproj</li>
+<li>JSON is valid (no trailing commas)</li>
+<li>Property names match exactly (case-insensitive but spelling matters)</li>
+</ol>
+<p><strong>Debug:</strong></p>
+<pre><code class="lang-csharp">// Log all configuration values
+foreach (var kvp in builder.Configuration.AsEnumerable())
+{
+    Console.WriteLine($&quot;{kvp.Key} = {kvp.Value}&quot;);
+}
+</code></pre>
+<hr>
+<h2 id="best-practices">Best Practices</h2>
+<p>✅ <strong>DO:</strong></p>
+<ul>
+<li>Use appsettings.json for all configuration</li>
+<li>Create environment-specific overrides (appsettings.Production.json)</li>
+<li>Use environment variables for sensitive data in production</li>
+<li>Document configuration changes in this file</li>
+</ul>
+<p>❌ <strong>DON'T:</strong></p>
+<ul>
+<li>Hardcode paths in Program.cs</li>
+<li>Use <code>Environment.IsEnvironment()</code> checks for configuration</li>
+<li>Store secrets in appsettings.json (use User Secrets or Azure Key Vault)</li>
+<li>Commit production connection strings to source control</li>
+</ul>
+<hr>
+<h2 id="migration-from-old-approach">Migration from Old Approach</h2>
+<p><strong>Before (Hardcoded):</strong></p>
+<pre><code class="lang-csharp">var rootPath = builder.Configuration[&quot;Opossum:RootPath&quot;] ?? &quot;D:\\Database&quot;;
+options.AutoRebuild = builder.Environment.IsEnvironment(&quot;Testing&quot;) ? AutoRebuildMode.None : AutoRebuildMode.MissingCheckpointsOnly;
+</code></pre>
+<p><strong>After (Configuration-Based):</strong></p>
+<pre><code class="lang-csharp">builder.Configuration.GetSection(&quot;Opossum&quot;).Bind(options);
+builder.Configuration.GetSection(&quot;Projections&quot;).Bind(options);
+</code></pre>
+<p><strong>Benefits:</strong></p>
+<ul>
+<li>No environment checks in code</li>
+<li>Clear visibility of all configuration</li>
+<li>Easy to override per environment</li>
+<li>Standard .NET practices</li>
+</ul>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/getting-started/configuration.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

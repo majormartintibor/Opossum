@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+      <title>ADR-004: Single Context by Design — Multi-Context Support Will Not Be Implemented | Opossum — File System Event Store </title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="title" content="ADR-004: Single Context by Design — Multi-Context Support Will Not Be Implemented | Opossum — File System Event Store ">
+      
+      
+      <link rel="icon" href="../../favicon.ico">
+      <link rel="stylesheet" href="../../public/docfx.min.css">
+      <link rel="stylesheet" href="../../public/main.css">
+      <meta name="docfx:navrel" content="../../toc.html">
+      <meta name="docfx:tocrel" content="../toc.html">
+      
+      <meta name="docfx:rel" content="../../">
+      
+      
+      <meta name="docfx:docurl" content="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/decisions/adr-004.md/#L1">
+      <meta name="loc:inThisArticle" content="In this article">
+      <meta name="loc:searchResultsCount" content="{count} results for &quot;{query}&quot;">
+      <meta name="loc:searchNoResults" content="No results for &quot;{query}&quot;">
+      <meta name="loc:tocFilter" content="Filter by title">
+      <meta name="loc:nextArticle" content="Next">
+      <meta name="loc:prevArticle" content="Previous">
+      <meta name="loc:themeLight" content="Light">
+      <meta name="loc:themeDark" content="Dark">
+      <meta name="loc:themeAuto" content="Auto">
+      <meta name="loc:changeTheme" content="Change theme">
+      <meta name="loc:copy" content="Copy">
+      <meta name="loc:downloadPdf" content="Download PDF">
+
+      <script type="module" src="./../../public/docfx.min.js"></script>
+
+      <script>
+        const theme = localStorage.getItem('theme') || 'auto'
+        document.documentElement.setAttribute('data-bs-theme', theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme)
+      </script>
+
+  </head>
+
+  <body class="tex2jax_ignore" data-layout="" data-yaml-mime="">
+    <header class="bg-body border-bottom">
+      <nav id="autocollapse" class="navbar navbar-expand-md" role="navigation">
+        <div class="container-xxl flex-nowrap">
+          <a class="navbar-brand" href="../../index.html">
+            <img id="logo" class="svg" src="../../logo.svg" alt="Opossum">
+            Opossum
+          </a>
+          <button class="btn btn-lg d-md-none border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navpanel" aria-controls="navpanel" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="bi bi-three-dots"></i>
+          </button>
+          <div class="collapse navbar-collapse" id="navpanel">
+            <div id="navbar">
+              <form class="search" role="search" id="search">
+                <i class="bi bi-search"></i>
+                <input class="form-control" id="search-query" type="search" disabled placeholder="Search" autocomplete="off" aria-label="Search">
+              </form>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container-xxl">
+      <div class="toc-offcanvas">
+        <div class="offcanvas-md offcanvas-start" tabindex="-1" id="tocOffcanvas" aria-labelledby="tocOffcanvasLabel">
+          <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="tocOffcanvasLabel">Table of Contents</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#tocOffcanvas" aria-label="Close"></button>
+          </div>
+          <div class="offcanvas-body">
+            <nav class="toc" id="toc"></nav>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="actionbar">
+          <button class="btn btn-lg border-0 d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#tocOffcanvas" aria-controls="tocOffcanvas" aria-expanded="false" aria-label="Show table of contents">
+            <i class="bi bi-list"></i>
+          </button>
+
+          <nav id="breadcrumb"></nav>
+        </div>
+
+        <article data-uid="">
+<h1 id="adr-004-single-context-by-design--multi-context-support-will-not-be-implemented">ADR-004: Single Context by Design — Multi-Context Support Will Not Be Implemented</h1>
+<!-- source: docs/decisions/004-single-context-by-design.md � keep in sync -->
+
+<p><strong>Date:</strong> 2026-03-01
+<strong>Status:</strong> ❌ Closed — Will Not Implement</p>
+<hr>
+<h2 id="context">Context</h2>
+<p>The 0.3.0-preview.1 roadmap (item 1) proposed adding multi-context support to <code>IEventStore</code>
+and <code>IProjectionManager</code> — the ability to route reads, appends, and projection rebuilds to
+one of several named contexts configured on a single Opossum instance. The motivation was
+bounded context isolation analogous to having separate database schemas within one PostgreSQL
+database, a pattern associated with the modern modular monolith architecture.</p>
+<p>After evaluating this against Opossum's actual deployment profile, the feature was closed.</p>
+<hr>
+<h2 id="what-multi-context-would-have-looked-like">What Multi-Context Would Have Looked Like</h2>
+<p>The proposed API added an optional <code>context</code> parameter to every read and append:</p>
+<pre><code class="lang-csharp">// New multi-context callers opt in explicitly
+await eventStore.AppendAsync(events, condition, context: &quot;Billing&quot;);
+await eventStore.ReadAsync(Query.All(), context: &quot;Inventory&quot;);
+</code></pre>
+<p><code>ProjectionManager</code> would have gained corresponding <code>context</code> parameters on
+<code>RegisterProjection</code>, <code>RebuildAsync</code>, and <code>UpdateAsync</code>. Internally, a
+<code>ConcurrentDictionary&lt;string, SemaphoreSlim&gt;</code> would have replaced the single
+<code>_appendLock</code> to avoid serialising appends across unrelated contexts.
+<code>ProjectionDaemon</code> would have polled each registered context separately.</p>
+<p>The storage layout already supports it — <code>StorageInitializer</code> creates directories
+per context name — so the work was purely in the routing and locking layers.</p>
+<hr>
+<h2 id="why-it-was-rejected">Why It Was Rejected</h2>
+<h3 id="1-wrong-pattern-for-opossums-deployment-profile">1. Wrong pattern for Opossum's deployment profile</h3>
+<p>Multi-context-in-one-process is a cloud-era <strong>modular monolith</strong> pattern: one deployable
+unit, multiple internal bounded contexts, a shared infrastructure layer. It is designed
+for horizontally scaled cloud services where running separate processes per context has
+real operational cost (separate CI pipelines, separate Kubernetes deployments, separate
+monitoring stacks).</p>
+<p>Opossum is designed for the opposite end of the spectrum:</p>
+<blockquote>
+<p>Perfect for scenarios where simplicity, offline operation, and local data sovereignty
+matter more than cloud scalability.</p>
+<p>✅ POS systems · ✅ Field service · ✅ SMB ERP · ✅ Offline-first · ✅ Single server</p>
+</blockquote>
+<p>In a POS system or a field service application, you deploy <strong>one focused application</strong> to
+one device or one site. That application models one bounded context. There is no operational
+overhead for &quot;running a separate process&quot; — it is just the application. Multi-context adds
+complexity to solve a problem that does not exist in this profile.</p>
+<h3 id="2-the-workaround-is-already-functional-and-clean">2. The workaround is already functional and clean</h3>
+<p>A consumer who genuinely needs two isolated contexts can register two <code>IEventStore</code>
+instances with different root paths using standard .NET named or keyed service
+registration. Each instance operates independently, has its own file system directory,
+its own ledger, and its own index. There is no shared state to co-ordinate. This is
+simpler and more explicit than a shared instance with a routing layer.</p>
+<h3 id="3-implementation-complexity-is-disproportionate">3. Implementation complexity is disproportionate</h3>
+<p>The required changes touched every layer of the stack:</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Change required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IEventStore</code></td>
+<td>New optional <code>context</code> parameter on <code>ReadAsync</code> and <code>AppendAsync</code></td>
+</tr>
+<tr>
+<td><code>FileSystemEventStore</code></td>
+<td>Replace single <code>SemaphoreSlim</code> with <code>ConcurrentDictionary&lt;string, SemaphoreSlim&gt;</code></td>
+</tr>
+<tr>
+<td><code>IProjectionManager</code></td>
+<td>New <code>context</code> parameter on <code>RegisterProjection</code>, <code>RebuildAsync</code>, <code>UpdateAsync</code></td>
+</tr>
+<tr>
+<td><code>ProjectionManager</code></td>
+<td>Per-context checkpoint paths, per-context locks</td>
+</tr>
+<tr>
+<td><code>ProjectionDaemon</code></td>
+<td>Poll each registered context independently</td>
+</tr>
+<tr>
+<td><code>IEventStore</code> extensions</td>
+<td>All overloads gain a <code>context</code> parameter</td>
+</tr>
+<tr>
+<td>All tests</td>
+<td>Every read/append call site potentially affected</td>
+</tr>
+</tbody>
+</table>
+<p>All of this complexity — per-context semaphores, routing logic, projection scoping,
+daemon polling loops — delivers zero benefit for any of Opossum's documented use cases.</p>
+<h3 id="4-it-does-not-align-with-dcbs-model">4. It does not align with DCB's model</h3>
+<p>The DCB specification models events across a single logical store per deployment.
+Consistency boundaries are expressed through event types and tags, not through
+physical storage partitions. Introducing multiple contexts in one store blurs the
+boundary between &quot;routing&quot; (an infrastructure concern) and &quot;querying&quot; (a domain concern)
+in a way that is not addressed by the spec.</p>
+<hr>
+<h2 id="current-state-of-the-api-as-of-030-preview1">Current State of the API (as of 0.3.0-preview.1)</h2>
+<p><code>OpossumOptions</code> exposes <code>UseStore(string name)</code> which sets the single <code>StoreName</code>
+property. Calling <code>UseStore</code> a second time throws <code>InvalidOperationException</code> immediately,
+making the single-store contract explicit at the call site rather than silent:</p>
+<pre><code class="lang-csharp">// ✅ Correct — one store per instance
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = @&quot;D:\EventStore&quot;;
+    options.UseStore(&quot;CourseManagement&quot;);
+});
+
+// ❌ Throws InvalidOperationException at startup
+builder.Services.AddOpossum(options =&gt;
+{
+    options.RootPath = @&quot;D:\EventStore&quot;;
+    options.UseStore(&quot;CourseManagement&quot;);
+    options.UseStore(&quot;Billing&quot;); // throws: &quot;UseStore has already been called...&quot;
+});
+</code></pre>
+<p><code>ContextNotFoundException</code> also exists in the public API, having been created in
+anticipation of multi-context support. It will not be thrown by the framework under any
+current code path. It is retained to avoid a breaking removal but carries no active
+routing logic.</p>
+<hr>
+<h2 id="if-the-deployment-profile-changes">If the Deployment Profile Changes</h2>
+<p>If Opossum is ever adopted in scenarios where multi-context genuinely matters — for
+example a cloud-hosted multi-tenant SaaS application — this decision should be
+re-evaluated from scratch. At that point, the architecture would likely differ
+significantly from the current file-per-event model anyway.</p>
+<p>This decision is closed and is not on any future roadmap.</p>
+
+</article>
+
+        <div class="contribution d-print-none">
+          <a href="https://github.com/majormartintibor/Opossum/blob/master/docs/docfx/articles/decisions/adr-004.md/#L1" class="edit-link">Edit this page</a>
+        </div>
+
+        <div class="next-article d-print-none border-top" id="nextArticle"></div>
+
+      </div>
+
+      <div class="affix">
+        <nav id="affix"></nav>
+      </div>
+    </main>
+
+    <div class="container-xxl search-results" id="search-results"></div>
+
+    <footer class="border-top text-secondary">
+      <div class="container-xxl">
+        <div class="flex-fill">
+          Opossum — MIT License
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
