@@ -80,7 +80,8 @@ public class StudentService(IEventStore eventStore)
             .WithTag("studentId", studentId.ToString())
             .WithTimestamp(DateTimeOffset.UtcNow);
 
-        await eventStore.AppendAsync([new NewEvent { Event = evt }], condition: null);
+        // DomainEventBuilder implicitly converts to NewEvent
+        await eventStore.AppendAsync([evt], condition: null);
 
         return studentId;
     }
@@ -147,15 +148,15 @@ public class StudentViewProjection : IProjectionDefinition<StudentView>
 }
 ```
 
-Query the projection via `IProjectionStore`:
+Query the projection via `IProjectionStore<T>`:
 
 ```csharp
 using Opossum.Projections;
 
-public class StudentController(IProjectionStore store)
+public class StudentController(IProjectionStore<StudentView> store)
 {
     public async Task<StudentView?> GetStudentAsync(Guid studentId) =>
-        await store.GetAsync<StudentView>("StudentView", studentId.ToString());
+        await store.GetAsync(studentId.ToString());
 }
 ```
 
@@ -198,7 +199,8 @@ public async Task<Guid> RegisterUniqueAsync(string email)
 
     try
     {
-        await eventStore.AppendAsync([new NewEvent { Event = evt }], condition);
+        // DomainEventBuilder implicitly converts to NewEvent
+        await eventStore.AppendAsync([evt], condition);
     }
     catch (AppendConditionFailedException)
     {

@@ -30,7 +30,7 @@ To scan additional assemblies:
 ```csharp
 builder.Services.AddMediator(options =>
 {
-    options.ScanAssembly(typeof(MyHandler).Assembly);
+    options.Assemblies.Add(typeof(MyHandler).Assembly);
 });
 ```
 
@@ -62,8 +62,9 @@ public class RegisterStudentHandler(IEventStore eventStore)
             .WithTag("studentId", studentId.ToString())
             .WithTag("studentEmail", command.Email);
 
+        // DomainEventBuilder implicitly converts to NewEvent
         await eventStore.AppendAsync(
-            [new NewEvent { Event = evt }],
+            [evt],
             condition: null,
             cancellationToken);
 
@@ -104,13 +105,13 @@ The same pattern works for queries:
 public record GetStudentQuery(Guid StudentId);
 
 [MessageHandler]
-public class GetStudentHandler(IProjectionStore store)
+public class GetStudentHandler(IProjectionStore<StudentView> store)
     : IMessageHandler<GetStudentQuery, StudentView?>
 {
     public async Task<StudentView?> HandleAsync(
         GetStudentQuery query,
         CancellationToken cancellationToken) =>
-        await store.GetAsync<StudentView>("StudentView", query.StudentId.ToString());
+        await store.GetAsync(query.StudentId.ToString());
 }
 ```
 
@@ -126,7 +127,7 @@ var student = await mediator.InvokeAsync<StudentView?>(new GetStudentQuery(stude
 - The handler class **must** be decorated with `[MessageHandler]`.
 - The handler class **must** implement `IMessageHandler<TMessage, TResponse>`.
 - Exactly **one handler per message type** is supported.
-- Handlers are registered as **transient** services.
+- Handlers are discovered by reflection at startup and stored in the mediator's internal handler map. They are **not registered as DI services**; they are resolved and invoked directly by the mediator.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **.NET 8 or later** — Opossum targets `net8.0` and above. .NET 10 is recommended.
+- **.NET 10** — Opossum targets `net10.0`.
 - A writable directory on a local or network drive for event storage.
 
 ## Install via NuGet
@@ -61,14 +61,26 @@ app.Run();
 
 ### What gets registered
 
+**`AddOpossum()`**
+
 | Service | Lifetime | Description |
 |---|---|---|
 | `IEventStore` | Singleton | Core append/read interface |
 | `IEventStoreAdmin` | Singleton | Administrative operations (tag migration, etc.) |
 | `IEventStoreMaintenance` | Singleton | Maintenance operations (add tags retroactively) |
+
+**`AddProjections()`**
+
+| Service | Lifetime | Description |
+|---|---|---|
 | `IProjectionManager` | Singleton | Manages projection state and updates |
 | `IProjectionRebuilder` | Singleton | Orchestrates projection rebuilds |
-| `IProjectionStore` | Singleton | Reads projection state |
+| `IProjectionStore<TState>` | Singleton | Reads projection state — one registration per projection type, created automatically during assembly scan |
+
+**`AddMediator()`**
+
+| Service | Lifetime | Description |
+|---|---|---|
 | `IMediator` | Singleton | Message dispatch |
 
 ---

@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs badge added to `README.md`.
 - `PackageProjectUrl` in `Opossum.csproj` updated to point to the documentation site.
 
+### Fixed
+- `installation.md`: corrected target framework claim from `.NET 8` to `.NET 10`.
+- `installation.md`: split "What gets registered" table by extension method (`AddOpossum`, `AddProjections`, `AddMediator`) and corrected `IProjectionStore` to its actual generic form `IProjectionStore<TState>`.
+- `quick-start.md`: fixed two append calls where `DomainEventBuilder` was incorrectly wrapped in `new NewEvent { Event = ... }` — the builder carries an implicit conversion to `NewEvent` and must be used directly.
+- `quick-start.md`: fixed `IProjectionStore` usage to the correct generic form `IProjectionStore<StudentView>` with the correct `GetAsync(key)` signature.
+- `mediator.md`: fixed `options.ScanAssembly()` (method does not exist on `MediatorOptions`) to `options.Assemblies.Add()`.
+- `mediator.md`: same `DomainEventBuilder` append fix applied to the handler code example.
+- `mediator.md`: fixed `GetStudentHandler` to use `IProjectionStore<StudentView>` with the correct `GetAsync(key)` signature.
+- `mediator.md`: corrected the claim that handlers are registered as transient DI services — they are discovered by reflection at startup and stored in the mediator's internal handler map.
+
 ---
 
 ## [0.5.0-preview.1] - 2026-03-11
