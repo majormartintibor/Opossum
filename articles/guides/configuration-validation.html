@@ -114,8 +114,8 @@ public int MaxConcurrentRebuilds { get; set; } = 4;
 <li>Validates RootPath is not null/empty</li>
 <li>Checks for invalid path characters</li>
 <li>Ensures path is absolute (rooted)</li>
-<li>Validates at least one context exists</li>
-<li>Checks context names are valid directory names</li>
+<li>Validates StoreName is set</li>
+<li>Checks StoreName is a valid directory name</li>
 <li>Rejects Windows reserved names (CON, PRN, etc.)</li>
 </ul>
 <p><strong>ProjectionOptionsValidator</strong> (<code>IValidateOptions&lt;ProjectionOptions&gt;</code>):</p>
@@ -147,10 +147,10 @@ if (validationResult.Failed)
 <li>✅ Empty/null RootPath</li>
 <li>✅ Relative paths (must be absolute)</li>
 <li>✅ Invalid path characters</li>
-<li>✅ No contexts configured</li>
-<li>✅ Empty/invalid context names</li>
+<li>✅ No StoreName configured</li>
+<li>✅ Invalid StoreName values</li>
 <li>✅ Windows reserved names (CON, PRN, etc.)</li>
-<li>✅ Multiple valid contexts</li>
+<li>✅ Valid StoreName values</li>
 <li>✅ Multiple validation failures</li>
 </ul>
 <h3 id="projectionoptionsvalidationtests-22-tests">ProjectionOptionsValidationTests (22 tests)</h3>
@@ -173,7 +173,7 @@ if (validationResult.Failed)
 <pre><code class="lang-json">{
   &quot;Opossum&quot;: {
     &quot;RootPath&quot;: &quot;D:\\Database&quot;,
-    &quot;Contexts&quot;: [&quot;MyContext&quot;],
+    &quot;StoreName&quot;: &quot;MyContext&quot;,
     &quot;FlushEventsImmediately&quot;: true
   },
   &quot;Projections&quot;: {
@@ -188,7 +188,7 @@ if (validationResult.Failed)
 <pre><code class="lang-json">{
   &quot;Opossum&quot;: {
     &quot;RootPath&quot;: &quot;relative/path&quot;,  // ❌ Must be absolute!
-    &quot;Contexts&quot;: []                // ❌ At least one context required!
+    // StoreName not set          // ❌ StoreName is required!
   },
   &quot;Projections&quot;: {
     &quot;MaxConcurrentRebuilds&quot;: 100,  // ❌ Max is 64!
@@ -201,7 +201,7 @@ if (validationResult.Failed)
 <pre><code>Microsoft.Extensions.Options.OptionsValidationException: 
 OpossumOptions validation failed:
 - RootPath must be an absolute path: relative/path
-- At least one context must be configured. Use AddContext() to add contexts.
+- A store name must be configured. Call options.UseStore(&quot;YourStoreName&quot;).
 
 ProjectionOptions validation failed:
 - MaxConcurrentRebuilds must be at most 64, got 100
@@ -222,7 +222,7 @@ ProjectionOptions validation failed:
 <h3 id="3-comprehensive-validation">3. Comprehensive Validation</h3>
 <p>✅ Range validation (min/max)<br>
 ✅ Format validation (absolute paths)<br>
-✅ Business rules (at least one context)<br>
+✅ Business rules (StoreName must be set)<br>
 ✅ Platform-specific rules (Windows reserved names)</p>
 <h3 id="4-clear-error-messages">4. Clear Error Messages</h3>
 <p>✅ Each failure includes what was expected<br>
@@ -249,8 +249,8 @@ ProjectionOptions validation failed:
 <td>- Not null/empty<br>- No invalid path characters<br>- Must be absolute (rooted) path</td>
 </tr>
 <tr>
-<td><code>Contexts</code></td>
-<td>- At least one context required<br>- No null/whitespace names<br>- Valid directory names<br>- No Windows reserved names</td>
+<td><code>StoreName</code></td>
+<td>- Must be set (via <code>UseStore()</code> or config binding)<br>- Valid directory name<br>- No Windows reserved names</td>
 </tr>
 <tr>
 <td><code>FlushEventsImmediately</code></td>

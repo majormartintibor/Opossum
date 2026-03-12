@@ -86,7 +86,7 @@
 
         <article data-uid="">
 <h1 id="opossum-use-cases-when-file-system-event-store-is-the-right-choice">Opossum Use Cases: When File System Event Store is the Right Choice</h1>
-<!-- source: docs/guides/use-cases.md � keep in sync -->
+<!-- source: docs/guides/use-cases.md — keep in sync -->
 
 <h2 id="executive-summary">Executive Summary</h2>
 <p>Opossum is a file system-based event store designed for scenarios where <strong>simplicity, offline operation, and local data sovereignty</strong> are more important than cloud scalability. This document identifies proven use cases where Opossum's architecture provides <strong>superior value</strong> compared to cloud-based or database-backed alternatives.</p>
@@ -191,7 +191,7 @@
 ✅ <strong>Data Ownership:</strong> All sales data stays on dealer's premises</p>
 <h4 id="technical-implementation">Technical Implementation</h4>
 <pre><code class="lang-csharp">// Event: Vehicle sale transaction
-public record VehicleSoldEvent : IEvent
+public sealed record VehicleSoldEvent : IEvent
 {
     public Guid VehicleId { get; init; }
     public Guid SalespersonId { get; init; }
@@ -203,22 +203,32 @@ public record VehicleSoldEvent : IEvent
 // Projection: Calculate total commission for a salesperson
 [ProjectionDefinition(&quot;SalespersonCommissions&quot;)]
 [ProjectionTags(typeof(CommissionTagProvider))]
-public class SalespersonCommissionProjection : IProjectionDefinition&lt;CommissionSummary&gt;
+public sealed class SalespersonCommissionProjection : IProjectionDefinition&lt;CommissionSummary&gt;
 {
-    public CommissionSummary? Apply(CommissionSummary? current, IEvent evt)
+    public string ProjectionName =&gt; &quot;SalespersonCommissions&quot;;
+
+    public string[] EventTypes =&gt;
+    [
+        nameof(VehicleSoldEvent),
+        nameof(CommissionAdjusted)
+    ];
+
+    public string KeySelector(SequencedEvent evt) =&gt;
+        evt.Event.Tags.First(t =&gt; t.Key == &quot;SalespersonId&quot;).Value;
+
+    public CommissionSummary? Apply(CommissionSummary? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
-            VehicleSoldEvent sold =&gt; current with
+            VehicleSoldEvent sold when current is not null =&gt; current with
             {
-                TotalCommission = current.TotalCommission + 
+                TotalCommission = current.TotalCommission +
                     (sold.SalePrice * sold.CommissionRate),
                 SalesCount = current.SalesCount + 1
             },
-            CommissionAdjusted adjusted =&gt; current with
+            CommissionAdjusted adjusted when current is not null =&gt; current with
             {
-                TotalCommission = adjusted.NewCommissionAmount,
-                Adjustments = current.Adjustments.Add(adjusted)
+                TotalCommission = adjusted.NewCommissionAmount
             },
             _ =&gt; current
         };
@@ -226,22 +236,22 @@ public class SalespersonCommissionProjection : IProjectionDefinition&lt;Commissi
 }
 
 // Tag Provider: Index by salesperson and date
-public class CommissionTagProvider : IProjectionTagProvider&lt;CommissionSummary&gt;
+public sealed class CommissionTagProvider : IProjectionTagProvider&lt;CommissionSummary&gt;
 {
     public IEnumerable&lt;Tag&gt; GetTags(CommissionSummary state)
     {
-        yield return new Tag { Key = &quot;SalespersonId&quot;, Value = state.SalespersonId.ToString() };
-        yield return new Tag { Key = &quot;Month&quot;, Value = state.Month.ToString(&quot;yyyy-MM&quot;) };
-        yield return new Tag { Key = &quot;Year&quot;, Value = state.Year.ToString() };
+        yield return new Tag(&quot;SalespersonId&quot;, state.SalespersonId.ToString());
+        yield return new Tag(&quot;Month&quot;, state.Month.ToString(&quot;yyyy-MM&quot;));
+        yield return new Tag(&quot;Year&quot;, state.Year.ToString());
     }
 }
 
 // Query: Get all commissions for a salesperson in a specific month
-var commissions = await projectionStore.QueryByTagsAsync(new[]
-{
-    new Tag { Key = &quot;SalespersonId&quot;, Value = johnDoeId.ToString() },
-    new Tag { Key = &quot;Month&quot;, Value = &quot;2024-01&quot; }
-});
+var commissions = await projectionStore.QueryByTagsAsync(
+[
+    new Tag(&quot;SalespersonId&quot;, johnDoeId.ToString()),
+    new Tag(&quot;Month&quot;, &quot;2024-01&quot;)
+]);
 </code></pre>
 <h4 id="migration-from-existing-system">Migration from Existing System</h4>
 <p>Many dealerships use Excel spreadsheets or simple databases. Migration path:</p>
@@ -368,7 +378,7 @@ var commissions = await projectionStore.QueryByTagsAsync(new[]
 ✅ <strong>Auditable:</strong> Every robot action timestamped and immutable</p>
 <h4 id="robot-coordination-pattern">Robot Coordination Pattern</h4>
 <pre><code class="lang-csharp">// Event: Robot command issued
-public record RobotCommandIssuedEvent : IEvent
+public sealed record RobotCommandIssuedEvent : IEvent
 {
     public string RobotId { get; init; } = string.Empty;
     public string CommandType { get; init; } = string.Empty; // &quot;Pick&quot;, &quot;Place&quot;, &quot;Weld&quot;
@@ -377,7 +387,7 @@ public record RobotCommandIssuedEvent : IEvent
 }
 
 // Event: Robot command completed
-public record RobotCommandCompletedEvent : IEvent
+public sealed record RobotCommandCompletedEvent : IEvent
 {
     public string RobotId { get; init; } = string.Empty;
     public Guid CommandId { get; init; }
@@ -389,11 +399,23 @@ public record RobotCommandCompletedEvent : IEvent
 // Projection: Track unit progress through stations
 [ProjectionDefinition(&quot;UnitProgress&quot;)]
 [ProjectionTags(typeof(UnitProgressTagProvider))]
-public class UnitProgressProjection : IProjectionDefinition&lt;UnitProgress&gt;
+public sealed class UnitProgressProjection : IProjectionDefinition&lt;UnitProgress&gt;
 {
-    public UnitProgress? Apply(UnitProgress? current, IEvent evt)
+    public string ProjectionName =&gt; &quot;UnitProgress&quot;;
+
+    public string[] EventTypes =&gt;
+    [
+        nameof(UnitStartedEvent),
+        nameof(StationCompletedEvent),
+        nameof(DefectDetectedEvent)
+    ];
+
+    public string KeySelector(SequencedEvent evt) =&gt;
+        evt.Event.Tags.First(t =&gt; t.Key == &quot;UnitId&quot;).Value;
+
+    public UnitProgress? Apply(UnitProgress? current, SequencedEvent evt)
     {
-        return evt switch
+        return evt.Event.Event switch
         {
             UnitStartedEvent started =&gt; new UnitProgress
             {
@@ -403,37 +425,37 @@ public class UnitProgressProjection : IProjectionDefinition&lt;UnitProgress&gt;
                 Status = &quot;InProgress&quot;,
                 StartTime = started.Timestamp
             },
-            
-            StationCompletedEvent completed when current != null =&gt; current with
+
+            StationCompletedEvent completed when current is not null =&gt; current with
             {
                 CurrentStation = completed.NextStation,
                 CompletedStations = current.CompletedStations.Add(completed.WorkstationId),
                 LastUpdate = completed.Timestamp
             },
-            
-            DefectDetectedEvent defect when current != null =&gt; current with
+
+            DefectDetectedEvent defect when current is not null =&gt; current with
             {
                 Status = &quot;Failed&quot;,
                 DefectType = defect.DefectType,
                 RequiresRework = defect.Severity &gt; SeverityThreshold.Medium
             },
-            
+
             _ =&gt; current
         };
     }
 }
 
 // Tag Provider: Index by unit ID and product type
-public class UnitProgressTagProvider : IProjectionTagProvider&lt;UnitProgress&gt;
+public sealed class UnitProgressTagProvider : IProjectionTagProvider&lt;UnitProgress&gt;
 {
     public IEnumerable&lt;Tag&gt; GetTags(UnitProgress state)
     {
-        yield return new Tag { Key = &quot;UnitId&quot;, Value = state.UnitId.ToString() };
-        yield return new Tag { Key = &quot;ProductType&quot;, Value = state.ProductType };
-        yield return new Tag { Key = &quot;Status&quot;, Value = state.Status };
-        yield return new Tag { Key = &quot;Shift&quot;, Value = GetShift(state.StartTime) };
+        yield return new Tag(&quot;UnitId&quot;, state.UnitId.ToString());
+        yield return new Tag(&quot;ProductType&quot;, state.ProductType);
+        yield return new Tag(&quot;Status&quot;, state.Status);
+        yield return new Tag(&quot;Shift&quot;, GetShift(state.StartTime));
     }
-    
+
     private static string GetShift(DateTime time)
     {
         // Day shift: 6 AM - 2 PM, Evening: 2 PM - 10 PM, Night: 10 PM - 6 AM
@@ -447,11 +469,11 @@ public class UnitProgressTagProvider : IProjectionTagProvider&lt;UnitProgress&gt
 }
 
 // Query: Find all units that failed quality check in Station 3
-var failedUnits = await projectionStore.QueryByTagsAsync(new[]
-{
-    new Tag { Key = &quot;Status&quot;, Value = &quot;Failed&quot; },
-    new Tag { Key = &quot;CurrentStation&quot;, Value = &quot;Station3&quot; }
-});
+var failedUnits = await projectionStore.QueryByTagsAsync(
+[
+    new Tag(&quot;Status&quot;, &quot;Failed&quot;),
+    new Tag(&quot;CurrentStation&quot;, &quot;Station3&quot;)
+]);
 </code></pre>
 <h4 id="troubleshooting-scenario-robot-malfunction">Troubleshooting Scenario: Robot Malfunction</h4>
 <p><strong>Problem:</strong> Robot #7 occasionally drops parts during &quot;Pick&quot; operation.</p>
@@ -464,16 +486,15 @@ var failedUnits = await projectionStore.QueryByTagsAsync(new[]
 <p><strong>With Opossum Event Sourcing:</strong></p>
 <pre><code class="lang-csharp">// Replay all events for Robot #7 in last 24 hours
 var robotEvents = await eventStore.ReadAsync(
-    Query.FromTags(new Tag { Key = &quot;RobotId&quot;, Value = &quot;Robot7&quot; }),
-    startPosition: GetPositionForTimestamp(DateTime.Now.AddDays(-1))
-);
+    Query.FromTags(new Tag(&quot;RobotId&quot;, &quot;Robot7&quot;)),
+    readOptions: null);
 
 // Analyze pattern
 foreach (var evt in robotEvents)
 {
-    if (evt.Event is RobotCommandCompletedEvent completed &amp;&amp; !completed.Success)
+    if (evt.Event.Event is RobotCommandCompletedEvent completed &amp;&amp; !completed.Success)
     {
-        Console.WriteLine($&quot;{completed.Timestamp}: Failed {completed.CommandType}&quot;);
+        Console.WriteLine($&quot;{evt.Metadata.Timestamp}: Failed command&quot;);
         Console.WriteLine($&quot;  Duration: {completed.Duration}&quot;);
         Console.WriteLine($&quot;  Error: {completed.ErrorMessage}&quot;);
     }
@@ -674,11 +695,19 @@ SQL DELETE → EntityDeleted event
 <p>Create read models from events:</p>
 <pre><code class="lang-csharp">// Projection replaces database view
 [ProjectionDefinition(&quot;OrderSummary&quot;)]
-public class OrderSummaryProjection : IProjectionDefinition&lt;OrderSummary&gt;
+public sealed class OrderSummaryProjection : IProjectionDefinition&lt;OrderSummary&gt;
 {
-    public OrderSummary? Apply(OrderSummary? current, IEvent evt)
+    public string ProjectionName =&gt; &quot;OrderSummary&quot;;
+
+    public string[] EventTypes =&gt; [/* ... */];
+
+    public string KeySelector(SequencedEvent evt) =&gt;
+        evt.Event.Tags.First(t =&gt; t.Key == &quot;orderId&quot;).Value;
+
+    public OrderSummary? Apply(OrderSummary? current, SequencedEvent evt)
     {
         // Build read model from events
+        return current;
     }
 }
 </code></pre>

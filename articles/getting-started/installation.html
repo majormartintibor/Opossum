@@ -107,27 +107,28 @@
 </blockquote>
 <hr>
 <h2 id="register-with-dependency-injection">Register with Dependency Injection</h2>
-<p>Opossum integrates with Microsoft's standard <code>IServiceCollection</code>:</p>
+<p>Opossum integrates with Microsoft's standard <code>IServiceCollection</code>. All services chain from <code>AddOpossum()</code>:</p>
 <pre><code class="lang-csharp">using Opossum.DependencyInjection;
+using Opossum.Mediator;
+using Opossum.Projections;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Core event store
-builder.Services.AddOpossum(options =&gt;
-{
-    options.RootPath = @&quot;D:\MyAppData\EventStore&quot;; // where events are stored
-    options.UseStore(&quot;MyApp&quot;);                      // store/context name
-    options.FlushEventsImmediately = true;          // durability (recommended for production)
-});
-
-// Projection system (optional — for read models)
-builder.Services.AddProjections(options =&gt;
-{
-    options.ScanAssembly(typeof(Program).Assembly); // auto-discover IProjectionDefinition&lt;T&gt;
-});
-
-// Mediator (optional — for command/query handling)
-builder.Services.AddMediator();
+builder.Services
+    // Core event store
+    .AddOpossum(options =&gt;
+    {
+        options.RootPath = @&quot;D:\MyAppData\EventStore&quot;; // where events are stored
+        options.UseStore(&quot;MyApp&quot;);                      // store name
+        options.FlushEventsImmediately = true;          // durability (recommended for production)
+    })
+    // Mediator (optional — for command/query handling)
+    .AddMediator()
+    // Projection system (optional — for read models)
+    .AddProjections(options =&gt;
+    {
+        options.ScanAssembly(typeof(Program).Assembly); // auto-discover IProjectionDefinition&lt;T&gt;
+    });
 
 var app = builder.Build();
 app.Run();
@@ -151,12 +152,12 @@ app.Run();
 <tr>
 <td><code>IEventStoreAdmin</code></td>
 <td>Singleton</td>
-<td>Administrative operations (tag migration, etc.)</td>
+<td>Destructive admin operations (<code>DeleteStoreAsync</code>)</td>
 </tr>
 <tr>
 <td><code>IEventStoreMaintenance</code></td>
 <td>Singleton</td>
-<td>Maintenance operations (add tags retroactively)</td>
+<td>Additive maintenance operations (retroactive tag migration)</td>
 </tr>
 </tbody>
 </table>

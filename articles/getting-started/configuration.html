@@ -103,9 +103,7 @@
 <pre><code class="lang-json">{
   &quot;Opossum&quot;: {
     &quot;RootPath&quot;: &quot;D:\\Database&quot;,
-    &quot;Contexts&quot;: [
-      &quot;OpossumSampleApp&quot;
-    ],
+    &quot;StoreName&quot;: &quot;OpossumSampleApp&quot;,
     &quot;FlushEventsImmediately&quot;: true
   },
 
@@ -152,10 +150,10 @@
 <td>Root directory for event store data</td>
 </tr>
 <tr>
-<td><code>Contexts</code></td>
-<td>string[]</td>
-<td><code>[]</code></td>
-<td>List of bounded context names</td>
+<td><code>StoreName</code></td>
+<td>string</td>
+<td><em>(none)</em></td>
+<td>Name of the event store (subdirectory under RootPath). Set via <code>UseStore()</code> or config binding</td>
 </tr>
 <tr>
 <td><code>FlushEventsImmediately</code></td>
@@ -223,7 +221,7 @@ dotnet run
 <p>Uses: <code>appsettings.json</code></p>
 <ul>
 <li>Database: <code>D:\Database</code></li>
-<li>Auto-rebuild: <code>true</code></li>
+<li>Auto-rebuild: <code>MissingCheckpointsOnly</code></li>
 </ul>
 <h3 id="testing-integration-tests">Testing (Integration Tests)</h3>
 <pre><code class="lang-bash"># Tests automatically use Testing environment
