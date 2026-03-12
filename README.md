@@ -225,11 +225,11 @@ public class StudentDetailsProjection : IProjectionDefinition<StudentDetails>
 {
     public string ProjectionName => "StudentDetails";
 
-    public string[] EventTypes => new[]
-    {
+    public string[] EventTypes =>
+    [
         nameof(StudentRegisteredEvent),
         nameof(StudentEnrolledToCourseEvent)
-    };
+    ];
 
     public string KeySelector(SequencedEvent evt)
     {
@@ -248,7 +248,7 @@ public class StudentDetailsProjection : IProjectionDefinition<StudentDetails>
                 registered.Email,
                 EnrolledCoursesCount: 0),
 
-            StudentEnrolledToCourseEvent enrolled when current != null =>
+            StudentEnrolledToCourseEvent enrolled when current is not null =>
                 current with { EnrolledCoursesCount = current.EnrolledCoursesCount + 1 },
 
             _ => current
@@ -262,15 +262,11 @@ public class StudentDetailsProjection : IProjectionDefinition<StudentDetails>
 ```csharp
 using Opossum.Projections;
 
-public class StudentController
+public class StudentController(IProjectionStore<StudentDetails> projectionStore)
 {
-    private readonly IProjectionStore _projectionStore;
-
     public async Task<StudentDetails?> GetStudentAsync(Guid studentId)
     {
-        return await _projectionStore.GetAsync<StudentDetails>(
-            "StudentDetails",
-            studentId.ToString());
+        return await projectionStore.GetAsync(studentId.ToString());
     }
 }
 ```
@@ -363,11 +359,18 @@ var query = Query.FromItems(new QueryItem
 [ProjectionDefinition("CourseEnrollmentCount")]
 public class CourseEnrollmentProjection : IProjectionDefinition<CourseEnrollmentState>
 {
+    public string ProjectionName => "CourseEnrollmentCount";
+
+    public string[] EventTypes => [nameof(StudentEnrolledToCourseEvent)];
+
+    public string KeySelector(SequencedEvent evt) =>
+        evt.Event.Tags.First(t => t.Key == "courseId").Value;
+
     public CourseEnrollmentState? Apply(CourseEnrollmentState? current, SequencedEvent evt)
     {
         return evt.Event.Event switch
         {
-            StudentEnrolledToCourseEvent =>
+            StudentEnrolledToCourseEvent when current is not null =>
                 current with { EnrollmentCount = current.EnrollmentCount + 1 },
             _ => current
         };
@@ -710,19 +713,22 @@ Opossum creates a **file-based database** with the following structure:
 
 ```
 D:\MyApp\EventStore\                 # RootPath
-└── MyApplicationContext\             # Context name
+└── MyApplicationContext\             # Store name
     ├── .ledger                       # Ledger file (current sequence position)
     ├── Events\                       # Event files (one per event)
     │   ├── 0000000001.json           # Event at position 1
     │   ├── 0000000002.json           # Event at position 2
     │   └── ...
-    └── Indices\                      # Index directories
-        ├── EventType\                # Index by event type
-        │   ├── StudentRegisteredEvent.idx
-        │   └── StudentEnrolledToCourseEvent.idx
-        └── Tags\                     # Index by tags
-            ├── studentId_123.idx     # All events with tag studentId=123
-            └── studentEmail_test@example.com.idx
+    ├── Indices\                      # Index directories
+    │   ├── EventType\                # Index by event type
+    │   │   ├── StudentRegisteredEvent.idx
+    │   │   └── StudentEnrolledToCourseEvent.idx
+    │   └── Tags\                     # Index by tags
+    │       ├── studentId_123.idx     # All events with tag studentId=123
+    │       └── studentEmail_test@example.com.idx
+    └── Projections\                  # Projection data (read models)
+        └── StudentDetails\
+            └── <student-guid>.json
 ```
 
 ### File Formats
@@ -785,11 +791,12 @@ Core event store operations:
 public interface IEventStore
 {
     // Append one or more events (position is assigned by the store)
-    Task AppendAsync(NewEvent[] events, AppendCondition? condition = null, CancellationToken ct = default);
+    Task AppendAsync(NewEvent[] events, AppendCondition? condition, CancellationToken ct = default);
 
     // Read events matching a query (returns sequenced events with positions)
-    // fromPosition: when provided, only events with Position > fromPosition are returned
-    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null);
+    // fromPosition: only events with Position > fromPosition are returned
+    // maxCount: cap the number of events returned (for paged reads)
+    Task<SequencedEvent[]> ReadAsync(Query query, ReadOption[]? readOptions, long? fromPosition = null, int? maxCount = null);
 
     // Read the single highest-position event matching a query — O(1) file reads
     // Returns null when no matching events exist

@@ -583,3 +583,91 @@ If you introduce breaking changes:
 - ✅ Get explicit approval from the user BEFORE implementation
 
 **NEVER claim a feature is complete without running the full test suite and confirming all tests pass.**
+
+## File Encoding — UTF-8 Preservation
+
+### CRITICAL RULE: Never Corrupt File Encoding
+
+All Markdown and source files in this repository are **UTF-8 encoded**. Special characters (emojis like ✅ ❌ ⭐ ⚠️, em-dashes —, arrows →) MUST be preserved exactly.
+
+### Rules
+
+1. **Never use unicode escape sequences (`\u00e2`, `\u015b`, etc.) when editing Markdown files.**
+   These represent raw UTF-8 byte values and will cause double-encoding corruption (e.g. ✅ becomes `âś…`).
+
+2. **When editing files that contain emojis or special Unicode characters:**
+   - ✅ Use `replace_string_in_file` with the literal characters copied from the file
+   - ✅ If the tool cannot match special characters, use PowerShell with explicit UTF-8:
+     ```powershell
+     $content = [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
+     $content = $content.Replace("old text", "new text")
+     [System.IO.File]::WriteAllText($path, $content, [System.Text.Encoding]::UTF8)
+     ```
+   - ❌ Never pass unicode escape sequences in `oldString` or `newString` parameters
+
+3. **After editing any Markdown file with special characters, verify encoding:**
+   ```powershell
+   [System.IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8).Contains("✅")
+   ```
+
+4. **Known corruption signatures to watch for:**
+   - `âś…` instead of `✅`
+   - `âťŚ` instead of `❌`
+   - `â€"` instead of `—`
+   - `â†'` instead of `→`
+   - Any `Ã` or `Â` characters appearing in Markdown prose
+
+   If you see these, the file has been double-encoded. Restore from git and re-apply changes using the PowerShell method above.
+
+## Documentation Accuracy — Source Code Is the Single Source of Truth
+
+### CRITICAL RULE: Every Code Example Must Match the Actual Codebase
+
+Documentation examples (README, docfx articles, guide files) MUST accurately reflect the real types, signatures, and patterns in `src/Opossum/`. **Never fabricate, simplify, or approximate an API.**
+
+### Before Writing Any Code Example
+
+1. **Look up the actual interface/class** using `get_symbols_by_name` or `find_symbol` before writing any code example that references it.
+2. **Verify all members** — if showing an `IProjectionDefinition<T>` implementation, include ALL required members (`ProjectionName`, `EventTypes`, `KeySelector`, `Apply`), not just `Apply`.
+3. **Verify method signatures** — check the actual parameter list (names, types, defaults). Do not add or remove parameters (e.g. `AppendCondition? condition = null` when the actual has no default, or omitting `maxCount` from `ReadAsync`).
+4. **Verify types exist** — do not reference `IProjectionStore` (non-generic) if only `IProjectionStore<TState>` exists. Do not reference `IMessageHandler<TMessage, TResponse>` if only `IMessageHandler` (non-generic) exists.
+
+### Directory and File Structure in Documentation
+
+When documenting the on-disk storage layout:
+- ✅ Check `StorageInitializer.cs` for the actual directory names (`Events/`, `Indices/`, `Projections/`, `.ledger`)
+- ✅ Check `EventFileManager.cs` for the actual file naming pattern (`{position:D10}.json` → `0000000001.json`)
+- ❌ Never guess directory names or file patterns — they are **case-sensitive** on some OS and must match the code exactly
+
+### Cross-Document Consistency
+
+**README.md and docfx articles MUST NOT contradict each other on how something works.**
+
+They may differ in:
+- ✅ Level of detail (README can be briefer)
+- ✅ Which features they showcase
+- ✅ Prose style and framing
+
+They must NOT differ in:
+- ❌ API signatures, type names, or method parameters
+- ❌ Required interface members shown in examples
+- ❌ On-disk file/directory names and structure
+- ❌ Business logic in code examples (e.g. which invariant checks a handler performs)
+
+**Verification step:** When changing a code example in any documentation file, search all other documentation files for the same type/method/pattern and ensure they are consistent:
+```powershell
+Select-String -Path "README.md","docs/docfx/articles/**/*.md" -Pattern "TheTypeOrMethodName" -Recurse
+```
+
+### Keeping Documentation Copies in Sync
+
+Files under `docs/docfx/articles/` that have a `<!-- source: docs/... — keep in sync -->` header are copies. When editing:
+
+1. **Always edit the source file first** (under `docs/`)
+2. **Then propagate to the docfx copy** using the UTF-8-safe PowerShell copy method:
+   ```powershell
+   $header = "<!-- source: docs/path/to/source.md — keep in sync -->`n`n"
+   $content = [System.IO.File]::ReadAllText("docs/path/to/source.md", [System.Text.Encoding]::UTF8)
+   [System.IO.File]::WriteAllText("docs/docfx/articles/target.md", $header + $content, [System.Text.Encoding]::UTF8)
+   ```
+3. **Never edit only the copy** — changes will be lost when the source is next synced

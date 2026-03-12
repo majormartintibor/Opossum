@@ -25,20 +25,20 @@ Opossum stores events as **individual JSON files** in a structured directory hie
 ```
 EventStore\
   MyApp\
-    events\
-      position_1.json      ← {"eventType":"StudentRegisteredEvent", "data":{...}, "tags":[...]}
-      position_2.json
-      position_3.json
-    index\
-      event-types\
-        StudentRegisteredEvent.idx   ← list of positions
+    .ledger                            ← tracks last committed position
+    Events\
+      0000000001.json                  ← {"eventType":"StudentRegisteredEvent", "data":{...}, "tags":[...]}
+      0000000002.json
+      0000000003.json
+    Indices\
+      EventType\
+        StudentRegisteredEvent.idx     ← list of positions
         CourseCreatedEvent.idx
-      tags\
-        studentId_abc123.idx         ← positions for tag "studentId:abc123"
-    ledger.json                      ← tracks last committed position
-    projections\
+      Tags\
+        studentId_abc123.idx           ← positions for tag "studentId:abc123"
+    Projections\
       StudentView\
-        abc123.json                  ← current state for key "abc123"
+        abc123.json                    ← current state for key "abc123"
 ```
 
 ### Why files?

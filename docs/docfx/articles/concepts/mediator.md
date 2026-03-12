@@ -137,11 +137,17 @@ public sealed class EnrollStudentToCourseCommandHandler()
         if (courseCapacity is null)
             return CommandResult.Fail("Course does not exist.");
 
+        if (studentLimit is null)
+            return CommandResult.Fail("Student is not registered.");
+
         if (alreadyEnrolled)
             return CommandResult.Fail("Student is already enrolled in this course.");
 
         if (courseCapacity.IsFull)
-            return CommandResult.Fail("Course is at maximum capacity.");
+            return CommandResult.Fail($"Course is at maximum capacity ({courseCapacity.MaxCapacity} students).");
+
+        if (studentLimit.IsAtLimit)
+            return CommandResult.Fail($"Student has reached their enrollment limit ({studentLimit.MaxAllowed} courses for {studentLimit.Tier} tier).");
 
         NewEvent enrollmentEvent = new StudentEnrolledToCourseEvent(
                 CourseId: command.CourseId,

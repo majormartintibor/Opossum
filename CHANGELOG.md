@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `quick-start.md`: fixed `IProjectionStore` usage to the correct generic form `IProjectionStore<StudentView>` with the correct `GetAsync(key)` signature.
 - `mediator.md`: fixed `options.ScanAssembly()` (method does not exist on `MediatorOptions`) to `options.Assemblies.Add()`.
 - `mediator.md`: same `DomainEventBuilder` append fix applied to the handler code example.
+- **README ↔ docfx contradiction fixes (cross-documentation review):**
+  - **README Section 7:** replaced non-generic `IProjectionStore` with `GetAsync<T>("name", key)` with the actual generic `IProjectionStore<StudentDetails>` using `GetAsync(key)`.
+  - **README Core Concepts Projection:** added missing `ProjectionName`, `EventTypes`, and `KeySelector` members required by `IProjectionDefinition<T>`.
+  - **README API Reference `IEventStore`:** added missing `maxCount` parameter to `ReadAsync` signature; removed incorrect `= null` default from `AppendAsync` condition parameter.
+  - **README disk layout:** changed `Context name` comment to `Store name`; added `Projections\` directory (capital P) matching actual code.
+  - **README:** replaced `new[]` with collection expression and `!= null` with `is not null` for style consistency.
+  - **`quick-start.md` disk layout:** corrected `events/` → `Events/`, `index/event-types/` → `Indices/EventType/`, `tags/` → `Indices/Tags/`, `ledger.json` → `.ledger`, `position_1.json` → `0000000001.json`, `projections/` → `Projections/` — all matching actual `StorageInitializer` path constants.
+  - **`event-store.md` disk layout:** applied same directory naming corrections.
+  - **`mediator.md` enrollment handler:** added missing `studentLimit is null` and `studentLimit.IsAtLimit` checks to match actual `EnrollStudentToCourseCommandHandler` source and README.
 - `mediator.md`: fixed `GetStudentHandler` to use `IProjectionStore<StudentView>` with the correct `GetAsync(key)` signature.
 - `mediator.md`: corrected the claim that handlers are registered as transient DI services — they are discovered by reflection at startup and stored in the mediator's internal handler map.
 

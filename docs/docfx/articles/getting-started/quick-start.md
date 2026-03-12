@@ -228,16 +228,16 @@ After running the above, your event store directory looks like:
 ```
 D:\MyData\EventStore\
   QuickStart\
-    events\
-      position_1.json
-      position_2.json
-    index\
-      event-types\
+    .ledger
+    Events\
+      0000000001.json
+      0000000002.json
+    Indices\
+      EventType\
         StudentRegisteredEvent.idx
-      tags\
+      Tags\
         studentId_<guid>.idx
-    ledger.json
-    projections\
+    Projections\
       StudentView\
         <student-guid>.json
 ```
