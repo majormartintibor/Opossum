@@ -7,6 +7,7 @@ Opossum turns your file system into a fully functional event store with projecti
 [![NuGet](https://img.shields.io/nuget/v/Opossum.svg)](https://www.nuget.org/packages/Opossum/)
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue.svg)](https://dotnet.microsoft.com/download)
 [![License](https://img.shields.io/github/license/majormartintibor/Opossum.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-gh--pages-blue)](https://majormartintibor.github.io/Opossum/)
 
 ---
 

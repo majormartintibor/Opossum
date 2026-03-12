@@ -13,7 +13,7 @@
     <Product>Opossum</Product>
     <Description>A file system-based event store for .NET that implements the DCB (Dynamic Consistency Boundaries) specification. Perfect for offline-first applications, on-premises deployments, and scenarios where simplicity matters more than cloud-scale distribution.</Description>
     <PackageTags>event-sourcing;eventsourcing;event-store;eventstore;dcb;cqrs;domain-driven-design;ddd;filesystem;offline-first;projections</PackageTags>
-    <PackageProjectUrl>https://github.com/majormartintibor/Opossum</PackageProjectUrl>
+    <PackageProjectUrl>https://majormartintibor.github.io/Opossum/</PackageProjectUrl>
     <RepositoryUrl>https://github.com/majormartintibor/Opossum</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

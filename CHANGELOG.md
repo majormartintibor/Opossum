@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- DocFX documentation website scaffolded under `docs/docfx/` with full article hierarchy (Getting Started, Concepts, Guides, Architecture Decisions) and auto-generated API reference from XML doc comments.
+- GitHub Actions workflow (`.github/workflows/docs.yml`) that builds and deploys the site to GitHub Pages on every push to `master`.
+- Documentation site live at `https://majormartintibor.github.io/Opossum/`.
+- Docs badge added to `README.md`.
+- `PackageProjectUrl` in `Opossum.csproj` updated to point to the documentation site.
+
 ---
 
 ## [0.5.0-preview.1] - 2026-03-11

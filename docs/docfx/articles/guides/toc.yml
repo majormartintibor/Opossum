@@ -1,0 +1,6 @@
+- name: Use Cases
+  href: use-cases.md
+- name: Durability Guarantees
+  href: durability.md
+- name: Configuration Validation
+  href: configuration-validation.md

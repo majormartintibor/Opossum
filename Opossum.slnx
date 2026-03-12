@@ -5,6 +5,7 @@
   </Folder>
   <Folder Name="/.github/workflows/">
     <File Path=".github/workflows/ci.yml" />
+    <File Path=".github/workflows/docs.yml" />
     <File Path=".github/workflows/samples-ci.yml" />
   </Folder>
     <Folder Name="/docs/">
@@ -129,7 +130,40 @@
     <File Path="docs/benchmarking/results/20260311/Opossum.BenchmarkTests.Projections.ParallelRebuildBenchmarks-report-github.md" />
     <File Path="docs/benchmarking/results/20260311/Opossum.BenchmarkTests.Projections.ProjectionRebuildBenchmarks-report-github.md" />
   </Folder>
-  <Folder Name="/docs/decisions/">
+  <Folder Name="/docs/docfx/">
+    <File Path="docs/docfx/docfx.json" />
+    <File Path="docs/docfx/index.md" />
+    <File Path="docs/docfx/toc.yml" />
+  </Folder>
+  <Folder Name="/docs/docfx/articles/">
+    <File Path="docs/docfx/articles/toc.yml" />
+  </Folder>
+  <Folder Name="/docs/docfx/articles/concepts/">
+    <File Path="docs/docfx/articles/concepts/dcb.md" />
+    <File Path="docs/docfx/articles/concepts/event-store.md" />
+    <File Path="docs/docfx/articles/concepts/mediator.md" />
+    <File Path="docs/docfx/articles/concepts/projections.md" />
+    <File Path="docs/docfx/articles/concepts/toc.yml" />
+  </Folder>
+  <Folder Name="/docs/docfx/articles/decisions/">
+    <File Path="docs/docfx/articles/decisions/adr-001.md" />
+    <File Path="docs/docfx/articles/decisions/adr-003.md" />
+    <File Path="docs/docfx/articles/decisions/adr-004.md" />
+    <File Path="docs/docfx/articles/decisions/adr-005.md" />
+    <File Path="docs/docfx/articles/decisions/toc.yml" />
+  </Folder>
+  <Folder Name="/docs/docfx/articles/getting-started/">
+    <File Path="docs/docfx/articles/getting-started/configuration.md" />
+    <File Path="docs/docfx/articles/getting-started/installation.md" />
+    <File Path="docs/docfx/articles/getting-started/quick-start.md" />
+    <File Path="docs/docfx/articles/getting-started/toc.yml" />
+  </Folder>
+  <Folder Name="/docs/docfx/articles/guides/">
+    <File Path="docs/docfx/articles/guides/configuration-validation.md" />
+    <File Path="docs/docfx/articles/guides/durability.md" />
+    <File Path="docs/docfx/articles/guides/toc.yml" />
+    <File Path="docs/docfx/articles/guides/use-cases.md" />
+  </Folder>  <Folder Name="/docs/decisions/">
     <File Path="docs/decisions/001-configureawait-implementation.md" />
     <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
     <File Path="docs/decisions/003-iasyncenumerable-not-implemented.md" />

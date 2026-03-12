@@ -1,7 +1,7 @@
 # Documentation Website Plan — DocFX + GitHub Pages
 
 **Date:** 2025-06-11  
-**Status:** 📋 Planned — not yet implemented  
+**Status:** ✅ Implemented — 2025-06-11  
 **Chosen tool:** [DocFX](https://dotnet.github.io/docfx/)  
 **Target host:** GitHub Pages (`gh-pages` branch)
 

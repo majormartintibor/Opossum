@@ -366,3 +366,7 @@ FodyWeavers.xsd
 
 # Benchmark results (daily runs)
 docs/benchmarking/results/
+
+# DocFX build output (regenerated on every build)
+docs/docfx/_site/
+docs/docfx/api/

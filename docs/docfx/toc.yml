@@ -1,0 +1,17 @@
+- name: Getting Started
+  href: articles/getting-started/toc.yml
+  topicHref: articles/getting-started/installation.md
+
+- name: Concepts
+  href: articles/concepts/toc.yml
+  topicHref: articles/concepts/event-store.md
+
+- name: Guides
+  href: articles/guides/toc.yml
+  topicHref: articles/guides/use-cases.md
+
+- name: Architecture Decisions
+  href: articles/decisions/toc.yml
+
+- name: API Reference
+  href: api/

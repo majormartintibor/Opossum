@@ -1,0 +1,48 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [ "src/Opossum/Opossum.csproj" ],
+          "src": "../.."
+        }
+      ],
+      "dest": "api",
+      "disableGitFeatures": false,
+      "disableDefaultFilter": false
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [ "api/**.yml", "api/index.md" ]
+      },
+      {
+        "files": [
+          "index.md",
+          "toc.yml",
+          "articles/**/*.md",
+          "articles/**/toc.yml"
+        ]
+      }
+    ],
+    "resource": [
+      { "files": [ "images/**" ] }
+    ],
+    "output": "_site",
+    "template": [ "default", "modern" ],
+    "globalMetadata": {
+      "_appName": "Opossum",
+      "_appTitle": "Opossum — File System Event Store",
+      "_appFooter": "Opossum — MIT License",
+      "_enableSearch": true,
+      "_gitContribute": {
+        "repo": "https://github.com/majormartintibor/Opossum",
+        "branch": "master",
+        "apiSpecFolder": "docs/docfx/api"
+      }
+    },
+    "fileMetadata": {},
+    "postProcessors": []
+  }
+}

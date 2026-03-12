@@ -1,0 +1,14 @@
+- name: Getting Started
+  href: getting-started/toc.yml
+  topicHref: getting-started/installation.md
+
+- name: Concepts
+  href: concepts/toc.yml
+  topicHref: concepts/event-store.md
+
+- name: Guides
+  href: guides/toc.yml
+  topicHref: guides/use-cases.md
+
+- name: Architecture Decisions
+  href: decisions/toc.yml
