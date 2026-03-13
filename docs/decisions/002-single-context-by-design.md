@@ -1,6 +1,4 @@
-<!-- source: docs/decisions/004-single-context-by-design.md � keep in sync -->
-
-# ADR-004: Single Context by Design — Multi-Context Support Will Not Be Implemented
+# ADR-002: Single Context by Design — Multi-Context Support Will Not Be Implemented
 
 **Date:** 2026-03-01
 **Status:** ❌ Closed — Will Not Implement

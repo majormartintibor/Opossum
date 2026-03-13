@@ -1,8 +1,6 @@
-- name: ADR-001 — ConfigureAwait
+- name: ADR-001 — IAsyncEnumerable
   href: adr-001.md
-- name: ADR-003 — IAsyncEnumerable
+- name: ADR-002 — Single Context
+  href: adr-002.md
+- name: ADR-003 — Cross-Process Safety
   href: adr-003.md
-- name: ADR-004 — Single Context
-  href: adr-004.md
-- name: ADR-005 — Cross-Process Safety
-  href: adr-005.md

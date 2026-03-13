@@ -1,4 +1,4 @@
-# ADR-003: Decision Not to Implement `IAsyncEnumerable<SequencedEvent>` on `IEventStore.ReadAsync`
+# ADR-001: Decision Not to Implement `IAsyncEnumerable<SequencedEvent>` on `IEventStore.ReadAsync`
 
 **Date:** 2026-03-01
 **Status:** ❌ Closed — Will Not Implement (may be re-evaluated if deployment profile changes)

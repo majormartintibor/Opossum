@@ -1,4 +1,4 @@
-# Copilot Instructions
+﻿# Copilot Instructions
 
 ## What is Opossum?
 Opossum is a .NET library that turns your file system into an event store database.
@@ -142,9 +142,8 @@ copies of files from `docs/`. When the source file changes, update the copy in
 | `docs/guides/durability-quick-reference.md` | `guides/durability.md` |
 | `docs/configuration-validation.md` | `guides/configuration-validation.md` |
 | `docs/decisions/001-*.md` | `decisions/adr-001.md` |
+| `docs/decisions/002-*.md` | `decisions/adr-002.md` |
 | `docs/decisions/003-*.md` | `decisions/adr-003.md` |
-| `docs/decisions/004-*.md` | `decisions/adr-004.md` |
-| `docs/decisions/005-*.md` | `decisions/adr-005.md` |
 
 #### Local verification before committing
 

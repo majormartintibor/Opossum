@@ -1,4 +1,4 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/.github/">
     <File Path=".github/copilot-instructions.md" />
     <File Path=".github/pull_request_template.md" />
@@ -36,9 +36,9 @@
     <File Path="docs/analysis/prevent-record-duplication-feasibility.md" />
     <File Path="docs/analysis/throughput-research-and-improvement-paths.md" />
     <File Path="docs/analysis/unique-username-feasibility.md" />
+    <File Path="docs/analysis/nuget-release-readiness-assessment.md" />
     <File Path="docs/analysis/use-case-fit-post-adr005.md" />
   </Folder>
-  <Folder Name="/docs/architecture/" />
   <Folder Name="/docs/benchmarking/" />
   <Folder Name="/docs/benchmarking/results/" />
   <Folder Name="/docs/benchmarking/results/20260212/">
@@ -147,9 +147,8 @@
   </Folder>
   <Folder Name="/docs/docfx/articles/decisions/">
     <File Path="docs/docfx/articles/decisions/adr-001.md" />
+    <File Path="docs/docfx/articles/decisions/adr-002.md" />
     <File Path="docs/docfx/articles/decisions/adr-003.md" />
-    <File Path="docs/docfx/articles/decisions/adr-004.md" />
-    <File Path="docs/docfx/articles/decisions/adr-005.md" />
     <File Path="docs/docfx/articles/decisions/toc.yml" />
   </Folder>
   <Folder Name="/docs/docfx/articles/getting-started/">
@@ -164,11 +163,9 @@
     <File Path="docs/docfx/articles/guides/toc.yml" />
     <File Path="docs/docfx/articles/guides/use-cases.md" />
   </Folder>  <Folder Name="/docs/decisions/">
-    <File Path="docs/decisions/001-configureawait-implementation.md" />
-    <File Path="docs/decisions/002-nuget-release-readiness-assessment.md" />
-    <File Path="docs/decisions/003-iasyncenumerable-not-implemented.md" />
-    <File Path="docs/decisions/004-single-context-by-design.md" />
-    <File Path="docs/decisions/005-cross-process-append-safety.md" />
+    <File Path="docs/decisions/001-iasyncenumerable-not-implemented.md" />
+    <File Path="docs/decisions/002-single-context-by-design.md" />
+    <File Path="docs/decisions/003-cross-process-append-safety.md" />
     <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
   <Folder Name="/docs/design/">
