@@ -2,9 +2,9 @@
 <html>
   <head>
     <meta charset="utf-8">
-      <title>ConfigureAwait(false) Implementation - COMPLETE! &#127881; | Opossum — File System Event Store </title>
+      <title>ADR-001: Decision Not to Implement IAsyncEnumerable&lt;SequencedEvent&gt; on IEventStore.ReadAsync | Opossum — File System Event Store </title>
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <meta name="title" content="ConfigureAwait(false) Implementation - COMPLETE! &#127881; | Opossum — File System Event Store ">
+      <meta name="title" content="ADR-001: Decision Not to Implement IAsyncEnumerable&lt;SequencedEvent&gt; on IEventStore.ReadAsync | Opossum — File System Event Store ">
       
       
       <link rel="icon" href="../../favicon.ico">
@@ -85,399 +85,170 @@
         </div>
 
         <article data-uid="">
-<h1 id="configureawaitfalse-implementation---complete-">ConfigureAwait(false) Implementation - COMPLETE! 🎉</h1>
-<!-- source: docs/decisions/001-configureawait-implementation.md � keep in sync -->
+<h1 id="adr-001-decision-not-to-implement-iasyncenumerablesequencedevent-on-ieventstorereadasync">ADR-001: Decision Not to Implement <code>IAsyncEnumerable&lt;SequencedEvent&gt;</code> on <code>IEventStore.ReadAsync</code></h1>
+<!-- source: docs/decisions/001-iasyncenumerable-not-implemented.md � keep in sync -->
 
-<h2 id="status--100-complete">Status: ✅ 100% COMPLETE</h2>
-<p><strong>Date:</strong> 2025-01-28<br>
-<strong>Branch:</strong> <code>feature/parallel-reads</code><br>
-<strong>Total Files Updated:</strong> 13 files<br>
-<strong>Total Awaits Updated:</strong> ~105 awaits<br>
-<strong>Build Status:</strong> ✅ Successful<br>
-<strong>Unit Tests:</strong> ✅ 512/512 passing<br>
-<strong>Integration Tests:</strong> ✅ 97/97 passing</p>
+<p><strong>Date:</strong> 2026-03-01
+<strong>Status:</strong> ❌ Closed — Will Not Implement (may be re-evaluated if deployment profile changes)</p>
 <hr>
-<h2 id="all-files-completed-">All Files Completed ✅</h2>
-<h3 id="phase-1-critical-files-previously-done">Phase 1: Critical Files (Previously Done)</h3>
+<h2 id="context">Context</h2>
+<p>Item 2 of the 0.3.0-preview.1 roadmap proposed changing <code>IEventStore.ReadAsync</code> from
+returning <code>Task&lt;SequencedEvent[]&gt;</code> to <code>IAsyncEnumerable&lt;SequencedEvent&gt;</code>, motivated by:</p>
+<ul>
+<li><strong>Memory pressure</strong> on large reads — 134,000 events × ~7 KB/event ≈ 938 MB heap during a full rebuild</li>
+<li><strong>Latency to first event</strong> — projection rebuilds cannot start processing until all events are deserialised</li>
+<li><strong>DCB specification language</strong> — the spec SHOULD clause recommends &quot;some form of iterable or reactive stream&quot;</li>
+</ul>
+<p>The proposal seemed straightforward on paper. When evaluated against the actual codebase and
+deployment profile, the trade-offs did not support the change.</p>
+<hr>
+<h2 id="what-the-roadmap-got-wrong">What the Roadmap Got Wrong</h2>
+<p>The roadmap's implementation note assumed a sequential accumulator was the bottleneck:</p>
+<blockquote>
+<p><code>EventFileManager.ReadEventsAsync</code> reads each event file in a loop and collects results
+into a <code>List&lt;SequencedEvent&gt;</code> before converting to an array.</p>
+</blockquote>
+<p><strong>This was already fixed.</strong> The actual production implementation uses <code>Parallel.ForEachAsync</code>
+for batches of 10 or more events:</p>
+<pre><code class="lang-csharp">// EventFileManager.ReadEventsAsync — current implementation
+await Parallel.ForEachAsync(
+    Enumerable.Range(0, positions.Length),
+    new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount * 2 },
+    async (i, ct) =&gt;
+    {
+        parallelEvents[i] = await ReadEventAsync(eventsPath, positions[i]).ConfigureAwait(false);
+    }).ConfigureAwait(false);
+</code></pre>
+<p>The comment in that code is explicit: <em>&quot;2x CPU count for I/O-bound work to keep SSD saturated —
+benchmark results show 2x is optimal.&quot;</em> This parallel I/O strategy is the primary driver of
+the real-world improvement from <strong>3 hours to 18 minutes</strong> when rebuilding 52,000 projections
+from 134,000 events.</p>
+<hr>
+<h2 id="the-core-trade-off">The Core Trade-off</h2>
+<p>A naive <code>IAsyncEnumerable</code> implementation replaces <code>Parallel.ForEachAsync</code> with sequential reads:</p>
+<pre><code class="lang-csharp">// Naive streaming — loses all parallel I/O benefit
+foreach (var position in positions)
+    yield return await ReadEventAsync(eventsPath, position).ConfigureAwait(false);
+</code></pre>
+<p>For the known real-world workload (134,000 events, 18-minute rebuild), this regression would
+likely take rebuild time from 18 minutes back toward the original 3 hours.</p>
+<h3 id="can-the-parallelism-be-preserved-in-a-streaming-model">Can the parallelism be preserved in a streaming model?</h3>
+<p>Yes, via a <code>Channel&lt;T&gt;</code>-based prefetcher that reads ahead in parallel while the caller
+processes the current event. But this approach has significant problems:</p>
 <ol>
-<li>✅ <code>EventFileManager.cs</code> - 5 awaits</li>
-<li>✅ <code>FileSystemProjectionStore.cs</code> - 23 awaits</li>
-<li>✅ <code>FileSystemEventStore.cs</code> - 13 awaits</li>
-<li>✅ <code>Mediator.cs</code> - 1 await</li>
-<li>✅ <code>ReflectionMessageHandler.cs</code> - 1 await</li>
-</ol>
-<h3 id="phase-2-remaining-files-just-completed">Phase 2: Remaining Files (Just Completed)</h3>
-<ol start="6">
-<li>✅ <code>LedgerManager.cs</code> - 11 awaits</li>
-<li>✅ <code>TagIndex.cs</code> - 10 awaits</li>
-<li>✅ <code>EventTypeIndex.cs</code> - 10 awaits</li>
-<li>✅ <code>IndexManager.cs</code> - 6 awaits</li>
-<li>✅ <code>ProjectionManager.cs</code> - 10 awaits (2 pre-existing + 8 new)</li>
-<li>✅ <code>ProjectionDaemon.cs</code> - 8 awaits</li>
-<li>✅ <code>ProjectionTagIndex.cs</code> - 9 awaits</li>
-<li>✅ <code>ProjectionMetadataIndex.cs</code> - 8 awaits</li>
+<li><p><strong>Ordering.</strong> <code>Parallel.ForEachAsync</code> completes tasks in arbitrary order. Projection
+rebuilds require strictly ascending position order. A parallel prefetcher produces
+out-of-order events that must be buffered and reordered before yielding — adding a
+sorting/reordering stage that grows with parallelism degree and event payload size.</p>
+</li>
+<li><p><strong>Complexity.</strong> A correct, backpressure-aware, ordered parallel prefetcher is
+non-trivial to implement and test. It requires bounded channels, reorder buffers,
+and careful cancellation handling. This complexity is disproportionate to the benefit
+for Opossum's target deployment scale.</p>
+</li>
+<li><p><strong>It's still a breaking API change.</strong> Every caller — <code>DecisionModelExtensions</code>,
+<code>ProjectionManager</code>, <code>ProjectionDaemon</code>, all tests — would need to be migrated.</p>
+</li>
 </ol>
 <hr>
-<h2 id="summary-by-file">Summary by File</h2>
+<h2 id="how-other-net-event-sourcing-frameworks-approach-this">How Other .NET Event Sourcing Frameworks Approach This</h2>
 <table>
 <thead>
 <tr>
-<th>File</th>
-<th>Awaits Fixed</th>
-<th>Complexity</th>
-<th>Status</th>
+<th>Framework</th>
+<th>Read return type</th>
+<th>Why</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>LedgerManager.cs</td>
-<td>11</td>
-<td>High (retry logic, atomic ops)</td>
-<td>✅ Complete</td>
+<td><strong>EventStoreDB client</strong></td>
+<td><code>IAsyncEnumerable&lt;ResolvedEvent&gt;</code></td>
+<td>Data arrives over gRPC — inherently a network stream; no array to pre-build</td>
 </tr>
 <tr>
-<td>TagIndex.cs</td>
-<td>10</td>
-<td>High (retry logic, atomic moves)</td>
-<td>✅ Complete</td>
+<td><strong>Marten</strong> (PostgreSQL)</td>
+<td><code>IReadOnlyList&lt;IEvent&gt;</code></td>
+<td>PostgreSQL result sets are materialised; streaming exists on the query side, not event reads</td>
 </tr>
 <tr>
-<td>EventTypeIndex.cs</td>
-<td>10</td>
-<td>High (retry logic, atomic moves)</td>
-<td>✅ Complete</td>
+<td><strong>NEventStore</strong></td>
+<td><code>IEnumerable&lt;ICommit&gt;</code></td>
+<td>Synchronous, materialised; backed by SQL/MongoDB</td>
 </tr>
 <tr>
-<td>IndexManager.cs</td>
-<td>6</td>
-<td>Medium (coordination)</td>
-<td>✅ Complete</td>
-</tr>
-<tr>
-<td>ProjectionManager.cs</td>
-<td>8 new</td>
-<td>Medium (checkpoints, rebuilds)</td>
-<td>✅ Complete</td>
-</tr>
-<tr>
-<td>ProjectionDaemon.cs</td>
-<td>8</td>
-<td>Medium (background service)</td>
-<td>✅ Complete</td>
-</tr>
-<tr>
-<td>ProjectionTagIndex.cs</td>
-<td>9</td>
-<td>High (concurrent dictionaries)</td>
-<td>✅ Complete</td>
-</tr>
-<tr>
-<td>ProjectionMetadataIndex.cs</td>
-<td>8</td>
-<td>Medium (caching, persistence)</td>
-<td>✅ Complete</td>
+<td><strong>SqlStreamStore</strong></td>
+<td>Page-based: array per page + cursor</td>
+<td>Explicitly paginated; callers request the next page</td>
 </tr>
 </tbody>
 </table>
+<p>The pattern is clear: frameworks that use <code>IAsyncEnumerable</code> do so because their data
+source is an inherently incremental network stream (gRPC, database cursor over a socket).
+For Opossum, data is on the <strong>local file system</strong> and the parallel I/O model is the right
+fit for that transport.</p>
 <hr>
-<h2 id="test-results">Test Results</h2>
-<h3 id="build">Build</h3>
-<pre><code>✅ Build successful
-No errors, no warnings
-</code></pre>
-<h3 id="unit-tests">Unit Tests</h3>
-<pre><code>✅ 512 tests passing
-✅ 0 tests failing
-✅ Duration: 28.3s
-✅ No behavioral changes detected
-</code></pre>
-<h3 id="integration-tests">Integration Tests</h3>
-<pre><code>✅ 97 tests passing
-✅ 0 tests failing
-✅ Duration: 54.7s
-✅ No regressions found
-</code></pre>
-<hr>
-<h2 id="changes-made-per-file">Changes Made Per File</h2>
-<h3 id="1-ledgermanagercs-11-awaits">1. LedgerManager.cs (11 awaits)</h3>
+<h2 id="opossums-deployment-profile-does-not-require-streaming">Opossum's Deployment Profile Does Not Require Streaming</h2>
+<p>The README is explicit about target use cases:</p>
+<blockquote>
+<p>Perfect for scenarios where simplicity, offline operation, and local data sovereignty
+matter more than cloud scalability.</p>
+<p>✅ Single server/small deployment (&lt; 100k events/day)
+✅ Offline-first requirements
+✅ POS systems, field service, SMB ERP</p>
+</blockquote>
+<p>In this profile:</p>
 <ul>
-<li><code>GetNextSequencePositionAsync()</code> - GetLastSequencePositionAsync call</li>
-<li><code>GetLastSequencePositionAsync()</code> - JsonSerializer.DeserializeAsync (2x), Task.Delay (2x retry loops)</li>
-<li><code>UpdateSequencePositionAsync()</code> - JsonSerializer.SerializeAsync, FlushAsync, AtomicMoveWithRetryAsync</li>
-<li><code>AtomicMoveWithRetryAsync()</code> - Task.Delay (2x retry loops)</li>
-<li><code>AcquireLockAsync()</code> - File.WriteAllTextAsync</li>
-<li><code>LedgerLock.DisposeAsync()</code> - FileStream.DisposeAsync</li>
-</ul>
-<h3 id="2-tagindexcs-10-awaits">2. TagIndex.cs (10 awaits)</h3>
-<ul>
-<li><code>AddPositionAsync()</code> - SemaphoreSlim.WaitAsync, ReadPositionsAsync, WritePositionsAsync</li>
-<li><code>GetPositionsAsync()</code> - ReadPositionsAsync</li>
-<li><code>ReadPositionsAsync()</code> - File.ReadAllTextAsync (2x), Task.Delay (2x retry loops)</li>
-<li><code>WritePositionsAsync()</code> - StreamWriter.WriteAsync, StreamWriter.FlushAsync, AtomicMoveWithRetryAsync</li>
-<li><code>AtomicMoveWithRetryAsync()</code> - Task.Delay (2x retry loops)</li>
-</ul>
-<h3 id="3-eventtypeindexcs-10-awaits">3. EventTypeIndex.cs (10 awaits)</h3>
-<ul>
-<li>Same structure as TagIndex.cs</li>
-<li><code>AddPositionAsync()</code> - SemaphoreSlim.WaitAsync, ReadPositionsAsync, WritePositionsAsync</li>
-<li><code>GetPositionsAsync()</code> - ReadPositionsAsync</li>
-<li><code>ReadPositionsAsync()</code> - File.ReadAllTextAsync (2x), Task.Delay (2x retry loops)</li>
-<li><code>WritePositionsAsync()</code> - StreamWriter.WriteAsync, StreamWriter.FlushAsync, AtomicMoveWithRetryAsync</li>
-<li><code>AtomicMoveWithRetryAsync()</code> - Task.Delay (2x retry loops)</li>
-</ul>
-<h3 id="4-indexmanagercs-6-awaits">4. IndexManager.cs (6 awaits)</h3>
-<ul>
-<li><code>AddEventToIndicesAsync()</code> - EventTypeIndex.AddPositionAsync, TagIndex.AddPositionAsync (loop)</li>
-<li><code>GetPositionsByEventTypeAsync()</code> - EventTypeIndex.GetPositionsAsync</li>
-<li><code>GetPositionsByEventTypesAsync()</code> - EventTypeIndex.GetPositionsAsync (loop)</li>
-<li><code>GetPositionsByTagAsync()</code> - TagIndex.GetPositionsAsync</li>
-<li><code>GetPositionsByTagsAsync()</code> - TagIndex.GetPositionsAsync (loop)</li>
-</ul>
-<h3 id="5-projectionmanagercs-8-new-awaits">5. ProjectionManager.cs (8 new awaits)</h3>
-<ul>
-<li><code>RebuildAsync()</code> - ClearAsync, ApplyAsync (loop), SaveCheckpointAsync
-<ul>
-<li>Note: Lines 88 and 98 already had ConfigureAwait(false) from earlier work</li>
-</ul>
-</li>
-<li><code>UpdateAsync()</code> - ApplyAsync (loop), SaveCheckpointAsync</li>
-<li><code>GetCheckpointAsync()</code> - File.ReadAllTextAsync</li>
-<li><code>SaveCheckpointAsync()</code> - GetCheckpointAsync, File.WriteAllTextAsync</li>
-</ul>
-<h3 id="6-projectiondaemoncs-8-awaits">6. ProjectionDaemon.cs (8 awaits)</h3>
-<ul>
-<li><code>ExecuteAsync()</code> - Task.Delay (startup), RebuildMissingProjectionsAsync, ProcessNewEventsAsync, Task.Delay (polling loop)</li>
-<li><code>RebuildMissingProjectionsAsync()</code> - GetCheckpointAsync, RebuildAsync</li>
-<li><code>ProcessNewEventsAsync()</code> - GetCheckpointAsync (loop), ReadAsync, UpdateAsync (batch loop)</li>
-</ul>
-<h3 id="7-projectiontagindexcs-9-awaits">7. ProjectionTagIndex.cs (9 awaits)</h3>
-<ul>
-<li><code>AddProjectionAsync()</code> - SemaphoreSlim.WaitAsync, File.ReadAllTextAsync, File.WriteAllTextAsync</li>
-<li><code>RemoveProjectionAsync()</code> - SemaphoreSlim.WaitAsync, File.ReadAllTextAsync, File.WriteAllTextAsync</li>
-<li><code>GetProjectionKeysByTagAsync()</code> - SemaphoreSlim.WaitAsync, File.ReadAllTextAsync</li>
-<li><code>GetProjectionKeysByTagsAsync()</code> - GetProjectionKeysByTagAsync (single tag path), GetProjectionKeysByTagAsync (multi-tag loop)</li>
-<li><code>UpdateProjectionTagsAsync()</code> - RemoveProjectionAsync (loop), AddProjectionAsync (loop)</li>
-</ul>
-<h3 id="8-projectionmetadataindexcs-8-awaits">8. ProjectionMetadataIndex.cs (8 awaits)</h3>
-<ul>
-<li><code>SaveAsync()</code> - SemaphoreSlim.WaitAsync, PersistIndexAsync</li>
-<li><code>GetAsync()</code> - LoadIndexAsync</li>
-<li><code>GetAllAsync()</code> - LoadIndexAsync</li>
-<li><code>GetUpdatedSinceAsync()</code> - LoadIndexAsync</li>
-<li><code>DeleteAsync()</code> - SemaphoreSlim.WaitAsync, PersistIndexAsync</li>
-<li><code>ClearAsync()</code> - SemaphoreSlim.WaitAsync</li>
-<li><code>LoadIndexAsync()</code> - SemaphoreSlim.WaitAsync, File.ReadAllTextAsync</li>
-<li><code>PersistIndexAsync()</code> - File.WriteAllTextAsync</li>
+<li><strong>Full projection rebuilds are rare</strong> — they happen at startup after a crash, during
+schema migrations, or during development. They are not on the hot path.</li>
+<li><strong>Incremental updates are the hot path</strong> — 10–11 µs/event, already excellent.</li>
+<li><strong>938 MB during a rare cold rebuild is acceptable</strong> on any modern POS machine or
+SMB server (typically 8–32 GB RAM).</li>
+<li><strong>There is no backpressure producer</strong> — data is already on the local disk, not
+arriving over a network where flow control matters.</li>
 </ul>
 <hr>
-<h2 id="code-coverage">Code Coverage</h2>
-<h3 id="library-code-srcopossum">Library Code (<code>src/Opossum/</code>)</h3>
-<p>✅ <strong>100% of async methods now use ConfigureAwait(false)</strong></p>
-<p><strong>Breakdown:</strong></p>
+<h2 id="what-to-do-if-memory-does-become-a-concern">What to Do If Memory Does Become a Concern</h2>
+<p>If a future deployment profile genuinely requires bounded memory during projection rebuilds
+(e.g. very large stores on constrained hardware), the correct fix is <strong>chunked reading
+inside <code>ProjectionManager.RebuildAsync</code></strong>, not a change to <code>IEventStore</code>:</p>
+<pre><code class="lang-csharp">// ProjectionManager.RebuildAsync — chunked approach (not yet implemented)
+long checkpoint = 0;
+do {
+    var chunk = await _eventStore.ReadAsync(Query.All(), null, fromPosition: checkpoint);
+    if (chunk.Length == 0) break;
+    foreach (var evt in chunk)
+        await registration.ApplyAsync(evt, ct);
+    checkpoint = chunk[^1].Position;
+} while (chunk.Length == _projectionOptions.RebuildChunkSize);
+</code></pre>
+<p>This gives bounded memory with:</p>
 <ul>
-<li>Storage layer: 100% ✅</li>
-<li>Projections layer: 100% ✅</li>
-<li>Mediator: 100% ✅</li>
+<li>Zero public API change on <code>IEventStore</code></li>
+<li>Full preservation of <code>Parallel.ForEachAsync</code> within each chunk</li>
+<li>A configurable <code>RebuildChunkSize</code> on <code>ProjectionOptions</code></li>
 </ul>
-<h3 id="application-code-samples-tests">Application Code (Samples, Tests)</h3>
-<p>❌ <strong>Intentionally NOT updated</strong> (application code should NOT use ConfigureAwait(false))</p>
+<p>This approach should be revisited as a backlog item if real-world memory pressure is
+reported by users.</p>
 <hr>
-<h2 id="infrastructure-setup">Infrastructure Setup</h2>
-<h3 id="1-analyzer-package">1. Analyzer Package</h3>
-<pre><code class="lang-xml">&lt;!-- Directory.Packages.props --&gt;
-&lt;PackageVersion Include=&quot;Microsoft.VisualStudio.Threading.Analyzers&quot; Version=&quot;17.12.19&quot; /&gt;
-</code></pre>
-<h3 id="2-project-configuration">2. Project Configuration</h3>
-<pre><code class="lang-xml">&lt;!-- src/Opossum/Opossum.csproj --&gt;
-&lt;PackageReference Include=&quot;Microsoft.VisualStudio.Threading.Analyzers&quot;&gt;
-  &lt;PrivateAssets&gt;all&lt;/PrivateAssets&gt;
-  &lt;IncludeAssets&gt;runtime; build; native; contentfiles; analyzers&lt;/IncludeAssets&gt;
-&lt;/PackageReference&gt;
-</code></pre>
-<h3 id="3-copilot-instructions">3. Copilot Instructions</h3>
-<pre><code class="lang-markdown">## Async/Await Best Practices for Library Code
-
-**ALWAYS use `ConfigureAwait(false)` for all `await` statements in library code (`src/Opossum/`).**
-
-✅ DO use in: src/Opossum/**/*.cs
-❌ DON'T use in: Samples/**/*.cs, tests/**/*.cs
-</code></pre>
-<hr>
-<h2 id="benefits-achieved">Benefits Achieved</h2>
-<h3 id="1--deadlock-prevention">1. ✅ Deadlock Prevention</h3>
-<p><strong>Before:</strong></p>
-<pre><code class="lang-csharp">// WPF application using Opossum
-var student = await eventStore.ReadEventAsync(...); // Could deadlock UI thread
-</code></pre>
-<p><strong>After:</strong></p>
-<pre><code class="lang-csharp">// Library code
-var json = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
-// No deadlock - continues on thread pool instead of marshaling back to UI thread
-</code></pre>
-<h3 id="2--performance-improvement">2. ✅ Performance Improvement</h3>
-<ul>
-<li>~10% faster when synchronization context exists (Blazor, WPF, WinForms)</li>
-<li>No performance degradation in ASP.NET Core</li>
-</ul>
-<h3 id="3--best-practice-compliance">3. ✅ Best Practice Compliance</h3>
-<ul>
-<li>Follows Microsoft's official guidance for library code</li>
-<li>Matches behavior of popular libraries (Newtonsoft.Json, Dapper, EF Core)</li>
-<li>Future-proof against framework changes</li>
-</ul>
-<h3 id="4--analyzer-protection">4. ✅ Analyzer Protection</h3>
-<ul>
-<li>Future code automatically checked by analyzer</li>
-<li>VSTHRD111 warning prevents missing ConfigureAwait(false)</li>
-<li>Enforced at build time</li>
-</ul>
-<hr>
-<h2 id="verification-checklist">Verification Checklist</h2>
-<ul>
-<li>[x] ✅ All library files updated</li>
-<li>[x] ✅ Build successful (no errors)</li>
-<li>[x] ✅ All 512 unit tests passing</li>
-<li>[x] ✅ All 97 integration tests passing</li>
-<li>[x] ✅ No behavioral changes</li>
-<li>[x] ✅ No performance regressions</li>
-<li>[x] ✅ Analyzer configured</li>
-<li>[x] ✅ Documentation complete</li>
-<li>[x] ✅ Copilot instructions updated</li>
-</ul>
-<hr>
-<h2 id="documentation-created">Documentation Created</h2>
+<h2 id="decision">Decision</h2>
+<p><strong><code>IEventStore.ReadAsync</code> keeps the <code>Task&lt;SequencedEvent[]&gt;</code> return type.</strong></p>
+<p>Reasons:</p>
 <ol>
-<li>✅ <code>docs/ConfigureAwait-Analysis-And-Recommendation.md</code> - Why ConfigureAwait matters</li>
-<li>✅ <code>docs/ConfigureAwait-Implementation-Guide.md</code> - How to implement (now obsolete - all done!)</li>
-<li>✅ <code>docs/ConfigureAwait-Implementation-Summary.md</code> - Partial completion status (60%)</li>
-<li>✅ <code>docs/ConfigureAwait-Complete.md</code> - <strong>THIS FILE</strong> - Final completion status (100%)</li>
+<li>The parallel I/O optimisation that drives the 3h → 18min rebuild improvement is
+incompatible with a naive sequential streaming model.</li>
+<li>A correct parallel-streaming implementation (ordered <code>Channel&lt;T&gt;</code> prefetcher) is
+disproportionately complex for Opossum's deployment scale.</li>
+<li>All other .NET event sourcing frameworks that use <code>IAsyncEnumerable</code> do so because
+their transport is an inherently streaming network source — not applicable here.</li>
+<li>Opossum's target users (POS, SMB, offline-first) do not encounter the memory
+scenarios that motivated the original proposal.</li>
+<li>If memory pressure does appear, chunked reads inside <code>ProjectionManager</code> solve it
+without any public API change.</li>
 </ol>
-<hr>
-<h2 id="patterns-applied">Patterns Applied</h2>
-<h3 id="pattern-1-semaphoreslimwaitasync">Pattern 1: SemaphoreSlim.WaitAsync</h3>
-<pre><code class="lang-csharp">await _lock.WaitAsync(cancellationToken).ConfigureAwait(false);
-</code></pre>
-<h3 id="pattern-2-file-io">Pattern 2: File I/O</h3>
-<pre><code class="lang-csharp">var json = await File.ReadAllTextAsync(filePath, ct).ConfigureAwait(false);
-await File.WriteAllTextAsync(filePath, json, ct).ConfigureAwait(false);
-</code></pre>
-<h3 id="pattern-3-taskdelay-retry-logic">Pattern 3: Task.Delay (retry logic)</h3>
-<pre><code class="lang-csharp">await Task.Delay(retryDelay).ConfigureAwait(false);
-</code></pre>
-<h3 id="pattern-4-streamwriter-operations">Pattern 4: StreamWriter operations</h3>
-<pre><code class="lang-csharp">await writer.WriteAsync(json).ConfigureAwait(false);
-await writer.FlushAsync().ConfigureAwait(false);
-</code></pre>
-<h3 id="pattern-5-method-chaining">Pattern 5: Method chaining</h3>
-<pre><code class="lang-csharp">var data = await SomeMethodAsync().ConfigureAwait(false);
-await AnotherMethodAsync(data).ConfigureAwait(false);
-</code></pre>
-<h3 id="pattern-6-parallelforeachasync">Pattern 6: Parallel.ForEachAsync</h3>
-<pre><code class="lang-csharp">await Parallel.ForEachAsync(items, options, async (item, ct) =&gt;
-{
-    await ProcessAsync(item).ConfigureAwait(false);
-}).ConfigureAwait(false);
-</code></pre>
-<hr>
-<h2 id="performance-impact">Performance Impact</h2>
-<h3 id="before">Before</h3>
-<ul>
-<li>Library code could cause deadlocks in UI applications</li>
-<li>Unnecessary context marshaling overhead when sync context exists</li>
-<li>~10% slower in UI applications</li>
-</ul>
-<h3 id="after">After</h3>
-<ul>
-<li>✅ No deadlock risk</li>
-<li>✅ No context marshaling overhead</li>
-<li>✅ ~10% faster in UI applications</li>
-<li>✅ Same performance in ASP.NET Core (no sync context)</li>
-</ul>
-<hr>
-<h2 id="commit-message-recommendation">Commit Message Recommendation</h2>
-<pre><code>feat: Add ConfigureAwait(false) to all library async code
-
-- Added ConfigureAwait(false) to 105 await statements across 13 files
-- Prevents deadlocks when library used in UI applications
-- ~10% performance improvement when sync context exists
-- Follows Microsoft best practices for library code
-- Added Microsoft.VisualStudio.Threading.Analyzers for enforcement
-- Updated copilot-instructions.md with async/await rules
-
-BREAKING CHANGE: None - fully backward compatible
-
-Tested:
-- ✅ All 512 unit tests passing
-- ✅ All 97 integration tests passing
-- ✅ Build successful with no warnings
-
-Fixes: Potential deadlock issues in WPF/WinForms/Blazor consumers
-Closes: #ConfigureAwait implementation
-</code></pre>
-<hr>
-<h2 id="whats-next">What's Next</h2>
-<h3 id="immediate">Immediate</h3>
-<ol>
-<li>✅ <strong>Commit these changes</strong> to <code>feature/parallel-reads</code> branch</li>
-<li>✅ <strong>Create PR</strong> for review</li>
-<li>✅ <strong>Merge to main</strong> after approval</li>
-</ol>
-<h3 id="future">Future</h3>
-<ul>
-<li>✅ Analyzer will automatically enforce ConfigureAwait(false) on new code</li>
-<li>✅ Copilot will follow instructions for all new async methods</li>
-<li>✅ No manual intervention needed going forward</li>
-</ul>
-<hr>
-<h2 id="lessons-learned">Lessons Learned</h2>
-<h3 id="what-worked-well-">What Worked Well ✅</h3>
-<ol>
-<li>Systematic file-by-file approach</li>
-<li>Testing after each file</li>
-<li>Using unique context for replacements</li>
-<li>Not being lazy - doing all files completely</li>
-</ol>
-<h3 id="what-didnt-work-">What Didn't Work ❌</h3>
-<ol>
-<li>PowerShell regex automation (corrupted files)</li>
-<li>Generic find/replace without unique context</li>
-</ol>
-<h3 id="best-practice-for-future-">Best Practice for Future 💡</h3>
-<ul>
-<li>Manual is better than broken automation</li>
-<li>Take time to do it right</li>
-<li>Test frequently</li>
-<li>Be thorough, not hasty</li>
-</ul>
-<hr>
-<h2 id="final-statistics">Final Statistics</h2>
-<p><strong>Time Spent:</strong> ~2 hours (thorough, careful implementation)<br>
-<strong>Files Modified:</strong> 13 library files<br>
-<strong>Awaits Updated:</strong> ~105 total<br>
-<strong>Lines Changed:</strong> ~210 lines (2 per await: old + new)<br>
-<strong>Tests Run:</strong> 609 tests (512 unit + 97 integration)<br>
-<strong>Regressions:</strong> 0<br>
-<strong>Build Errors:</strong> 0<br>
-<strong>Quality:</strong> Production-ready ✅</p>
-<hr>
-<h2 id="conclusion">Conclusion</h2>
-<p><strong>ConfigureAwait(false) implementation is 100% COMPLETE!</strong> 🎉</p>
-<p>Every async method in the Opossum library now follows .NET best practices for library code. The library is now safe to use in:</p>
-<ul>
-<li>✅ ASP.NET Core applications</li>
-<li>✅ WPF applications</li>
-<li>✅ WinForms applications</li>
-<li>✅ Blazor applications</li>
-<li>✅ Console applications</li>
-<li>✅ Any other .NET application</li>
-</ul>
-<p>No deadlock risks, better performance, and fully compliant with Microsoft's official guidance.</p>
-<p><strong>Ready to ship!</strong> 🚀</p>
-<hr>
-<p><strong>Date:</strong> 2025-01-28<br>
-<strong>Author:</strong> GitHub Copilot (Complete Manual Implementation)<br>
-<strong>Reviewer:</strong> Pending<br>
-<strong>Status:</strong> ✅ COMPLETE - Ready for PR and Merge</p>
+<p><strong>This decision is closed and is not on any future roadmap.</strong> It may be re-opened only
+if a concrete real-world memory constraint is reported against a deployment that cannot
+be addressed by chunked rebuilds.</p>
 
 </article>
 

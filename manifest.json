@@ -1040,30 +1040,20 @@
     },
     {
       "type": "Conceptual",
+      "source_relative_path": "articles/decisions/adr-002.md",
+      "output": {
+        ".html": {
+          "relative_path": "articles/decisions/adr-002.html"
+        }
+      },
+      "version": ""
+    },
+    {
+      "type": "Conceptual",
       "source_relative_path": "articles/decisions/adr-003.md",
       "output": {
         ".html": {
           "relative_path": "articles/decisions/adr-003.html"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Conceptual",
-      "source_relative_path": "articles/decisions/adr-004.md",
-      "output": {
-        ".html": {
-          "relative_path": "articles/decisions/adr-004.html"
-        }
-      },
-      "version": ""
-    },
-    {
-      "type": "Conceptual",
-      "source_relative_path": "articles/decisions/adr-005.md",
-      "output": {
-        ".html": {
-          "relative_path": "articles/decisions/adr-005.html"
         }
       },
       "version": ""
