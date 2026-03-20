@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Changed document status from "Production Validated" to "Pre-production (sample application only)".
   - All performance numbers now reference actual 2026-03-11 BenchmarkDotNet results.
   - Docfx copy synced to `docs/docfx/articles/guides/use-cases.md`.
+- **README.md — honesty review:**
+  - Replaced "Perfect Use Cases" heading with "Recommended Use Cases".
+  - Removed "Field service applications — sync when connected" (no sync mechanism exists).
+  - Removed "Compliance-heavy industries" from recommended use cases (no built-in encryption or compliance features).
+  - Added "Desktop tools with event-sourced state" and "Environments where databases are banned" as recommended use cases.
+  - Added encryption/compliance and per-event deletion entries to "When NOT to Use Opossum" table.
+  - Softened rule of thumb to include encryption caveat.
+  - Changed "Built for real-world use cases in automotive retail" acknowledgment to honest description.
+  - Changed "Data residency requirements (legal/compliance)" to "Data residency requirements (data stays on local disk)".
 
 ### Added
 - DocFX documentation website scaffolded under `docs/docfx/` with full article hierarchy (Getting Started, Concepts, Guides, Architecture Decisions) and auto-generated API reference from XML doc comments.

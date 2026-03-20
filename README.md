@@ -49,27 +49,27 @@ Opossum is an **event sourcing framework** that uses your **file system as the d
 
 Unlike cloud-based event stores (EventStoreDB, Azure Event Hubs) or database-backed solutions, Opossum **stores events directly as files** in a structured directory hierarchy. This makes it ideal for:
 
-- 🏢 **On-premises applications** (POS systems, dealership software)
-- 📴 **Offline-first applications** (field service, remote installations)
+- 🏢 **On-premises applications** (low-volume business software)
+- 📴 **Offline-first applications** (no network dependency)
 - 💼 **SMB solutions** (where cloud costs don't make sense)
 - 🔒 **Data sovereignty requirements** (keep data in-country/on-site)
-- 🧪 **Development & testing** (no Docker/database setup needed)
+- 🧪 **Development & prototyping** (no Docker/database setup needed)
 - 🖥️ **Multi-workstation deployments** (multiple PCs sharing a store on a network drive — cross-process append safety via OS file locking)
 
 ---
 
 ## ✅ When to Use Opossum
 
-### Perfect Use Cases
+### Recommended Use Cases
 
 | Scenario | Why Opossum Fits |
 |----------|------------------|
-| **Automotive dealership sales tracking** | Offline operation, complete audit trail, local compliance |
+| **Low-volume business applications** | Offline operation, complete audit trail, local storage |
 | **Point-of-sale systems** | Works during internet outages, simple IT management |
-| **Field service applications** | Offline data collection, sync when connected |
+| **Desktop tools with event-sourced state** | Undo/redo, change history, no external dependencies |
 | **Small business ERP** | No cloud costs, data stays on-premises |
-| **Compliance-heavy industries** | Immutable audit log, easy to backup/archive |
-| **Development & testing** | Zero infrastructure setup, just run the app |
+| **Environments where databases are banned** | Just files on disk, no DB server to install or patch |
+| **Development & prototyping** | Zero infrastructure setup, learn event sourcing patterns |
 
 ### Key Characteristics
 
@@ -77,8 +77,8 @@ Unlike cloud-based event stores (EventStoreDB, Azure Event Hubs) or database-bac
 ✅ **Offline-first requirements**  
 ✅ **Simple IT environment** (IT staff comfortable with files/folders)  
 ✅ **Budget-conscious** (avoid monthly cloud fees)  
-✅ **Data residency requirements** (legal/compliance)  
-✅ **Complete audit trail needed**
+✅ **Data residency requirements** (data stays on local disk)  
+✅ **Append-only audit trail needed**
 
 ---
 
@@ -93,9 +93,11 @@ Opossum is **not designed** for:
 | ❌ **Cloud-native microservices** | Azure Event Hubs, AWS Kinesis |
 | ❌ **Multi-region replication** needed | Distributed event stores |
 | ❌ **Event streaming** to multiple consumers | Kafka, RabbitMQ |
-| ❌ **Massive scale** (millions of events) | Purpose-built event stores |
+| ❌ **Large scale** (> 10 million total events) | Purpose-built event stores |
+| ❌ **Encryption or compliance certification** required | Opossum has no built-in encryption, signatures, or access control |
+| ❌ **Per-event deletion** (e.g. GDPR right-to-erasure) | Opossum is strictly append-only; only whole-store delete exists |
 
-**Rule of thumb:** If your application runs on a single server (or small cluster) and needs offline capabilities, Opossum is great. If you need cloud-scale distribution, choose a cloud-native solution.
+**Rule of thumb:** If your application runs on a single server, needs offline capabilities, doesn't require built-in encryption, and generates fewer than ~100k events/day — Opossum is a good fit. Otherwise, choose a purpose-built event store.
 
 ---
 
@@ -1702,7 +1704,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - Inspired by the [DCB Specification](https://dcb.events/)
-- Built for real-world use cases in automotive retail and SMB applications
+- Designed for low-volume, single-server event sourcing with offline-first operation
 
 ---
 
