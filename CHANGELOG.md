@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Production feasibility analysis** (`docs/analysis/production-feasibility-analysis.md`): Deep analysis of .NET file system API limits with micro-benchmarks, competitive landscape assessment, and identification of the viable production niche (embedded event sourcing for desktop/tablet applications).
+- **GDPR and encryption design document** (`docs/design/gdpr-and-encryption-design.md`): Complete design for crypto shredding (per-subject encryption keys with AES-256-GCM), soft delete (tombstone event replacement), and forgettable payload analysis. Covers key management, serialization integration, erasure API, and key rotation.
+- **Throughput optimization plan** (`docs/design/throughput-optimization-plan.md`): Detailed implementation plan for Options A (append-only indices), B (in-memory cache), and E (implicit ledger) with measured performance expectations.
+- **0.6.0 roadmap rewrite** (`docs/future-plans/0.6.0-roadmap.md`): Complete rewrite with three-phase plan (GDPR Foundation, Encryption at Rest, Throughput), detailed session planning guide, dependency graph, and ~22-27 session estimate.
+
 ### Changed
 - **`use-cases.md` — complete rewrite for honesty and accuracy:**
   - Removed false "Production Validated" and "Proven Use Cases" claims — Opossum has never been deployed in production.

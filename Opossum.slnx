@@ -1,4 +1,4 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/.github/">
     <File Path=".github/copilot-instructions.md" />
     <File Path=".github/pull_request_template.md" />
@@ -35,6 +35,7 @@
     <File Path="docs/analysis/invoice-number-feasibility.md" />
     <File Path="docs/analysis/opt-in-token-feasibility.md" />
     <File Path="docs/analysis/prevent-record-duplication-feasibility.md" />
+    <File Path="docs/analysis/production-feasibility-analysis.md" />
     <File Path="docs/analysis/throughput-research-and-improvement-paths.md" />
     <File Path="docs/analysis/unique-username-feasibility.md" />
     <File Path="docs/analysis/nuget-release-readiness-assessment.md" />
@@ -170,7 +171,9 @@
   </Folder>
   <Folder Name="/docs/design/">
     <File Path="docs/design/dataseeder-redesign.md" />
+    <File Path="docs/design/gdpr-and-encryption-design.md" />
     <File Path="docs/design/scalable-projection-rebuild-architecture.md" />
+    <File Path="docs/design/throughput-optimization-plan.md" />
     <File Path="docs/design/scalable-projection-rebuild-status.md" />
     <File Path="docs/design/scalable-projection-rebuild-tasks.md" />
   </Folder>
