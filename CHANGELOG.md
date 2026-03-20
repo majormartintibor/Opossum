@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`use-cases.md` — complete rewrite for honesty and accuracy:**
+  - Removed false "Production Validated" and "Proven Use Cases" claims — Opossum has never been deployed in production.
+  - Removed fabricated compliance section (GDPR per-event deletion, SOX cryptographic verification, HIPAA, FDA digital signatures, PCI encryption) — Opossum has no built-in encryption, no digital signatures, no per-event deletion, and no access control beyond OS file permissions.
+  - Removed IoT Edge Gateway use case — 100+ sensors exceed throughput limits (~55 durable events/sec); "low latency" claim was false at 18 ms/event; no sync mechanism exists.
+  - Removed "Architectural Patterns" section describing sync mechanisms (hybrid cloud, offline-first with eventual sync) that do not exist in the library.
+  - Removed "Migration Guide" section — speculative, not based on any actual migration.
+  - Removed unverifiable storage size comparison (EventStoreDB, Marten) with no backing benchmark data.
+  - Reframed Car Dealership scenario from "Production Validated" to "Recommended" based on architecture analysis (low volume fits well, but unproven).
+  - Reframed Factory scenario from "Robot Communication System" to "Production Logging" — Opossum is too slow for real-time robot coordination (~18 ms/event), but fits as an audit log for discrete production events.
+  - Reframed Desktop Software use case with honest limitations (no branching, directory-based storage not portable as a single file).
+  - Added "Prototyping and Learning Event Sourcing" as a legitimate use case.
+  - Added explicit "What Opossum does NOT provide" section in the executive summary.
+  - Expanded "When NOT to Use Opossum" with encryption/compliance, IoT, and per-event deletion entries.
+  - Changed document status from "Production Validated" to "Pre-production (sample application only)".
+  - All performance numbers now reference actual 2026-03-11 BenchmarkDotNet results.
+  - Docfx copy synced to `docs/docfx/articles/guides/use-cases.md`.
+
 ### Added
 - DocFX documentation website scaffolded under `docs/docfx/` with full article hierarchy (Getting Started, Concepts, Guides, Architecture Decisions) and auto-generated API reference from XML doc comments.
 - GitHub Actions workflow (`.github/workflows/docs.yml`) that builds and deploys the site to GitHub Pages on every push to `master`.

@@ -10,6 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="CourseBookOrderHistory\**" />
+    <Content Remove="CourseBookOrderHistory\**" />
+    <EmbeddedResource Remove="CourseBookOrderHistory\**" />
+    <None Remove="CourseBookOrderHistory\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" />
     <PackageReference Include="Scalar.AspNetCore" />
@@ -21,7 +28,6 @@
 
   <ItemGroup>
     <Folder Include="Configuration\" />
-    <Folder Include="CourseBookOrderHistory\" />
   </ItemGroup>
 
 </Project>

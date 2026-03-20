@@ -1,4 +1,4 @@
-﻿<Solution>
+<Solution>
   <Folder Name="/.github/">
     <File Path=".github/copilot-instructions.md" />
     <File Path=".github/pull_request_template.md" />
@@ -26,6 +26,7 @@
   </Folder>
   <Folder Name="/docs/analysis/">
     <File Path="docs/analysis/aggregate-vs-dcb-comparison.md" />
+    <File Path="docs/analysis/configureawait-analysis.md" />
     <File Path="docs/analysis/course-subscriptions-feasibility.md" />
     <File Path="docs/analysis/dcb-compliance-analysis.md" />
     <File Path="docs/analysis/dotnet-eventsourcing-comparison.md" />
@@ -166,7 +167,6 @@
     <File Path="docs/decisions/001-iasyncenumerable-not-implemented.md" />
     <File Path="docs/decisions/002-single-context-by-design.md" />
     <File Path="docs/decisions/003-cross-process-append-safety.md" />
-    <File Path="docs/decisions/configureawait-analysis.md" />
   </Folder>
   <Folder Name="/docs/design/">
     <File Path="docs/design/dataseeder-redesign.md" />
